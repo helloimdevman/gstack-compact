@@ -1,7 +1,7 @@
 import { describe, expect, test } from 'bun:test';
 import { resolveModel } from '../scripts/models';
 import { generateModelOverlay, readOverlay } from '../scripts/resolvers/model-overlay';
-import { generateCompletenessSection } from '../scripts/resolvers/preamble/generate-completeness-section';
+import { generateInstalledPreamble } from '../scripts/resolvers/preamble';
 import { generateSetupCommand } from '../scripts/resolvers/utility';
 import type { TemplateContext } from '../scripts/resolvers/types';
 
@@ -16,7 +16,6 @@ function ctx(model: TemplateContext['model']): TemplateContext {
       binDir: '$GSTACK_BIN',
       browseDir: '$GSTACK_BROWSE',
       designDir: '$GSTACK_DESIGN',
-      makePdfDir: '$GSTACK_MAKE_PDF',
     },
     preambleTier: 3,
     model,
@@ -48,30 +47,18 @@ describe('GPT-5.6 Sol model profile', () => {
     expect(out).toContain('Never use this patch to skip a concrete requirement');
   });
 
-  // The lake intro moved from a per-model render-time generator into
-  // bin/gstack-skill-start's one-time emission layer (token-reduction Phase 2).
-  // Sol's scope discipline is carried by the model overlay + completeness
-  // section (both still model-conditional and pinned here); the intro itself
-  // is a single display-once blurb emitted by the script.
-  test('completeness copy stays inside the explicit task boundary', () => {
-    const completeness = generateCompletenessSection(ctx('gpt-5.6-sol'));
-    expect(completeness).toContain("inside the user's explicit task boundary");
-    expect(completeness).toContain('report them, do not implement them');
-    expect(completeness).toContain('all relevant in-scope edge cases');
+  test('the installed preamble retains Sol scope guidance without the retired completeness essay', () => {
+    const out = generateInstalledPreamble(ctx('gpt-5.6-sol'));
+    expect(out).toContain('The explicit task is the lake');
+    expect(out).toContain('GSTACK_CONTRACT');
+    expect(out).not.toContain('## Completeness Principle');
+    expect(generateInstalledPreamble({ ...ctx('gpt-5.6-sol'), explainLevel: 'terse' })).toBe(out);
   });
 
-  test('generic GPT copy remains unchanged', () => {
-    const generic = generateModelOverlay(ctx('gpt'));
-    const completeness = generateCompletenessSection(ctx('gpt'));
-    expect(generic).toContain('make your best judgment and proceed');
-    expect(completeness).toContain('the complete thing is the goal');
+  test('generic GPT overlay remains unchanged', () => {
+    expect(generateModelOverlay(ctx('gpt'))).toContain('make your best judgment and proceed');
   });
 
-  test('terse mode still suppresses the completeness section for Sol', () => {
-    // Terse short-circuits before the Sol branch — a check-order flip would
-    // ship Sol completeness prose to terse users (a token regression).
-    expect(generateCompletenessSection({ ...ctx('gpt-5.6-sol'), explainLevel: 'terse' })).toBe('');
-  });
 });
 
 describe('SETUP_COMMAND resolver', () => {

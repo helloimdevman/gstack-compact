@@ -4,6 +4,15 @@ import * as path from 'node:path';
 import { atomicWriteSync } from '../lib/fs-atomic.ts';
 import { assessOfficeHoursReviews, loadOfficeHoursReviews, renderOfficeHoursReview, renderOfficeHoursReviewerPrompt, replaceOfficeHoursReviewBlock } from '../lib/office-hours-review.ts';
 
+/** macOS /var and /tmp are symlinks. Keep the caller's path when it names the same directory. */
+function callerPath(requested: string, canonical: string): string {
+  const asked = path.resolve(requested);
+  const fold = (p: string) => p.replace(/^\/private\/(var|tmp)\//, '/$1/');
+  try { if (fs.realpathSync(asked) === fs.realpathSync(canonical)) return asked; }
+  catch { if (fold(asked) === fold(canonical)) return asked; }
+  return canonical;
+}
+
 function main(args) {
   const command = args.shift();
   if (!['check', 'prepare', 'finalize'].includes(command)) throw new Error('usage: gstack-office-hours-review check <round.json...> | prepare --design <doc> --out-dir <reviewdir> [round.json...] | finalize --design <doc> [--report <report>] [--unreviewed <reason>] <round.json...>');
@@ -29,7 +38,7 @@ function main(args) {
   if (command === 'prepare') {
     if (!options['--out-dir']) throw new Error('prepare requires --out-dir');
     if (!fs.statSync(designPath).isFile()) throw new Error('design must be an existing file');
-    const outDir = fs.realpathSync(options['--out-dir']);
+    const outDir = callerPath(options['--out-dir'], fs.realpathSync(options['--out-dir']));
     if (!fs.statSync(outDir).isDirectory()) throw new Error('out-dir must be an existing directory');
     const round = rounds.length + 1;
     const promptPath = path.join(outDir, `round-${round}.prompt.md`);

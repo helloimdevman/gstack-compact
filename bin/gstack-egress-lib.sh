@@ -32,7 +32,7 @@
 #     — Same contract for git-class ops: sha256:null receipt (a subprocess
 #     owns the bytes), no payload file, command runs unmodified.
 #
-# NO EXIT traps in this file, ever: callers (gstack-telemetry-sync) own
+# NO EXIT traps in this file, ever: callers own
 # their own EXIT traps and a trap set by a sourced library would clobber
 # the caller's. All temp handling is immediate, per call.
 

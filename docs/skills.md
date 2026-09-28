@@ -1,6 +1,28 @@
 # Skill Deep Dives
 
-Detailed guides for every gstack skill — philosophy, workflow, and examples.
+New Claude/Codex installations expose `/plan`, `/build`, `/review`, `/verify`,
+`/ship`, `/investigate`, `/design`, `/context`, `/gstack`, `/browse`, and
+`/sprint`. Run `./setup --skill-profile compat` for the specialist commands
+below. Converted names such as `/autoplan` and `/qa-only` enter a canonical
+mode; their current executable contracts live in the installed `SKILL.md`
+and selected sections. The older deep dives below are background and examples,
+not the current command contract.
+
+| Core skill | Current behavior |
+|------------|------------------|
+| `/plan` | Frame, write, or review plans and specs; stop before implementation. |
+| `/build` | Implement the authorized change and run relevant checks. |
+| `/review` | Review a current diff; fix only when authorized. |
+| `/verify` | Check the changed interface; report by default. |
+| `/ship` | Prepare, verify, review, and publish an authorized PR. |
+| `/investigate` | Reproduce, fix the cause, and verify a defect. |
+| `/design` | Design system, variants, or HTML mode. |
+| `/context` | Save, restore, or manage learnings. |
+| `/gstack` | Route to one installed skill. |
+| `/browse` | Drive the user's browser through the agent host. |
+| `/sprint` | Run one task through planning, build, verification, review, and authorized publication. |
+
+Historical guides for the compat specialist catalog follow.
 
 | Skill | Your specialist | What they do |
 |-------|----------------|--------------|
@@ -14,21 +36,18 @@ Detailed guides for every gstack skill — philosophy, workflow, and examples.
 | [`/investigate`](#investigate) | **Debugger** | Systematic root-cause debugging. Iron Law: no fixes without investigation. Traces data flow, tests hypotheses, stops after 3 failed fixes. |
 | [`/design-review`](#design-review) | **Designer Who Codes** | Live-site visual audit + fix loop. 80-item audit, then fixes what it finds. Atomic commits, before/after screenshots. |
 | [`/design-shotgun`](#design-shotgun) | **Design Explorer** | Generate multiple AI design variants, open a comparison board in your browser, and iterate until you approve a direction. Taste memory biases toward your preferences. |
-| [`/design-html`](#design-html) | **Design Engineer** | Generates production-quality Pretext-native HTML. Works with approved mockups, CEO plans, design reviews, or from scratch. Text reflows on resize, heights adjust to content. Smart API routing per design type. Framework detection for React/Svelte/Vue. Previews render through your Aside browser. |
+| [`/design-html`](#design-html) | **Design Engineer** | Generates production-quality Pretext-native HTML. Works with approved mockups, CEO plans, design reviews, or from scratch. Text reflows on resize, heights adjust to content. Smart API routing per design type. Framework detection for React/Svelte/Vue. Previews use the browser supplied by your agent host. |
 | [`/qa`](#qa) | **QA Lead** | Test your app, find bugs, fix them with atomic commits, re-verify. Auto-generates regression tests for every fix. |
 | [`/qa-only`](#qa) | **QA Reporter** | Same methodology as /qa but report only. Use when you want a pure bug report without code changes. |
-| [`/scrape`](#browse) | **Browser Data Extractor** | Pull structured data off a web page — tables, lists, prices — in your Aside browser with the page's real logged-in state. Same driver contract as `/browse`. On the fallback browser, a codified browser-skill answers a repeat intent in ~200ms. |
-| [`/skillify`](#browse) | **Skill Codifier** | Fallback-browser skill: walks back through your conversation, finds the last `/scrape` prototype, synthesizes script + test + fixture, runs the test, asks before committing. On Aside, durable per-site automation belongs to Aside's own skills. |
+| [`/scrape`](#browse) | **Browser Data Extractor** | Pull structured data off a web page — tables, lists, prices — in your host-provided browser. Same contract as `/browse`.  |
 | [`/ship`](#ship) | **Release Engineer** | Sync main, run tests, audit coverage, push, open PR. Bootstraps test frameworks if you don't have one. One command. |
 | [`/land-and-deploy`](#land-and-deploy) | **Release Engineer** | Merge the PR, wait for CI and deploy, verify production health. One command from "approved" to "verified in production." |
-| [`/canary`](#canary) | **SRE** | Post-deploy monitoring loop. Watches for console errors, performance regressions, and page failures in your Aside browser. |
+| [`/canary`](#canary) | **SRE** | Post-deploy monitoring loop. Watches for console errors, performance regressions, and page failures in your host-provided browser. |
 | [`/benchmark`](#benchmark) | **Performance Engineer** | Baseline page load times, Core Web Vitals, and resource sizes. Compare before/after on every PR. Track trends over time. |
-| [`/cso`](#cso) | **Chief Security Officer** | Supported security findings with explicit coverage. Static assessment remains available without catalog profiles; contained runtime/scanner execution requires matching qualified profiles. Runtime-tested bundles authenticate separate external assertions. Project-test completion remains `self_reported` because target code controls the test process; `tested` is reserved for a future target-independent completion witness. |
 | [`/document-release`](#document-release) | **Technical Writer** | Update all project docs to match what you just shipped. Catches stale READMEs automatically. |
 | [`/document-generate`](#document-generate) | **Technical Writer** | Generate Diataxis docs (tutorial / how-to / reference / explanation) for a feature from code. |
 | [`/retro`](#retro) | **Eng Manager** | Team-aware weekly retro. Per-person breakdowns, shipping streaks, test health trends, growth opportunities. |
-| [`/browse`](#browse) | **QA Engineer** | Give the agent eyes. Drives your Aside browser first — real sessions, real clicks, real screenshots — through deterministic `aside repl` scripts, and falls back to gstack's own Chromium (~100ms per command) when Aside isn't there. |
-| [`/setup-browser-cookies`](#setup-browser-cookies) | **Session Manager** | Copy selected cookies from Chrome, Chromium, Brave, Edge, or macOS-only Comet, Arc, and Dia into the fallback browser. Choose your profile and domains; check sign-in separately. Unnecessary on Aside, which already has your sessions. |
+| [`/browse`](#browse) | **QA Engineer** | Give the agent eyes through the browser supplied by your agent host. |
 | [`/autoplan`](#autoplan) | **Review Pipeline** | One command, fully reviewed plan. Runs CEO → design → DX → eng review automatically (eng always last, so the shipping gate reviews the final amended plan) with encoded decision principles. Surfaces only taste decisions for your approval. |
 | [`/plan-devex-review`](#plan-devex-review) | **DX Reviewer** | Plan-stage DX review. TTHW (time-to-hello-world), magical moments, friction points, persona traces. Three modes: Expansion, Polish, Triage. |
 | [`/devex-review`](#devex-review) | **DX Reviewer (live)** | Live developer experience audit. Walks the actual onboarding flow, measures TTHW, catches the docs lies. |
@@ -40,25 +59,17 @@ Detailed guides for every gstack skill — philosophy, workflow, and examples.
 | [`/health`](#health) | **Code Quality Dashboard** | Wraps type checker, linter, tests, dead code detection. Computes a weighted 0-10 score; tracks trends over time. |
 | [`/deslop-shared-libs`](#deslop-shared-libs) | **Shared Code Reviewer** | Find worthwhile shared-code extractions in recent work. Recommendations only. |
 | [`/landing-report`](#landing-report) | **Ship Queue Dashboard** | Read-only snapshot of the workspace-aware ship queue. Which version slots are claimed, which sibling workspaces have WIP. |
-| [`/benchmark-models`](#benchmark-models) | **Model Benchmark** | Side-by-side cross-model benchmark for skills (Claude vs GPT vs Gemini). Latency, tokens, cost, optional LLM-judged quality. |
 | | | |
-| **Multi-AI** | | |
-| [`/codex`](#codex) | **Second Opinion** | OpenAI Codex review, challenge, and consultation. Available outside the Codex harness. |
-| [`/claude-code`](#claude-code) | **Second Opinion** | Claude Code review, challenge, and consultation. Available outside the Claude Code harness; used for automatic outside reviews in Codex. |
-| [`/pair-agent`](#browse) | **Remote Agent Bridge** | Pair a remote AI agent (OpenClaw, Codex, Cursor, Hermes) with gstack's own browser. Scoped tunnel, locked allowlist, session token. Fallback-browser skill; agents driving Aside open their own tabs. |
-| [`/setup-gbrain`](#setup-gbrain) | **Memory Sync** | Set up gbrain for cross-machine session memory sync. One command from zero to live. |
-| [`/sync-gbrain`](#sync-gbrain) | **Keep Brain Current** | Refresh gbrain against this repo's code; teach the agent when to use `gbrain search`/`code-def` over Grep. Idempotent; safe to re-run. |
 | | | |
 | **Safety & Utility** | | |
 | [`/careful`](#safety--guardrails) | **Safety Guardrails** | Warns before destructive commands (rm -rf, DROP TABLE, force-push, git reset --hard). Override any MEDIUM warning; root/home recursive deletes and default-branch force-pushes are hard-denied. Common build cleanups whitelisted. |
 | [`/freeze`](#safety--guardrails) | **Edit Lock** | Restrict all file edits to a single directory. Blocks Edit and Write outside the boundary. Accident prevention for debugging. |
 | [`/guard`](#safety--guardrails) | **Full Safety** | Combines /careful + /freeze in one command. Maximum safety for prod work. |
 | [`/unfreeze`](#safety--guardrails) | **Unlock** | Remove the /freeze boundary, allowing edits everywhere again. |
-| [`/open-gstack-browser`](#open-gstack-browser) | **GStack Browser** | Launch gstack's own browser headed, with sidebar, anti-bot stealth, auto model routing, cookie import, and Claude Code integration. The visible face of the fallback engine; with Aside open you watch the agent's tabs there. |
 | [`/setup-deploy`](#setup-deploy) | **Deploy Configurator** | One-time setup for `/land-and-deploy`. Detects your platform, production URL, and deploy commands. |
 | [`/gstack-upgrade`](#gstack-upgrade) | **Self-Updater** | Upgrade gstack to the latest version. Detects global vs vendored install, syncs both, shows what changed. |
-| [`/make-pdf`](#make-pdf) | **PDF Generator** | Turn any markdown file into a publication-quality PDF. Proper margins, page numbers, cover pages, clickable TOC. Mermaid/excalidraw fences render as vector diagrams; `--to html\|docx` for other formats. Prints through your Aside browser (macOS 15+), or gstack's bundled browser when Aside is absent. |
-| [`/diagram`](#diagram) | **Diagram Maker** | English in, diagram out: mermaid source + editable `.excalidraw` (open it on excalidraw.com, hand-drawn style) + rendered SVG/PNG. Fully offline, rendered through your Aside browser (macOS 15+) or gstack's bundled browser when Aside is absent. |
+| [`/make-pdf`](#make-pdf) | **PDF Generator** | Prepare print-ready HTML from Markdown and export PDF when the host's user-browser tool supports it. |
+| [`/diagram`](#diagram) | **Diagram Maker** | English in, Mermaid source out; SVG, PNG, and editable Excalidraw exports use the host-provided browser when supported. |
 | [`/ios-qa`](#ios-qa) | **iOS QA Lead** | Live-device iOS QA via USB CoreDevice tunnel + embedded StateServer. Reads Swift source, codegens accessors, drives the real iPhone. Optionally exposes the device over Tailscale for remote agents. |
 | [`/ios-fix`](#ios-fix) | **iOS Autonomous Fixer** | Closes the find→fix→verify loop on a real iPhone. Captures a reproducing snapshot, fixes the source, rebuilds, redeploys, verifies. |
 | [`/ios-design-review`](#ios-design-review) | **iOS Designer's Eye** | 10-dimension Apple HIG audit on a real iPhone. Rates each screen, says what would make it a 10. |
@@ -407,7 +418,7 @@ This is my **designer who codes mode**.
 
 `/plan-design-review` reviews your plan before implementation. `/design-review` audits and fixes the live site after.
 
-It runs an 80-item visual audit on your live site — in your Aside browser, so it sees exactly what a logged-in you sees — then enters a fix loop: for each design finding, it locates the source file, makes the minimal CSS/styling change, commits with `style(design): FINDING-NNN`, re-navigates to verify, and takes before/after screenshots. One commit per fix, fully bisectable.
+It runs a visual audit on your live site in the browser supplied by your agent host, then enters a fix loop: for each confirmed finding, it locates the source file, makes a scoped change, reopens the page, and captures before/after evidence when the host supports screenshots.
 
 The self-regulation heuristic is tuned for design work — CSS-only changes get a free pass (they are inherently safe and reversible), but changes to component JSX/TSX files count against the risk budget. Hard cap at 30 fixes. If the risk score exceeds 20%, it stops and asks.
 
@@ -621,7 +632,7 @@ This is my **QA lead mode**.
 
 `/browse` gives the agent eyes. `/qa` gives it a testing methodology.
 
-The most common use case: you're on a feature branch, you just finished coding, and you want to verify everything works. Just say `/qa` — it reads your git diff, identifies which pages and routes your changes affect, opens them in tabs of your Aside browser, and tests each one. No URL required. No manual test plan.
+The most common use case: you're on a feature branch and want to verify the changed pages. `/qa` reads the diff, identifies affected routes, and tests them in the browser supplied by your agent host. No URL is needed when it can find the running app.
 
 Four modes:
 
@@ -651,7 +662,7 @@ Claude: [Explores 12 pages, fills 3 forms, tests 2 flows]
         [Full report with screenshots saved to .gstack/qa-reports/]
 ```
 
-**Testing authenticated pages:** with Aside, nothing to set up. Aside is your browser, so `/qa` already has your sessions; if it hits a sign-in wall, sign in inside Aside and tell it you're done — it re-runs the step. It never types a password for you. On the fallback browser, run `/setup-browser-cookies` first to import your real sessions, or log in once in headed mode.
+**Testing authenticated pages:** The host must connect to the browser profile you use. If `/qa` hits a sign-in wall, sign in yourself in that browser and tell the agent when to continue.
 
 ---
 
@@ -681,9 +692,9 @@ A lot of branches die when the interesting work is done and only the boring rele
 
 ### Third-party web actions (v1.72.0.0+)
 
-Sometimes the release work leaves the terminal: registering an API key, creating a vendor account, wiring a webhook or OAuth app. Instead of handing you a manual step list, `/ship` (and `/spec`, `/office-hours`, `/land-and-deploy`, `/setup-deploy`) offers to drive the browser for you. Aside first — it acts across your real logged-in sessions, which is exactly what vendor dashboards need. No Aside? gstack's own visible browser (headed `$B` with handoff for sign-in) is the fallback on every platform, with one pointer to aside.com (macOS 15+) per task.
+Sometimes release work needs a vendor dashboard. `/ship` and the related release skills use the browser capability supplied by the agent host for the browser and profile you use. If the host cannot reach it, they give you the specific manual step.
 
-The consent rules are strict and pin-tested: one explicit question per task naming the exact site and actions, no standing permission, no auto-install ever (on a Mac without Aside you get one download pointer — aside.com, macOS 15+ — once per task). Passwords, payment, CAPTCHAs, and identity verification stay yours; Apple credential creation is never a drive target in any skill. A captured secret never appears in chat — it lands in an owner-only file and gets verified with one read-only API call before gstack claims success.
+The agent uses authorization already given for the named site and actions, and asks when it is missing. Passwords, payment, CAPTCHAs, and identity verification stay yours; Apple credential creation is never a drive target. A captured secret stays out of chat and lands only in an owner-only file or your secret store.
 
 ---
 
@@ -721,7 +732,7 @@ Claude: Merging PR #42...
 
 This is my **post-deploy monitoring mode**.
 
-After deploy, `/canary` watches the live site for trouble. It loops through your key pages in your Aside browser (one `aside repl` script per page, so every cycle is a fresh load), checking for console errors, performance regressions, page failures, and visual anomalies. Takes periodic screenshots and compares against pre-deploy baselines.
+After deploy, `/canary` checks key pages in the browser supplied by your agent host for console errors, performance regressions, page failures, and visual anomalies. It captures screenshots when the host supports them and compares with available pre-deploy baselines.
 
 Use it right after `/land-and-deploy`, or schedule it to run periodically after a risky deploy.
 
@@ -774,7 +785,7 @@ This is my **performance engineer mode**.
 
 `/benchmark` establishes performance baselines for your pages: load time, Core Web Vitals (LCP, CLS, INP), resource counts, and total transfer size. Run it before and after a PR to catch regressions.
 
-It measures in your Aside browser — the page's own `performance` navigation and resource entries from a real load, not synthetic estimates. Multiple runs averaged. Results persist so you can track trends across PRs.
+It measures in your host-provided browser when performance entries are available. Multiple runs are averaged and results persist for comparison across PRs.
 
 ```
 You:   /benchmark https://myapp.com
@@ -786,27 +797,6 @@ Claude: Benchmarking 5 pages (3 runs each)...
         /settings   load: 0.8s  LCP: 0.6s  CLS: 0.00  resources: 18 (420KB)
 
         Baseline saved. Run again after changes to compare.
-```
-
----
-
-## `/cso`
-
-This is my **Chief Security Officer**.
-
-Run `/cso` for a bounded static investigation with an application model, challenged findings, and explicit coverage; static assessment remains available when no runtime or scanner catalog profile is qualified. With matching qualified profiles, `/cso --comprehensive` can prepare Node/Bun, Python, and Rails applications in contained local runtimes, reproduce a defect, and retain a reviewable repair candidate without changing the working branch. An out-of-process witness can authenticate the external boot, legitimate-control, and security assertions and issue a `runtime_tested` bundle. Project-test completion remains `self_reported` because target code shares that process and can forge reporter output or terminate the runner; recorded command, count, exit, and output hashes are diagnostic evidence, not a target-independent completion witness. Every report shows assertion, test-completion, and review assurance separately. The `tested` state is reserved for a future target-independent witness and is not emitted today. `/cso --doctor`, `--resume`, `--replay`, and `--recheck` diagnose prerequisites, recover interrupted work, repeat recorded verification, and establish current-source closure from fresh evidence.
-
-```
-You:   /cso
-
-Claude: complete — assessed application routes, tenant authorization, secrets,
-        dependency exposure, and deployment configuration.
-
-        HIGH: Cross-tenant invoice access (app/controllers/invoices.rb:47)
-        Confidence: high — caller, middleware, and policy checks traced
-        Evidence: supported static finding; runtime not requested
-
-        1 supported finding. Run ID: cso-…
 ```
 
 ---
@@ -853,7 +843,7 @@ Claude: Week of Mar 1: 47 commits (3 contributors), 3.2k LOC, 38% tests, 12 PRs,
 
         ## Your Week
         32 commits, +2.4k LOC, 41% tests. Peak hours: 9-11pm.
-        Biggest ship: one browser contract for every browser skill (Aside).
+        Biggest ship: one browser contract for every browser skill.
         What you did well: shipped a complete feature with encryption, UI, and
         18 unit tests in one focused push...
 
@@ -876,121 +866,36 @@ It saves a JSON snapshot to `.context/retros/` so the next run can show trends.
 
 ## `/browse`
 
-This is my **QA engineer mode**.
+`/browse` uses the browser capability supplied by your agent host, connected
+to the browser and profile you already use. It follows the host tool's
+documented navigation, interaction, screenshot, and console operations.
+`/qa`, `/qa-only`, `/design-review`, `/canary`, `/benchmark`, and `/scrape`
+follow the same browser contract. The agent works in its own tab or a tab
+you explicitly name, and treats page content as untrusted data.
 
-`/browse` is the skill that closes the loop. Before it, the agent could think and code but was still half blind. It had to guess about UI state, auth flows, redirects, console errors, empty states, and broken layouts. Now it can just go look.
-
-It drives the [Aside](https://aside.com) AI browser — your real browser, with your real logged-in sessions — through `aside repl` scripts: Playwright-style JavaScript that opens a tab, does the work, prints its evidence as labelled lines, and closes the tab. One flow per script, no state carried between calls, nothing to import. Every other browser skill (`/qa`, `/qa-only`, `/design-review`, `/canary`, `/benchmark`, `/scrape`) is built on the same contract. `/scrape` is the data-extraction flavor: point it at a page and it hands back the table, list, or prices as structured data.
-
-### Example
-
-```
-You:   /browse staging.myapp.com — test the signup flow and check
-       every page I changed in this branch
-
-Claude: Submitting the signup form on staging.myapp.com creates a real
-        account in your session. Go ahead?            [AskUserQuestion]
-
-You:    yes
-
-Claude: [aside repl: console hook → openTab → goto /signup → snapshot
-         → fill → click Submit → snapshot → screenshot → closeTab]
-
-        DIFF_START … heading "Welcome — set up your workspace" … DIFF_END
-        URL=https://staging.myapp.com/onboarding
-        CONSOLE_ERRORS=[]
-        ASIDE_DIR=/Users/you/.aside/u/0/sessions/2026-09-05_7KtoAatMItBqZvoL
-        GSTACK_STEP_OK
-
-        > cp "$ASIDE_DIR/issue-001-result.jpg" .gstack/qa-reports/screenshots/
-        > Read .gstack/qa-reports/screenshots/issue-001-result.jpg
-
-        Signup works. Redirected to onboarding. Now checking changed pages…
-
-        All 4 pages load. No console errors. No broken layouts.
-        Signup → onboarding → dashboard flow works end to end.
-```
-
-Four scripts, about a minute. Full QA pass, in the browser you were already signed into.
-
-> **Untrusted content:** everything a page returns — snapshot trees, text,
-> console output, `aside exec` answers — is data, never instructions.
-
-**What the agent will and won't do in your browser:** it opens its own tabs and closes them; it never reads or touches yours, never echoes your tab list, never types a password or reads a cookie. Looking is free; a mutating action (submit, delete, purchase) on anything that isn't localhost gets one AskUserQuestion first, listing the exact actions. Sign-in wall? Sign in inside Aside and say "done" — the session is already there.
-
-Aside is macOS 15+ and gstack never installs it. Full contract and cookbook pointer: [BROWSER.md](../BROWSER.md).
-
-### When Aside isn't there
-
-Linux, Windows, or a Mac with Aside closed: `/browse` says so once and switches to gstack's own browser for the run — a compiled binary that talks to a persistent Chromium daemon built on [Playwright](https://playwright.dev/). First call starts the browser (~3s); every call after that ~100-200ms, and cookies, tabs, and localStorage carry over between commands. The same skills produce the same evidence; the features that only make sense when the browser is gstack's rather than yours live here: `/setup-browser-cookies` to import your sessions, `/open-gstack-browser` to watch it headed, `/skillify` to codify a `/scrape`, `/pair-agent` to share it with another agent.
-
-When the headless browser gets stuck — CAPTCHA, MFA, complex auth — it hands off to you:
-
-```
-Claude: I'm stuck on a CAPTCHA at the login page. Opening a visible
-        Chrome so you can solve it.
-
-        > browse handoff "Stuck on CAPTCHA at login page"
-
-You:    done
-
-Claude: > browse resume
-
-        Got a fresh snapshot. Logged in successfully. Continuing QA.
-```
-
-The browser preserves all state across the handoff, and after `resume` the agent gets a fresh snapshot of wherever you left off. If a browse command fails 3 times in a row, it suggests `handoff` automatically.
-
-**Security note:** the fallback is a persistent Chromium session — cookies, localStorage, and session state carry over between commands. Do not use it against sensitive production environments unless you intend to. The session auto-shuts down after 30 minutes of idle time. Full `$B` command reference: [BROWSER.md](../BROWSER.md#the-fallback-engine--complete-reference).
-
----
-
-## `/setup-browser-cookies`
-
-This is my **session manager mode** — for the fallback browser. With Aside open, `/qa` and `/browse` already run in your real sessions and this skill has nothing to do.
-
-For authenticated testing on gstack's own browser, `/setup-browser-cookies` copies selected cookies from your daily browser. Sites may also need storage or a fresh login, so copying cookies is not proof that the session works.
-
-The picker detects Chrome, Chromium, Brave, Edge, and macOS-only Comet, Arc, and Dia. Choose the browser, account/profile, and domains. Profile labels use the current `Local State` name with a directory discriminator, so renamed profiles and duplicate names are distinguishable. No cookie values are displayed; source/profile labels are still sensitive.
-
-```
-You:   /setup-browser-cookies
-
-Claude: Cookie picker opened. Select your browser, profile, and domains,
-        then tell me when you're done.
-
-        [You choose a browser/profile and pick github.com, myapp.com]
-
-You:    done
-
-Claude: Imported 2 domains (47 cookies). Sign-in has not been checked.
-```
-
-For direct import, select the browser and profile first and navigate to a matching target. Do not infer an account from the CLI's legacy Comet default:
-
-```
-You:   /setup-browser-cookies github.com from Chrome, Profile 2
-
-Claude: Imported 12 cookies; sign-in has not been checked.
-```
-
-`--verify-auth` is explicit and requires a selector and expected identity configured privately in the daemon environment before startup. It checks one exact visible identity on the captured target, not just HTTP 200 or a cookie count. Missing configuration fails before mutation. `--clear-storage` is separate, opt-in recovery for Chromium targets: it clears only the captured origin's localStorage (shared across that origin's tabs) and the target tab's sessionStorage in an isolated world with a native deadline. Other target engines retain import/auth checks but reject reset. It is never automatic and cannot be combined with `--all`. Partial imports and unsuccessful checks remain visible rather than becoming a false "ready."
-
-macOS may prompt for Keychain approval; Linux uses its supported keyring/fallback paths; Windows can import DPAPI-compatible cookies, but native App-Bound Encryption extraction remains disabled pending qualification. Closing Chrome does not bypass Chrome 136+ default-directory protection. Use manual sign-in in the headed fallback browser when needed and a display is available, never a TCP downgrade or real-profile copy. Full flags, configuration, and privacy guidance: [cookie import reference](../BROWSER.md#choosing-a-source-and-checking-sign-in).
+If the host cannot reach your browser, the browser step is reported as
+`unavailable`. gstack does not install, launch, or connect another browser.
 
 ---
 
 ## `/make-pdf`
 
-Turn any markdown file into a publication-quality PDF: proper margins, page numbers, cover page, clickable TOC, mermaid and excalidraw fences rendered as vector diagrams, `--to html|docx` when you need another format. The compiled `pdf` binary does the typesetting; the printing happens in a browser — your Aside browser first. make-pdf serves the finished HTML from your machine on loopback, opens it in a tab Aside closes when it is done, prints through the browser's own PDF engine (tagged PDF, document outline, header and footer templates all intact), and copies the file out. Nothing leaves the box. When Aside is absent (Linux, Windows, or the app closed) the same pipeline prints through gstack's bundled browser instead, so a PDF comes out on every platform. Full guide to fences and formats: [howto-diagrams-and-formats.md](howto-diagrams-and-formats.md).
+`/make-pdf` turns Markdown into print-ready HTML with a cover, table of
+contents, page layout, and an offline Content Security Policy. When your
+agent host's browser tool supports PDF export, the skill prints through
+your browser and verifies the PDF. Otherwise it keeps the HTML and reports
+PDF export unavailable. See [the document guide](howto-diagrams-and-formats.md).
 
 ---
 
 ## `/diagram`
 
-English in, diagram out. Describe the diagram (or paste mermaid source) and you get a triplet: the mermaid source, an editable `.excalidraw` file you can open on excalidraw.com in hand-drawn style, and rendered SVG + PNG. The mermaid and excalidraw runtimes are vendored in `lib/diagram-render/` and rendered by `bin/gstack-render.ts`, the same one-script render make-pdf uses — through your Aside browser when it is open, through gstack's bundled browser otherwise — so it is fully offline on every platform.
+`/diagram` writes Mermaid source first. When your host's browser tool can
+run the bundled offline page, it also exports SVG, PNG, and an editable
+Excalidraw scene. Unsupported exports are reported as unavailable.
 
 ---
+
 
 ## `/autoplan`
 
@@ -1010,7 +915,7 @@ Claude: Running CEO review... [4 scope decisions auto-resolved]
         Running eng review... [2 architecture decisions auto-resolved]
 
         TASTE DECISIONS (need your input):
-        1. Scope: Codex suggested adding search — borderline expansion. Add?
+        1. Scope: A reviewer suggested adding search — borderline expansion. Add?
         2. Design: Two approaches scored within 1 point. Which feels right?
 
         [Shows both options with context]
@@ -1047,27 +952,6 @@ Claude: 23 learnings for this project (14 high confidence, 6 medium, 3 low)
 
 ---
 
-## `/open-gstack-browser`
-
-This is my **co-presence mode** — for the fallback browser. With Aside open, you already watch the agent's tabs in Aside; this skill is how you watch it when the browser is gstack's own.
-
-Without Aside, `/browse` runs headless by default. You don't see what the agent sees. `/open-gstack-browser` changes that. It launches GStack Browser (rebranded Chromium with anti-bot stealth) controlled by Playwright, with the sidebar extension auto-loaded. You watch every action in real time.
-
-The sidebar chat is a Claude instance that controls the browser. It auto-routes to the right model: Sonnet for navigation and actions (click, goto, fill, screenshot), Opus for reading and analysis (summarize, find bugs, describe). One-click cookie import from the sidebar footer. The browser stays alive as long as the window is open... no idle timeout in headed mode. The menu bar says "GStack Browser" instead of "Chrome for Testing."
-
-The sidebar agent ships a layered prompt injection defense: a local 22MB ML classifier scans every page and tool output, a Haiku transcript check votes on the full conversation, a canary token catches session-exfil attempts, and a verdict combiner requires two classifiers to agree before blocking. A shield icon in the header shows status (green/amber/red). Details in [ARCHITECTURE.md](../ARCHITECTURE.md#prompt-injection-defense-sidebar-agent).
-
-```
-You:   /open-gstack-browser
-
-Claude: Launched GStack Browser with sidebar extension.
-        Anti-bot stealth active. All $B commands run in headed mode.
-        Type in the sidebar to direct the browser agent.
-        Sidebar model routing: sonnet for actions, opus for analysis.
-```
-
----
-
 ## `/setup-deploy`
 
 One-time deploy configuration. Run this before your first `/land-and-deploy`.
@@ -1087,70 +971,6 @@ Claude: Detected: Fly.io (fly.toml found)
 ```
 
 ---
-
-## `/codex`
-
-This is my **second opinion mode**.
-
-`/codex` brings OpenAI Codex CLI to review the same diff independently. It is available on every harness except Codex itself. External harnesses install it as `/gstack-codex`. Compare its findings with the native review to distinguish corroborated findings from issues only one reviewer caught.
-
-gstack-owned Codex calls default to `gpt-6-astra`, including resumed consult
-sessions. Set `GSTACK_CODEX_MODEL=<model>` to change the default, or name a
-model in your request to override it for that invocation. Generated commands
-pass the selection through `-c model=...`, overriding the CLI's configured model.
-Native review also sets `-c review_model=...` to that selection, overriding any
-separate review-model pin.
-
-On Codex hosts, the Claude outside-voice skill is `gstack-claude-code`. Its
-review, challenge, and consult calls preserve Claude's configured model.
-`GSTACK_CLAUDE_MODEL=<model>` supplies an explicit override, including resumed
-sessions; a model named in your request takes precedence. Harness routing is
-independent of model selection.
-
-### Three modes
-
-**Review** — run `codex review` against the current diff. Codex reads every changed file, classifies findings by severity (P1 critical, P2 high, P3 medium), and returns a PASS/FAIL verdict. Any P1 finding = FAIL. The review is fully independent — Codex doesn't see Claude's review.
-
-A severity-gate PASS is separate from [review freshness](#review-readiness-dashboard): unresolved recorded findings (`findings > findings_fixed`, with missing `findings_fixed` treated as zero) prevent CURRENT even when the gate passes. This does not change the severity gate. Fixes still require a new completed, unchanged review pass before the fixed tree can grade CURRENT.
-
-**Challenge** — adversarial mode. Codex actively tries to break your code. It looks for edge cases, race conditions, security holes, and assumptions that would fail under load. Uses maximum reasoning effort (`xhigh`). Think of it as a penetration test for your logic.
-
-**Consult** — open conversation with session continuity. Ask Codex anything about the codebase. Follow-up questions reuse the same session, so context carries over. Great for "am I thinking about this correctly?" moments.
-
-### Cross-model analysis
-
-When both `/review` (Claude) and `/codex` (OpenAI) have reviewed the same branch, you get a cross-model comparison: which findings overlap (high confidence), which are unique to Codex (different perspective), and which are unique to Claude. This is the "two doctors, same patient" approach to code review.
-
-```
-You:   /codex review
-
-Claude: Running independent Codex review...
-
-        CODEX REVIEW: PASS (3 findings)
-        [P2] Race condition in payment handler — concurrent charges
-             can double-debit without advisory lock
-        [P3] Missing null check on user.email before downcase
-        [P3] Token comparison not using constant-time compare
-
-        Cross-model analysis (vs /review):
-        OVERLAP: Race condition in payment handler (both caught it)
-        UNIQUE TO CODEX: Token comparison timing attack
-        UNIQUE TO CLAUDE: N+1 query in listing photos
-```
-
----
-
-## `/claude-code`
-
-Claude Code provides the outside reviewer when gstack runs in Codex. Other non-Claude harnesses also expose this skill for explicit requests; Claude Code itself omits it. External harnesses install it as `/gstack-claude-code`.
-
-**Review** supplies the branch diff for a read-only pass/fail review. **Challenge** asks Claude Code to find concrete failure cases in the same diff. **Consult** supports read-only repository exploration and resumes the session saved in `.context/claude-session-id`. Review and challenge receive context from the parent workflow and run without tools; consultation can read and search files.
-
-The Claude Code CLI must be installed and authenticated. Its existing model configuration and `GSTACK_CLAUDE_BIN` / `GSTACK_CLAUDE_BIN_ARGS` executable overrides are honored. Errors, timeouts, and invalid responses report missing outside coverage instead of a clean review. Automatic reviews start fresh; consult session continuity is explicit.
-
-Outside-review routing follows the harness, independently of the configured model. Generic second-opinion requests choose `/claude-code` on Codex and `/codex` elsewhere; explicit provider requests keep that provider. The existing `codex_reviews` setting controls the selected automatic reviewer in workflows that already use that setting. Existing opt-in and skip controls still apply in office hours, design, and spec workflows.
-
-`/claude` was renamed to `/claude-code` without an alias. Run `./setup --host <name>` to migrate managed installations, including installations sharing that checkout. Setup retains a working old installation when replacement generation or installation fails.
 
 ## Safety & Guardrails
 
@@ -1212,8 +1032,7 @@ Claude: Current version: 0.7.4
         Latest version: 0.8.2
 
         What's new:
-        - Browser skills now drive your Aside browser
-        - /codex multi-AI second opinion
+        - Browser skills use the browser supplied by your agent host
         - /qa always uses browser now
         - Safety skills: /careful, /freeze, /guard
         - Proactive skill suggestions

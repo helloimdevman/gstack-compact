@@ -6,35 +6,28 @@ import { isPaidTestFile } from '../test/helpers/paid-test-set';
 /** Existing short behavioral probes; intersect with changed-input selection. */
 export const PR_PROFILE_CASE_IDS = [
   'hermetic-canary', 'hermetic-sentinel',
-  'browse-basic', 'browse-snapshot', 'skillmd-setup-discovery',
-  'qa-bootstrap', 'review-sql-injection', 'review-coverage-audit',
+  'review-sql-injection', 'review-coverage-audit',
   'plan-ceo-review-benefits', 'plan-eng-coverage-audit', 'plan-review-report',
   'auq-format-gate', 'plan-design-review-no-ui-scope', 'office-hours-spec-review',
-  'tpa-present', 'tpa-absent-linux',
   'ship-local-workflow', 'ship-coverage-audit', 'docsync-spawned',
   'setup-deploy-workflow', 'context-restore-loads-latest', 'plan-tune-inspect',
-  'skillify-provenance-refusal', 'diagram-triplet', 'learnings-show',
+  'learnings-show',
   'gstack-upgrade-happy-path',
 ] as const;
 
 /** Audited ownership: unknown/direct-describe files remain broad coverage. */
 export const PR_PROFILE_FILES: Record<string, readonly string[]> = {
   'test/skill-e2e-hermetic-canary.test.ts': ['hermetic-canary', 'hermetic-sentinel'],
-  'test/skill-e2e-bws.test.ts': ['browse-basic', 'browse-snapshot', 'skillmd-setup-discovery'],
-  'test/skill-e2e-qa-workflow.test.ts': ['qa-bootstrap'],
   'test/skill-e2e-review.test.ts': ['review-sql-injection'],
   'test/skill-e2e-coverage-audit.test.ts': ['review-coverage-audit', 'plan-eng-coverage-audit'],
   'test/skill-e2e-plan.test.ts': ['plan-ceo-review-benefits', 'plan-review-report', 'office-hours-spec-review'],
   'test/skill-e2e-ask-user-question-format-compliance.test.ts': ['auq-format-gate'],
   'test/skill-e2e-design.test.ts': ['plan-design-review-no-ui-scope'],
-  'test/skill-e2e-third-party-actions.test.ts': ['tpa-present', 'tpa-absent-linux'],
   'test/skill-e2e-workflow.test.ts': ['ship-local-workflow', 'ship-coverage-audit', 'gstack-upgrade-happy-path'],
   'test/skill-e2e-docsync-spawned.test.ts': ['docsync-spawned'],
   'test/skill-e2e-deploy.test.ts': ['setup-deploy-workflow'],
   'test/skill-e2e-session-intelligence.test.ts': ['context-restore-loads-latest'],
   'test/skill-e2e-plan-tune.test.ts': ['plan-tune-inspect'],
-  'test/skill-e2e-skillify.test.ts': ['skillify-provenance-refusal'],
-  'test/skill-e2e-diagram.test.ts': ['diagram-triplet'],
   'test/skill-e2e-learnings.test.ts': ['learnings-show'],
 };
 

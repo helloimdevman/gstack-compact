@@ -3,7 +3,7 @@
  * test-free-shards — enumerate, shard, curate, and run the free test suite.
  *
  * Four jobs:
- *   1. Enumeration. Walk `browse/test/`, `test/`, `make-pdf/test/` and return
+ *   1. Enumeration. Walk `test/`, `make-pdf/test/` and return
  *      every `*.test.{ts,tsx,js,jsx,mjs,cjs}` that isn't a paid-eval test.
  *   2. Sharding. Duration-pack local and isolated CI runs. Legacy --shard
  *      selection retains stable hash assignment.
@@ -105,7 +105,6 @@ const ROOT = path.resolve(import.meta.dir, '..');
 // source of truth for free-suite roots: package.json's `test` script routes
 // through this runner rather than passing its own directory globs.
 export const TEST_ROOTS = [
-  'browse/test',
   'test',
   'make-pdf/test',
   'design/test',
@@ -113,7 +112,6 @@ export const TEST_ROOTS = [
   // written coverage that caught nothing. All were green on arrival.
   'ios-qa/daemon/test',
   'ios-qa/scripts',
-  'browser-skills',
 ] as const;
 const TEST_FILE_REGEX = /\.test\.(?:[cm]?[jt]s|tsx|jsx)$/;
 
@@ -146,18 +144,6 @@ const WINDOWS_FRAGILE_PATTERNS: Array<{ pattern: RegExp; reason: string }> = [
   //   - join(import.meta.dir, '..', 'bin', 'name')   — destructured (diff-scope)
   //   - path.join(ROOT, 'bin')                       — bare BIN constant (brain-sync)
   { pattern: /,\s*['"]bin['"]\s*[,)]|['"]\.?\/?bin\/[a-z][\w-]+['"]/, reason: 'spawns bin/ shebang script (Windows CreateProcess does not parse shebangs)' },
-  // Tests that launch a real Playwright browser. The windows-free-tests CI job
-  // runs a curated subset that intentionally does NOT install Chromium —
-  // browser bring-up on Windows is a separate concern (see PR #1238). Tests
-  // matching `await foo.launch(` need Chromium and fail with "Executable
-  // doesn't exist" on the runner.
-  { pattern: /await\s+\w+\.launch\(/, reason: 'launches Playwright browser (Chromium not installed in windows-free CI)' },
-  // Tests that spawn the browse server as a subprocess via `bun run server.ts`.
-  // The Bun → server.ts → Playwright path is the same one that doesn't work
-  // on Windows (PR #1238 windows-pty-bun-pty-fix). Tests typically set
-  // BROWSE_HEADLESS_SKIP=1 to skip the browser launch but still need a working
-  // server, which they don't get on Windows.
-  { pattern: /BROWSE_HEADLESS_SKIP|spawn\(\[['"]bun['"],\s*['"]run['"]/, reason: 'spawns the browse server subprocess (Bun-driven path is Windows-broken)' },
 ];
 
 // Explicit known-Windows-incompatible test files that don't fit a regex
@@ -165,10 +151,6 @@ const WINDOWS_FRAGILE_PATTERNS: Array<{ pattern: RegExp; reason: string }> = [
 // when possible; this list is for environment-/runtime-specific tests where
 // the failure mode is structural rather than detectable via source-file scan.
 export const KNOWN_WINDOWS_INCOMPATIBLE: Array<{ file: string; reason: string }> = [
-  {
-    file: 'test/setup-gbrain-fixture.test.ts',
-    reason: 'the fixture invokes real POSIX detector/verifier helpers through executable shebang wrappers',
-  },
   {
     file: 'test/hermetic-skills-seeding.test.ts',
     reason: 'seeds the POSIX PTY skill runtime, whose embedded shell paths require a POSIX temporary root',
@@ -185,18 +167,10 @@ export const KNOWN_WINDOWS_INCOMPATIBLE: Array<{ file: string; reason: string }>
     file: 'test/host-config.test.ts',
     reason: 'asserts "claude" binary on PATH (only true when running inside Claude Code, not on bare CI runner)',
   },
-  {
-    file: 'browse/test/findport.test.ts',
-    reason: 'asserts Bun.serve.stop() is fire-and-forget — Bun behavior differs on Windows for this polyfill',
-  },
   // First full run of the expanded lane (v1.66, 13 → ~258 files) surfaced
   // seven POSIX-bound files the content patterns cannot see (their
   // POSIX-ness is what they TEST, or arrives via a variable). Receipts:
   // PR #2593 windows-free-tests run 31918591602.
-  {
-    file: 'test/codex-under-codex-detection.test.ts',
-    reason: 'drives the rendered preflight bash under a hardcoded POSIX PATH (/usr/bin:/bin) — bash is unreachable through that PATH on Windows, so every case sees empty output (v1.67 windows lane run 95234224148)',
-  },
   {
     file: 'test/regression-pr1169-build-app-sed.test.ts',
     reason: 'tests sed escape sequences in build-app.sh — sed/bash are the subject under test',
@@ -210,16 +184,8 @@ export const KNOWN_WINDOWS_INCOMPATIBLE: Array<{ file: string; reason: string }>
     reason: 'runs a bash migration script + jq against a scaffolded git state — POSIX toolchain paths break under cmd spawn',
   },
   {
-    file: 'test/gstack-decision-semantic.test.ts',
-    reason: 'installs a fake gbrain SHEBANG SHIM on PATH; Windows spawn cannot exec shebang scripts',
-  },
-  {
     file: 'test/question-log-hook.test.ts',
     reason: 'spawns the PostToolUse hook script (bash shebang) directly; Windows spawn cannot exec it',
-  },
-  {
-    file: 'browse/test/browser-skills-e2e.test.ts',
-    reason: 'asserts forward-slash tier paths (<repo>/browser-skills/) that resolve with backslashes on Windows',
   },
   {
     file: 'design/test/variants-retry-after.test.ts',
@@ -230,18 +196,10 @@ export const KNOWN_WINDOWS_INCOMPATIBLE: Array<{ file: string; reason: string }>
     file: 'test/skill-census.test.ts',
     reason: 'census walk throws at module load on Windows (skill-census.ts:63) — the skills-tree symlink layout needs Developer Mode that CI runners lack',
   },
-  {
-    file: 'browse/test/browser-manager-unit.test.ts',
-    reason: 'wedges the shard to its wall deadline on windows-latest (in-flight at kill); needs a Windows repro to diagnose — macOS + Linux lanes cover the file',
-  },
   // Round-3 census (PR #2593 run 31919871680): the round-2 wedge had been
   // TRUNCATING its shard, so these seven only surfaced once shard 2 completed.
   // All the same POSIX-environment classes: PID/cmdline identity probing,
   // bash scripts as the subject under test, env-scrubbed child spawns.
-  {
-    file: 'browse/test/server-embedder-terminal-port.test.ts',
-    reason: 'identity-based terminal-agent kill probes PID/cmdline with POSIX semantics; teardown asserts fail on windows-latest',
-  },
   {
     file: 'design/test/daemon-discovery.test.ts',
     reason: 'verifyIdentity matches a spawned daemon via /proc-style cmdline probing — POSIX identity semantics',
@@ -255,55 +213,11 @@ export const KNOWN_WINDOWS_INCOMPATIBLE: Array<{ file: string; reason: string }>
     reason: 'spawns the eval:list CLI via bun with a constructed env — bun resolution fails under Windows spawn',
   },
   {
-    file: 'test/memory-cache-injection.test.ts',
-    reason: 'exercises hook/deny-enforcement shell scripts — POSIX toolchain is the subject under test',
-  },
-  {
-    file: 'test/migrations-v1.65.0.0.test.ts',
-    reason: 'bash migration script (bunx re-fetch, .done markers) is the subject under test',
-  },
-  {
     file: 'test/question-preference-hook.test.ts',
     reason: 'spawns the PreToolUse preference hook (shebang script) directly; Windows spawn cannot exec it',
   },
   // Round-4 census (PR #2593 run 31920052810): unhandled errors with no
   // (fail) lines — attributed statically (the lane had no log artifact yet).
-  {
-    file: 'browse/test/browser-skill-commands.test.ts',
-    reason: 'spawnSkill spawns bun with a constructed env — bun resolution fails under Windows spawn (unhandled, no (fail) line)',
-  },
-  {
-    file: 'browse/test/security-audit-r2.test.ts',
-    reason: 'symlink-attack fixtures (evil-link) need Developer Mode CI runners lack; expect(toThrow) fires unhandled on Windows',
-  },
-  // CSO comprehensive execution is qualified only for Linux containers behind
-  // the POSIX watchdog and Unix-domain registry broker. Keep the portable
-  // static/parser contracts in the Windows lane while leaving these exact
-  // containment suites to the Linux and macOS gates.
-  {
-    file: 'test/cso-preparation-adversarial.test.ts',
-    reason: 'exercises POSIX prepared-tree and archive-cache containment for qualified Linux Docker execution, which Windows does not admit',
-  },
-  {
-    file: 'test/cso-preparation-container.test.ts',
-    reason: 'asserts POSIX permission and symlink semantics for inert exports consumed by qualified Linux Docker execution',
-  },
-  {
-    file: 'test/cso-preparation-executor.test.ts',
-    reason: 'executes the Linux Docker acquisition path and its Unix-domain registry broker; comprehensive execution is unavailable on Windows',
-  },
-  {
-    file: 'test/cso-verification-cleanup.test.ts',
-    reason: 'spawns the POSIX detached watchdog used by contained repair verification, which Windows intentionally leaves unavailable',
-  },
-  {
-    file: 'test/cso-witness.test.ts',
-    reason: 'tests the contained repair witness with POSIX private-directory and compiled-helper assumptions; comprehensive execution is unavailable on Windows',
-  },
-  {
-    file: 'test/cso-scanner-cli.test.ts',
-    reason: 'drives the prebuilt POSIX CSO launcher with /usr/bin/git and a POSIX-only PATH; native Windows launcher behavior is covered by the dedicated cso-windows-launcher gate',
-  },
 ];
 
 // Force-include overrides: files a WINDOWS_FRAGILE_PATTERNS regex excludes for
@@ -311,28 +225,6 @@ export const KNOWN_WINDOWS_INCOMPATIBLE: Array<{ file: string; reason: string }>
 // pattern hit is a false positive — the point of these files is Windows
 // coverage, so auto-excluding them defeats the regression tests they carry.
 const KNOWN_WINDOWS_SAFE: Array<{ file: string; reason: string }> = [
-  {
-    file: 'test/claude-code-windows-job.test.ts',
-    reason: 'invokes Bun directly; verifies Windows job containment at the standalone CLI boundary',
-  },
-  {
-    file: 'test/claude-code-runner.test.ts',
-    // The bin/ path is launched through process.execPath (Bun), never as a
-    // shebang executable. Keep taskkill tree supervision in the Windows lane.
-    reason: 'invokes the runner via Bun argv; fake CLI and timeout descendant assertions cover native Windows taskkill',
-  },
-  {
-    file: 'test/setup-gbrain-remote-caller.test.ts',
-    // bin is an expected PATH component; the adapter injects the SDK boundary
-    // and never launches a shebang. Keep the native delimiter cases in CI.
-    reason: 'replays the registered SDK callback with fixture-only bin paths; covers native Windows PATH composition',
-  },
-  {
-    file: 'test/cso-windows-build-contract.test.ts',
-    // bin is a temporary staging directory. The adapter injects spawnSync;
-    // real PowerShell/native execution remains in cso-windows-launcher.
-    reason: 'replays the native build callbacks with an injected subprocess; bin paths are staging fixtures, not shebang launches',
-  },
   {
     file: 'test/setup-windows-rerun-refresh.test.ts',
     // Trips the "spawns bin/ shebang script" pattern via path.join(..., 'bin',
@@ -352,31 +244,6 @@ const KNOWN_WINDOWS_SAFE: Array<{ file: string; reason: string }> = [
     // ONLY reproduces on the copy install shape windows-latest exercises.
     // The symlink-shape describe block self-skips on win32.
     reason: 'bin/ hit is a bash-spawned script path; #2563 real-dir uninstall coverage must run on windows-latest',
-  },
-  {
-    file: 'browse/test/file-permissions.test.ts',
-    // Trips the POSIX-mode-bitmask pattern, but every `mode & 0o777` assertion
-    // is platform-guarded: win32-only tests return early, POSIX-only tests
-    // guard the bitmask behind `process.platform !== 'win32'`, and the
-    // symlink-skip regression test both wraps symlinkSync in try/catch
-    // (runners without Developer Mode can't create symlinks) and guards its
-    // bitmask — on win32 it asserts behavior (warns, skips, doesn't throw,
-    // target stays usable), never fake Windows mode bits (dirs stat 0o777
-    // there, so a 0o755 expectation fails on runner semantics, not our code).
-    // This file carries the win32-only icacls-by-SID regression tests, which
-    // can ONLY execute on windows-latest — excluding it here means the
-    // machine-account ACL lockout regression is never exercised on the one
-    // platform it bricks.
-    reason: 'every mode-bitmask assertion is guarded off win32 (behavior asserted instead); win32-only ACL regression tests must run on windows-latest',
-  },
-  {
-    file: 'browse/test/terminal-agent-owner-watchdog.test.ts',
-    // Trips the spawn(['bun','run',...]) pattern, whose reason is the
-    // Playwright-bound browse server. This test spawns terminal-agent.ts,
-    // which imports only fs/path/crypto + local helpers (no Playwright, no
-    // PTY at module scope) and boots under Bun on Windows — the owner-PID
-    // orphan leak it pins was reported on Windows (#2019).
-    reason: 'spawns terminal-agent (no Playwright), not the browse server; owner-orphan leak is a Windows defect',
   },
 ];
 
@@ -410,7 +277,7 @@ export function wallTimeoutForShard(fileCount: number, baseMs = DEFAULT_WALL_TIM
 /**
  * Wall for a duration-packed shard. The count heuristic above assumes count
  * approximates cost; LPT packing breaks that BY DESIGN (a shard may hold six
- * slow Playwright files), so packed shards get max(base, predicted x 3) —
+ * slow files), so packed shards get max(base, predicted x 3) —
  * generous against seed drift, still bounded.
  */
 export function wallTimeoutForPackedShard(predictedMs: number, baseMs = DEFAULT_WALL_TIMEOUT_MS, fileCount = 0): number {
@@ -428,14 +295,14 @@ export function wallTimeoutForPackedShard(predictedMs: number, baseMs = DEFAULT_
  * processes can overlap subprocess and I/O waits without a fixed CPU reserve.
  * Prefer availableParallelism() to honor CPU affinity, falling back to cpus()
  * on runtimes without it. Keep the existing cap: beyond ~6 concurrent bun
- * processes, playwright-heavy shards contended on browser launches in the
+ * processes, spawn-heavy shards contended on child launches in the
  * original M-series measurement. More shards are not a guaranteed speedup;
  * compare complete-suite runs before raising the default further.
  *
  * GSTACK_FREE_JOBS overrides the computed count (the free runner's analogue
  * of the paid runner's EVALS_JOBS). Exists for syscall-supervised sandboxes:
  * on Vercel sandboxes, PID 1 (sandbox-init) installs a seccomp filter whose
- * user-space supervisor saturates under ~6 concurrent bun+playwright shards
+ * user-space supervisor saturates under ~6 concurrent bun test shards
  * and starts returning EACCES from plain file syscalls (measured: 200/200
  * `git init` probes in fresh mktemp dirs fail with
  * "Cannot access work tree: Permission denied" while the suite runs, 0/200
@@ -466,12 +333,7 @@ export function fullSuiteJobs(): number {
  * one-invocation --parallel strategy was abandoned, and as the exclusion list
  * should anyone re-attempt it on a newer Bun.
  */
-export const WORKER_HOSTILE: Record<string, string> = {
-  'browse/test/security-live-playwright.test.ts':
-    'Bun 1.3.13 segfaults running this file in a --parallel worker ("panic: '
-    + 'Segmentation fault ... a bug in Bun"), and the crashed-worker retry then '
-    + 'wedges the whole invocation past the wall clock. Passes serially.',
-};
+export const WORKER_HOSTILE: Record<string, string> = {};
 
 /**
  * TREE-SERIAL files: run in ONE serial shard AFTER the parallel shards.
@@ -610,9 +472,7 @@ export function assignFilesToShards(files: string[], shardCount: number): string
 }
 
 // ─── Duration-aware packing (local full suite and explicit CI plans) ───────
-// Hash sharding balances file COUNTS (~1.15x spread) but not cost: the 15
-// Playwright-launching files land 4/3/4/1/2/1 across 6 shards, giving a
-// measured 28s–97s shard spread and ~40s of idle tail on every run. LPT
+// Hash sharding balances file COUNTS (~1.15x spread) but not cost: costly files previously landed unevenly, giving a wide shard spread and ~40s of idle tail on every run. LPT
 // packing over recorded per-file durations reclaims most of it. The `--shard`
 // legacy path is deliberately untouched — its contract is stable indices
 // via assignFilesToShards/stableHash (empty shards no-op; see above).
@@ -784,6 +644,7 @@ export const QUICK_CORE = [
   'test/strict-output.test.ts', 'test/gen-skill-docs.test.ts',
   'test/skill-check-driver.test.ts', 'test/ceo-native-ledger-replay.test.ts',
   'test/skill-ceo-section-ordering.test.ts',
+  'test/frontier-opt-gates.test.ts',
 ];
 
 export function selectQuickFreeFiles(files: string[], durations: Record<string, number>): string[] {
@@ -1409,22 +1270,6 @@ export async function runFreeShard(
   env.TMPDIR = childTmp;
   env.TEMP = childTmp;
   env.TMP = childTmp;
-  // CLI renders otherwise attach to the repo's shared .gstack/browse.json,
-  // even with distinct Chromium profiles. Concurrent shards and surviving
-  // daemons from prior runs can then replace or remove each other's state.
-  // Override inherited state too; the shard owns this directory's cleanup.
-  env.BROWSE_STATE_FILE = path.join(stateDir, '.gstack', 'browse.json');
-  // Per-shard Chromium profile (same isolation idea as TMPDIR): nine test
-  // files launch in-process persistent contexts or daemons that default to
-  // the SHARED ~/.gstack/chromium-profile, and two concurrent shards on one
-  // profile dir kill each other's browser — observed live on CI once
-  // duration packing recomposed shards (handoff's launchPersistentContext
-  // died "Target page, context or browser has been closed" while a sibling
-  // shard's daemon logged "Chromium process crashed"). Hash sharding had
-  // masked the collision by chance placement. Within a shard, files run
-  // serially, so sharing the per-shard profile is safe; config tests that
-  // assert resolution order save/restore this env around their assertions.
-  env.CHROMIUM_PROFILE = path.join(stateDir, 'chromium-profile');
 
   const startedAt = Date.now();
   const child = spawn(command, args, {
@@ -1822,7 +1667,7 @@ async function main(): Promise<number> {
   // paid runner's proven model. One `bun test --parallel` invocation was
   // tried first (decision V3) and abandoned after three distinct
   // worker-runtime pathologies in a single day on Bun 1.3.13: a segfault
-  // whose crashed-worker retry wedged the run (security-live-playwright), a
+  // whose crashed-worker retry wedged the run, a
   // gated file's still-running file-level hooks stalling a worker
   // (compare-board), and spawn-heavy files hanging workers under load
   // (session-runner-timeout). Plain child processes have none of these:

@@ -2,7 +2,7 @@
  * AUTO_DECIDE opt-in preserved under Conductor flags (periodic-tier, paid, real-PTY).
  *
  * Regression test for v1.21+ fix: the new "Tool resolution" preamble
- * (scripts/resolvers/preamble/generate-ask-user-format.ts) tells the model
+ * (the retired AskUserQuestion Format preamble) tells the model
  * to prefer mcp__*__AskUserQuestion variants and fall back to plan-file
  * decisions when neither is callable. This must NOT break the legitimate
  * `/plan-tune` AUTO_DECIDE path: when the user has explicitly opted into

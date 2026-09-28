@@ -69,9 +69,8 @@ export const ROOT_SKILL_KEY = 'gstack';
 /**
  * The bill the ratchet grades: repo tree minus test-fixture skill dirs, with
  * POSIX-normalized names, the root skill pinned to ROOT_SKILL_KEY, symlink
- * aliases deduped by realpath (connect-chrome -> open-gstack-browser; on
- * Windows checkouts the symlink materializes as a plain file and the alias
- * dir vanishes, so budgeting it would make the stale-ceiling test
+ * aliases deduped by realpath (on Windows a symlink can materialize as a
+ * plain file, so budgeting the alias would make the stale-ceiling test
  * platform-dependent — same dedupe the skill census uses), and ALL totals
  * rebuilt from the filtered list (a partially-updated totals object would
  * hand fixture-polluted numbers to any future consumer of the

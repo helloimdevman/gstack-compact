@@ -227,14 +227,6 @@ export const QUESTIONS = {
     options: ['accept', 'reject'],
     description: "Premise check — agree or disagree?",
   },
-  'office-hours-cross-model-run': {
-    id: 'office-hours-cross-model-run',
-    skill: 'office-hours',
-    category: 'approval',
-    door_type: 'two-way',
-    options: ['accept', 'skip'],
-    description: "Want a second-opinion cross-model review of your brainstorm?",
-  },
   'office-hours-landscape-privacy-gate': {
     id: 'office-hours-landscape-privacy-gate',
     skill: 'office-hours',
@@ -282,22 +274,6 @@ export const QUESTIONS = {
     signal_key: 'scope-appetite',
     description: "Scope expansion proposal — add to plan, defer to TODOs, or skip?",
   },
-  'plan-ceo-review-premise-revise': {
-    id: 'plan-ceo-review-premise-revise',
-    skill: 'plan-ceo-review',
-    category: 'approval',
-    door_type: 'one-way',
-    options: ['revise', 'hold'],
-    description: "Cross-model challenged an agreed premise — revise or keep?",
-  },
-  'plan-ceo-review-outside-voice': {
-    id: 'plan-ceo-review-outside-voice',
-    skill: 'plan-ceo-review',
-    category: 'approval',
-    door_type: 'two-way',
-    options: ['accept', 'skip'],
-    description: "Get an outside-voice second opinion on the plan?",
-  },
   'plan-ceo-review-promote-to-docs': {
     id: 'plan-ceo-review-promote-to-docs',
     skill: 'plan-ceo-review',
@@ -336,14 +312,6 @@ export const QUESTIONS = {
     options: ['add-test', 'defer', 'skip'],
     signal_key: 'test-discipline',
     description: "Test gap identified — add now, defer, or skip?",
-  },
-  'plan-eng-review-outside-voice': {
-    id: 'plan-eng-review-outside-voice',
-    skill: 'plan-eng-review',
-    category: 'approval',
-    door_type: 'two-way',
-    options: ['accept', 'skip'],
-    description: "Get an outside-voice second opinion on the plan?",
   },
   'plan-eng-review-todo-add': {
     id: 'plan-eng-review-todo-add',
@@ -469,24 +437,6 @@ export const QUESTIONS = {
   },
 
   // -----------------------------------------------------------------------
-  // /cso — security audit
-  // -----------------------------------------------------------------------
-  'cso-global-scan-approval': {
-    id: 'cso-global-scan-approval',
-    skill: 'cso',
-    category: 'approval',
-    door_type: 'one-way',
-    options: ['accept', 'deny'],
-    description: "Run a global security scan? (Scans files outside this branch.)",
-  },
-  'cso-finding-fix': {
-    id: 'cso-finding-fix',
-    skill: 'cso',
-    category: 'approval',
-    door_type: 'one-way',
-    options: ['fix-now', 'defer', 'accept-risk'],
-    description: "Security finding — fix, defer to TODOs, or accept the risk?",
-  },
 
   // -----------------------------------------------------------------------
   // /gstack-upgrade — version upgrade

@@ -82,4 +82,4 @@ For each page visited during a QA session:
 5. **States** — Check empty state, loading state, error state, full/overflow state.
 6. **Console** — Print `CONSOLE_ERRORS=` after interactions. Any new JS errors or failed requests?
 7. **Responsiveness** — If relevant, check mobile and tablet viewports.
-8. **Auth boundaries** — Never sign the user out or switch accounts yourself. If the signed-out or other-role view matters, ask the user to sign out / switch in Aside and re-run the page scripts.
+8. **Auth boundaries** — Never sign the user out or switch accounts yourself. If the signed-out or other-role view matters, ask the user to switch in their browser and repeat the check.

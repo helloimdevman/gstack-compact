@@ -98,7 +98,7 @@ do_check() {
       // question_ids of the form <skill>-split-<option-slug>. These are
       // NEVER AUTO_DECIDE-eligible regardless of stored preferences — the
       // whole point of splitting is restoring user sovereignty over the
-      // option set. See scripts/resolvers/preamble/generate-ask-user-format.ts
+      // option set. See the retired AskUserQuestion Format preamble
       // \"Handling 5+ options — split, never drop\" for the surrounding
       // mechanism that generates these ids.
       if (/-split-/.test(qid)) {

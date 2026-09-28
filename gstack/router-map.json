@@ -1,0 +1,242 @@
+{
+  "version": 2,
+  "core": [
+    "plan",
+    "build",
+    "review",
+    "verify",
+    "ship",
+    "investigate",
+    "design",
+    "context",
+    "gstack",
+    "browse",
+    "sprint"
+  ],
+  "modes": {
+    "plan": [
+      "frame",
+      "review-product",
+      "review-design",
+      "review-dx",
+      "review-engineering",
+      "review-all",
+      "spec"
+    ],
+    "review": [
+      "report",
+      "fix",
+      "shared-libs"
+    ],
+    "verify": [
+      "browser-fix",
+      "browser-report",
+      "visual-fix",
+      "developer-flow",
+      "health"
+    ],
+    "ship": [
+      "prepare",
+      "publish"
+    ],
+    "design": [
+      "system",
+      "variants",
+      "html"
+    ],
+    "context": [
+      "save",
+      "restore",
+      "learn"
+    ]
+  },
+  "jobs": {
+    "product-framing": "/plan",
+    "ceo-scope-challenge": "/plan",
+    "engineering-plan": "/plan",
+    "design-critique": "/plan",
+    "code-review": "/review",
+    "browser-qa": "/verify",
+    "ship": "/ship",
+    "investigate": "/investigate",
+    "retro": "/retro",
+    "sprint": "/sprint"
+  },
+  "commands": {
+    "/autoplan": {
+      "skill": "plan",
+      "mode": "review-all"
+    },
+    "/benchmark": {
+      "skill": "benchmark"
+    },
+    "/browse": {
+      "skill": "browse"
+    },
+    "/build": {
+      "skill": "build"
+    },
+    "/canary": {
+      "skill": "canary"
+    },
+    "/careful": {
+      "skill": "careful"
+    },
+    "/context": {
+      "skill": "context"
+    },
+    "/context-restore": {
+      "skill": "context",
+      "mode": "restore"
+    },
+    "/context-save": {
+      "skill": "context",
+      "mode": "save"
+    },
+    "/design": {
+      "skill": "design"
+    },
+    "/design-consultation": {
+      "skill": "design",
+      "mode": "system"
+    },
+    "/design-html": {
+      "skill": "design",
+      "mode": "html"
+    },
+    "/design-review": {
+      "skill": "verify",
+      "mode": "visual-fix"
+    },
+    "/design-shotgun": {
+      "skill": "design",
+      "mode": "variants"
+    },
+    "/deslop-shared-libs": {
+      "skill": "review",
+      "mode": "shared-libs"
+    },
+    "/devex-review": {
+      "skill": "verify",
+      "mode": "developer-flow"
+    },
+    "/diagram": {
+      "skill": "diagram"
+    },
+    "/document-generate": {
+      "skill": "document-generate"
+    },
+    "/document-release": {
+      "skill": "document-release"
+    },
+    "/freeze": {
+      "skill": "freeze"
+    },
+    "/gstack": {
+      "skill": "gstack"
+    },
+    "/gstack-upgrade": {
+      "skill": "gstack-upgrade"
+    },
+    "/guard": {
+      "skill": "guard"
+    },
+    "/health": {
+      "skill": "verify",
+      "mode": "health"
+    },
+    "/investigate": {
+      "skill": "investigate"
+    },
+    "/ios-clean": {
+      "skill": "ios-clean"
+    },
+    "/ios-design-review": {
+      "skill": "ios-design-review"
+    },
+    "/ios-fix": {
+      "skill": "ios-fix"
+    },
+    "/ios-qa": {
+      "skill": "ios-qa"
+    },
+    "/ios-sync": {
+      "skill": "ios-sync"
+    },
+    "/land-and-deploy": {
+      "skill": "land-and-deploy"
+    },
+    "/landing-report": {
+      "skill": "landing-report"
+    },
+    "/learn": {
+      "skill": "context",
+      "mode": "learn"
+    },
+    "/make-pdf": {
+      "skill": "make-pdf"
+    },
+    "/office-hours": {
+      "skill": "plan",
+      "mode": "frame"
+    },
+    "/plan": {
+      "skill": "plan"
+    },
+    "/plan-ceo-review": {
+      "skill": "plan",
+      "mode": "review-product"
+    },
+    "/plan-design-review": {
+      "skill": "plan",
+      "mode": "review-design"
+    },
+    "/plan-devex-review": {
+      "skill": "plan",
+      "mode": "review-dx"
+    },
+    "/plan-eng-review": {
+      "skill": "plan",
+      "mode": "review-engineering"
+    },
+    "/plan-tune": {
+      "skill": "plan-tune"
+    },
+    "/qa": {
+      "skill": "verify",
+      "mode": "browser-fix"
+    },
+    "/qa-only": {
+      "skill": "verify",
+      "mode": "browser-report"
+    },
+    "/retro": {
+      "skill": "retro"
+    },
+    "/review": {
+      "skill": "review"
+    },
+    "/scrape": {
+      "skill": "scrape"
+    },
+    "/setup-deploy": {
+      "skill": "setup-deploy"
+    },
+    "/ship": {
+      "skill": "ship"
+    },
+    "/spec": {
+      "skill": "plan",
+      "mode": "spec"
+    },
+    "/sprint": {
+      "skill": "sprint"
+    },
+    "/unfreeze": {
+      "skill": "unfreeze"
+    },
+    "/verify": {
+      "skill": "verify"
+    }
+  }
+}

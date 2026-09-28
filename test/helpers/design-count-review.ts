@@ -1,6 +1,5 @@
 import { designFirstReviewAUQ, designReviewSetupAUQ } from './claude-pty-runner';
 import type { AskUserQuestionFingerprint } from './claude-pty-runner';
-import { pickDesignCountOutsideVoices } from './design-count-outside';
 
 /** Choosing reviewer participation is setup, even when numbered or asked late. */
 export function isDesignCountSetup(fp: AskUserQuestionFingerprint): boolean {
@@ -925,12 +924,10 @@ export function isDesignCompletionHandoff(fp: AskUserQuestionFingerprint): boole
   return q.options.some(option => call.answers?.[q.question] === option.label);
 }
 
-/** Preserve the native-only outside opt-out, then finish this review at its actual handoff. */
+/** Finish this review at its actual handoff. */
 export function pickDesignCountQuestion(
   routing: AskUserQuestionFingerprint,
   active: AskUserQuestionFingerprint,
 ): number | null {
-  const outside = pickDesignCountOutsideVoices(routing, active);
-  if (outside !== null) return outside;
   return active.nativeCall?.answered ? null : designHandoff(active)?.manualIndex ?? null;
 }

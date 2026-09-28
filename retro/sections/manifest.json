@@ -5,6 +5,12 @@
   "note": "PASSIVE registry (v2 plan T9 / CM2). id/file/title/trigger text ONLY. The skeleton's decision-tree prose decides WHEN to read. No machine predicate here.",
   "sections": [
     {
+      "id": "instructions",
+      "file": "instructions.md",
+      "title": "Retro collection, compare mode, and report inputs",
+      "trigger": "collecting the retro window, metrics, and compare-mode report inputs (before the narrative template)"
+    },
+    {
       "id": "report-format",
       "file": "report-format.md",
       "title": "Narrative report structure — tweetable summary, section-by-section output template, Test Health, Plan Completion, personal deep-dive, team breakdown, wins/improvements/habits (Step 14)",

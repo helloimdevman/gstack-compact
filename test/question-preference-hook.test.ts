@@ -694,16 +694,13 @@ describe('Conductor spawned deny (#2733)', () => {
     expect(reason).toContain('spawned driver: GSTACK_SESSION_KIND');
   });
 
-  test('cross-surface destructive-policy drift guard: every spawned surface carries the canonical phrase', () => {
-    // The conservative-continue destructive policy lives on four surfaces
-    // (shared hook constant, AUQ resolver rule, skill-start spawned block,
-    // ship dispatch prompt). Phrasings vary; the canonical core must not.
+  test('cross-surface destructive-policy drift guard: spawned runtime surfaces carry the canonical phrase', () => {
+    // Runtime hooks and bootstrap still own this rule after the unused
+    // essay resolver and ship dispatch prompt have retired.
     const surfaces = [
       path.join(ROOT, 'hosts', 'claude', 'hooks', 'spawned-directive.ts'),
       path.join(ROOT, 'hosts', 'claude', 'hooks', 'auq-error-fallback-hook.ts'),
-      path.join(ROOT, 'scripts', 'resolvers', 'preamble', 'generate-ask-user-format.ts'),
       path.join(ROOT, 'bin', 'gstack-skill-start'),
-      path.join(ROOT, 'ship', 'sections', 'pr-body.md.tmpl'),
     ];
     for (const f of surfaces) {
       const src = fs.readFileSync(f, 'utf-8');

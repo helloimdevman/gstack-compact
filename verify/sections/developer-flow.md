@@ -1,0 +1,5 @@
+<!-- AUTO-GENERATED from developer-flow.md.tmpl — do not edit directly -->
+<!-- Regenerate: bun run gen:skill-docs -->
+# Developer flow verification
+
+Start from a clean, isolated environment when possible. Follow the documented install or first-use path as the target developer would, measuring time to first working result. Record prerequisites, exact commands, actual output, misleading errors, and a recovery attempt. Test the changed CLI or API contract, including one invalid input. Keep runtime setup effects in the fixture. If the required service or credential is missing, mark that part `unavailable`; do not infer success from docs alone.

@@ -29,7 +29,7 @@ import * as os from 'os';
 import * as path from 'path';
 import { runBin } from './helpers/run-bin';
 import { selectTests, E2E_TOUCHFILES, LLM_JUDGE_TOUCHFILES, GLOBAL_TOUCHFILES } from './helpers/touchfiles';
-import { manualReviewFixture } from './helpers/manual-judge-review-fixture';
+import { alignedManualReviewFixture, manualReviewFixture } from './helpers/manual-judge-review-fixture';
 import { renderDashboard } from '../scripts/eval-watch';
 
 const ROOT = path.resolve(import.meta.dir, '..');
@@ -37,7 +37,7 @@ const SCRIPT = (name: string) => path.join(ROOT, 'scripts', name);
 const SLUG = 'eval-cli-fixture';
 
 test('eval:watch distinguishes unscored manual acceptance from malformed claims', () => {
-  const manual = manualReviewFixture();
+  const manual = alignedManualReviewFixture();
   const output = renderDashboard(null, { tests: [manual, { ...manual, passed: true }], total_cost_usd: 0 });
   expect(output).toContain('MANUAL/unscored');
   expect(output).toContain(manual.manual_review!.approval.approval_url);
@@ -268,7 +268,7 @@ describe('eval:list CLI (scripts/eval-list.ts)', () => {
 
 describe('eval:compare CLI (scripts/eval-compare.ts)', () => {
   test('shows a manual transition without calling it a scored regression', () => {
-    const manual = manualReviewFixture();
+    const manual = alignedManualReviewFixture();
     const prior = writeRun(evalDir, { tier: 'llm-judge', timestamp: '2026-01-01T01:00:00Z',
       tests: [{ name: manual.name, passed: true }] });
     const after = writeRun(evalDir, { tier: 'llm-judge', timestamp: '2026-01-02T01:00:00Z',
@@ -365,7 +365,7 @@ describe('eval:compare CLI (scripts/eval-compare.ts)', () => {
 
 describe('eval:summary CLI (scripts/eval-summary.ts)', () => {
   test('reports manual provenance without inventing a scored flake', () => {
-    const manual = manualReviewFixture();
+    const manual = alignedManualReviewFixture();
     writeRun(evalDir, { tier: 'llm-judge', timestamp: '2026-01-01T01:00:00Z',
       tests: [{ name: manual.name, passed: true }] });
     const accepted = writeRun(evalDir, { tier: 'llm-judge', timestamp: '2026-01-02T01:00:00Z',

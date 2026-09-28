@@ -1,0 +1,31 @@
+---
+name: context
+version: 1.0.0
+description: |
+  Save working state, restore it against the current checkout, or manage
+  project learnings. Select one requested mode. (gstack)
+preamble-tier: 2
+allowed-tools:
+  - Bash
+  - Read
+  - Glob
+  - Grep
+  - Write
+  - Edit
+triggers:
+  - save context
+  - restore context
+  - show learnings
+---
+
+{{PREAMBLE}}
+
+# /context
+
+Input: mode `save | restore | learn`, optional task ID or snapshot path, and the user's scope. Select the mode from the request when omitted. Use the installed `gstack-paths` and `gstack-slug` state roots or the user's path. Saved context stays local. A saved approval or passing check is history, not current authority or proof.
+
+{{SECTION_INDEX:context}}
+
+{{SECTION:save}}
+{{SECTION:restore}}
+{{SECTION:learn}}

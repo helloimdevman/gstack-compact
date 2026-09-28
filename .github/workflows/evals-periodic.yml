@@ -176,7 +176,6 @@ jobs:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
-          PLAYWRIGHT_BROWSERS_PATH: /opt/playwright-browsers
           EVALS_JOBS: "2"
           EVALS_CONCURRENCY: "2"
           GSTACK_EVAL_DIR: /tmp/paid-slice-results
@@ -258,7 +257,6 @@ jobs:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
-          PLAYWRIGHT_BROWSERS_PATH: /opt/playwright-browsers
           EVALS_JOBS: "1"
           EVALS_CONCURRENCY: "2"
           GSTACK_EVAL_DIR: /tmp/gate-census-results

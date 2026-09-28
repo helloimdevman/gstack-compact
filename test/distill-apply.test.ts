@@ -10,7 +10,7 @@
  *                     small=0.05, medium=0.10, large=0.15, clamped to [0,1].
  * Plus:
  *   - --list shows proposals with kind, confidence, rationale, quotes.
- *   - Applied proposals get applied_at + gbrain_published flag.
+ *   - Applied proposals get an applied_at timestamp.
  *   - Bad --proposal index errors with non-zero exit.
  */
 
@@ -128,7 +128,7 @@ describe('memory-nugget apply', () => {
         source_quotes: ['always explain the tradeoffs'],
       },
     ]);
-    const r = run(['--proposal', '0', '--gbrain-published', 'true']);
+    const r = run(['--proposal', '0']);
     expect(r.status).toBe(0);
     expect(r.stdout).toContain('APPLIED: memory-nugget');
 
@@ -137,7 +137,6 @@ describe('memory-nugget apply', () => {
     expect(mem.nuggets.length).toBe(1);
     expect(mem.nuggets[0].nugget).toContain('verbose explanations');
     expect(mem.nuggets[0].applies_to_signal_keys).toEqual(['detail-preference']);
-    expect(mem.nuggets[0].gbrain_published).toBe(true);
     expect(mem.nuggets[0].source_quotes).toEqual(['always explain the tradeoffs']);
   });
 
@@ -259,7 +258,7 @@ describe('declared-nudge apply', () => {
 // ----------------------------------------------------------------------
 
 describe('proposal marked applied', () => {
-  test('applied_at + gbrain_published written back to proposals.json', () => {
+  test('applied_at written back to proposals.json', () => {
     writeProposals([
       {
         kind: 'memory-nugget',
@@ -268,10 +267,9 @@ describe('proposal marked applied', () => {
         applies_to_signal_keys: [],
       },
     ]);
-    run(['--proposal', '0', '--gbrain-published', 'true']);
+    run(['--proposal', '0']);
     const p = JSON.parse(fs.readFileSync(proposalFile, 'utf-8'));
     expect(p.proposals[0].applied_at).toBeTruthy();
-    expect(p.proposals[0].gbrain_published).toBe(true);
   });
 });
 

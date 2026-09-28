@@ -17,7 +17,9 @@ const scoped = (file: unknown, config: string, session: string) => {
   return rel.length === 2 && rel[0] !== '..' && rel[0] !== '.' && rel[1] === `${session}.jsonl`;
 };
 export function createFilePermissionRecorder(cwd: string, config: string, expected: string) {
-  const relative = path.relative(os.tmpdir(), expected);
+  // macOS tmpdir is /var while realpath reports /private/var. Fold only that prefix.
+  const fold = (value: string) => value.replace(/^\/private\/(var|tmp)\//, '/$1/');
+  const relative = path.relative(fold(os.tmpdir()), fold(expected));
   if (!path.isAbsolute(expected) || !relative || relative === '..' || relative.startsWith('..' + path.sep) || path.isAbsolute(relative)) return undefined;
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'gstack-file-permission-'));
   const file = path.join(dir, 'state.json');
@@ -84,7 +86,10 @@ export function recordFilePermission(input: string, file: string, cwd: string, c
   try {
     if (Buffer.byteLength(input) > MAX_WRITE_INPUT_BYTES) throw Error('oversized hook');
     const e = JSON.parse(input);
-    if (e?.agent_id !== undefined || e?.cwd !== cwd) return;
+    const sameTemp = (left: unknown, right: unknown) =>
+      typeof left === 'string' && typeof right === 'string' &&
+      left.replace(/^\/private\/(var|tmp)\//, '/$1/') === right.replace(/^\/private\/(var|tmp)\//, '/$1/');
+    if (e?.agent_id !== undefined || !sameTemp(e?.cwd, cwd)) return;
     if (!['PreToolUse','PostToolUse','PostToolUseFailure'].includes(e.hook_event_name) ||
         !['Write','Edit'].includes(e.tool_name) || !identifier(e.session_id) || !identifier(e.tool_use_id) ||
         !scoped(e.transcript_path,config,e.session_id) || e.tool_input?.file_path !== expected) return;
@@ -303,11 +308,20 @@ function currentCreatePreview(preview: string, r: any, config: string, cwd: stri
     (!i||row.line===numbered[i-1]!.line+1)&&compact(row.text)===compact(source[row.line-1]!));
 }
 
+/** macOS temp lives under the /var symlink. Reject a symlinked leaf, not that prefix. */
+function acceptsOwnedPath(p: string): boolean {
+  try {
+    if (fs.lstatSync(p).isSymbolicLink()) return false;
+    const fold = (s: string) => path.resolve(s).replace(/^\/private\/(var|tmp)\//, '/$1/');
+    return fold(fs.realpathSync(p)) === fold(p);
+  } catch { return false; }
+}
+
 /** A cropped in-fixture Edit needs its sole current native request and exact visible diff. */
 function currentEditPreview(preview: string, r: any, config: string, cwd: string, startedAt: number): boolean {
   try {
-    if (path.dirname(r.expected) !== cwd || fs.realpathSync(cwd) !== cwd || fs.realpathSync(r.expected) !== r.expected ||
-        [config, path.dirname(r.transcriptPath), r.transcriptPath].some(p => fs.realpathSync(p) !== p)) return false;
+    if (path.dirname(r.expected) !== cwd || !acceptsOwnedPath(cwd) || !acceptsOwnedPath(r.expected) ||
+        [config, path.dirname(r.transcriptPath), r.transcriptPath].some(p => !acceptsOwnedPath(p))) return false;
     const pending = new Map<string, NativePublicToolEvent>(), seen = new Map<string, NativePublicToolEvent>();
     const completed = new Set<string>();
     let conflict = false;

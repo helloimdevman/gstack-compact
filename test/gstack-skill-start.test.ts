@@ -113,7 +113,7 @@ describe('gstack-skill-start contract', () => {
     // Claude host: literal interpolated path. Env-var hosts: $GSTACK_BIN.
     // Every generated SKILL.md that carries a Preamble fence must name the
     // script through one of those shapes plus the local fallback.
-    const renders = [path.join(ROOT, 'SKILL.md'), path.join(ROOT, 'ship', 'SKILL.md'), path.join(ROOT, 'learn', 'SKILL.md')];
+    const renders = [path.join(ROOT, 'SKILL.md'), path.join(ROOT, 'ship', 'SKILL.md'), path.join(ROOT, 'context', 'SKILL.md')];
     for (const r of renders) {
       const content = fs.readFileSync(r, 'utf-8');
       expect(content).toContain('gstack-skill-start');
@@ -121,6 +121,9 @@ describe('gstack-skill-start contract', () => {
       expect(content).toContain('--parent-pid "$PPID"');
       expect(content).toContain('SKILL_START: unavailable');
     }
+    const learnAlias = fs.readFileSync(path.join(ROOT, 'learn', 'SKILL.md'), 'utf-8');
+    expect(learnAlias).toContain('Read `../context/SKILL.md`');
+    expect(learnAlias).toContain('The target owns bootstrap');
   });
 
   test('degraded-mode prose carries the safe defaults + consent deferral (F1/EOV8/OV5)', () => {

@@ -11,9 +11,7 @@ export interface HostPaths {
   skillRoot: string;
   localSkillRoot: string;
   binDir: string;
-  browseDir: string;
   designDir: string;
-  makePdfDir: string;
 }
 
 /**
@@ -50,9 +48,7 @@ function buildHostPaths(): Record<string, HostPaths> {
         skillRoot: '$GSTACK_ROOT',
         localSkillRoot: config.localSkillRoot,
         binDir: '$GSTACK_BIN',
-        browseDir: '$GSTACK_BROWSE',
         designDir: '$GSTACK_DESIGN',
-        makePdfDir: '$GSTACK_MAKE_PDF',
       };
     } else {
       const root = `~/${config.globalRoot}`;
@@ -60,9 +56,7 @@ function buildHostPaths(): Record<string, HostPaths> {
         skillRoot: root,
         localSkillRoot: config.localSkillRoot,
         binDir: `${root}/bin`,
-        browseDir: `${root}/browse/dist`,
         designDir: `${root}/design/dist`,
-        makePdfDir: `${root}/make-pdf/dist`,
       };
     }
   }
@@ -73,7 +67,7 @@ export const HOST_PATHS: Record<string, HostPaths> = buildHostPaths();
 
 /**
  * Render a HostPaths binary dir as a shell-expandable absolute path.
- * Claude-style dirs are `~`-rooted (e.g. `~/.claude/skills/gstack/browse/dist`)
+ * Claude-style dirs are `~`-rooted (e.g. `~/.claude/skills/gstack/bin`)
  * and expand via `$HOME`; env-var hosts already carry an absolute `$GSTACK_*`
  * value, so they pass through untouched — prepending `$HOME` would double it.
  */
@@ -82,6 +76,7 @@ export function toShellPath(dir: string): string {
 }
 
 import type { Model } from '../models';
+import type { SkillProfile } from '../host-config';
 export type { Model } from '../models';
 
 export interface TemplateContext {
@@ -92,6 +87,7 @@ export interface TemplateContext {
   paths: HostPaths;
   preambleTier?: number;  // 1-4, controls which preamble sections are included
   model?: Model;  // model family for behavioral overlay. Omitted/undefined → no overlay.
+  skillProfile?: SkillProfile;
   interactive?: boolean;  // true → emit plan-mode handshake in preamble. Generator-only, not written to SKILL.md.
   /**
    * Build-time compression mode. Defaults to 'default'.

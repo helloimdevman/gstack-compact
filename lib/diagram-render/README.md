@@ -1,46 +1,19 @@
 # diagram-render
 
-Offline diagram rendering for make-pdf and /diagram. One self-contained HTML
-page (`dist/diagram-render.html`, ~9MB) bundles mermaid, the excalidraw export
-utilities, and the official mermaid→excalidraw converter. Callers open it
-through `lib/aside-render.ts` (the TypeScript API make-pdf embeds) or
-`bin/gstack-render.ts` (the CLI the /diagram skill runs) — in the Aside browser
-when it is running, otherwise in gstack's own headless browser (the browse
-daemon; `ENGINE=` on the CLI's first line says which). Either way the page's
-directory is served on 127.0.0.1 for one render, `--eval` calls the page API,
-and `--out` copies each result out (strings verbatim, data URLs as bytes).
+`dist/diagram-render.html` is a committed, self-contained page with Mermaid
+and Excalidraw conversion code. `/diagram` opens it only through the browser
+capability supplied by the agent host for the user's browser. If that host
+cannot open and evaluate the page, the skill returns Mermaid source and
+reports SVG, PNG, and Excalidraw export unavailable. `./setup` does not build
+or install a browser.
 
-The built page is **committed** (eng-review D2): rendering works with zero
-network at install time and render time, and there is no npm supply-chain
-surface in `./setup`. The drift test (`test/diagram-render-drift.test.ts`)
-fails CI if `dist/` is edited by hand or falls out of sync with `BUILD_INFO.json`.
+The page exposes `window.__renderMermaid(id, text)`,
+`window.__mermaidToExcalidraw(text)`, `window.__excalidrawToSvg(sceneJson)`,
+and `window.__rasterize(svg, targetWidthPx)`. Wait until `#status` reads
+`ready` before calling them. The functions return SVG text, Excalidraw JSON,
+or a PNG data URL respectively.
 
-## Page API (window functions)
-
-| Function | In → Out |
-|---|---|
-| `__renderMermaid(id, text)` | mermaid text → SVG string. `id` must be unique per fence (`mermaid-fence-<n>`) — it namespaces every internal SVG id. |
-| `__mermaidToExcalidraw(text)` | mermaid text → `.excalidraw` scene JSON (flowcharts and sequence diagrams as editable elements; other types fall back to one image element and log `Error processing Mermaid diagram` to the console). |
-| `__excalidrawToSvg(sceneJson)` | scene JSON → SVG string (Excalifont embedded, offline). |
-| `__rasterize(svg, targetWidthPx)` | SVG → PNG data URL. Callers own DPI math: `targetWidthPx = placed width (in) × 300`. Throws on tainted canvas. |
-| `__downscaleRaster(dataUri, targetWidthPx, mime)` | raster data URI → smaller data URI at `targetWidthPx` (same mime). make-pdf uses it to normalize oversized photos to print resolution. |
-| `__mountForScreenshot(svg, px)` | taint-proof fallback: mounts SVG at `#raster-stage` for `gstack-render --screenshot out.png --selector '#raster-stage'`. |
-| `__probeImage(src)` | data URI/URL → `{width, height}` JSON. |
-| `__bundleInfo` | `{ name, deps }` — pinned dependency versions baked at build. |
-
-Readiness: poll until `#status` text is `ready` (or `gstack-render ... --wait-selector '#done'`).
-Page errors accumulate in `window.__errors`.
-
-## Updating
-
-```bash
-# 1. edit the exact pin in package.json
-cd lib/diagram-render && bun install
-# 2. rebuild (deterministic; build twice → same sha)
-bun run build
-# 3. commit package.json + bun.lock + dist/ together
-```
-
-Render contract details (securityLevel strict, htmlLabels false, print-css font
-lock, `<base href>` + `</scri` escaping) are documented in `src/entry.ts` and
-`scripts/build.ts` — read both before touching either.
+To update the bundle, edit an exact dependency pin in `package.json`, run
+`bun install` and `bun run build` in this directory, then commit the lockfile,
+`dist/diagram-render.html`, and `dist/BUILD_INFO.json` together. The drift
+test checks that the committed bundle matches the source.

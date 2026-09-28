@@ -102,7 +102,8 @@ function canonicalFor(heading: string): CanonicalSection | undefined {
 
 function parseYaml(text: string): { value: Record<string, unknown> | null; error?: string } {
   try {
-    const v = (Bun as unknown as { YAML: { parse(s: string): unknown } }).YAML.parse(text);
+    const api = (Bun as unknown as { YAML?: { parse(s: string): unknown } }).YAML;
+    const v = api?.parse ? api.parse(text) : require('yaml').parse(text);
     if (v === null || v === undefined) return { value: {} };
     if (typeof v !== 'object' || Array.isArray(v)) return { value: null, error: 'front matter is not a mapping' };
     return { value: v as Record<string, unknown> };

@@ -1,0 +1,9 @@
+{
+  "skill": "design",
+  "sections": [
+    { "id": "system", "file": "system.md", "title": "Design system", "trigger": "running system mode for a design-system proposal" },
+    { "id": "variants", "file": "variants.md", "title": "Visual variants", "trigger": "running variants mode for a comparison board" },
+    { "id": "html", "file": "html.md", "title": "Pretext HTML", "trigger": "running html mode for production HTML and CSS" },
+    { "id": "detector-install-offer", "file": "detector-install-offer.md", "title": "Detector installation", "trigger": "the design detector probe explicitly prints DESIGN_DETECTOR_INSTALL_OFFER" }
+  ]
+}

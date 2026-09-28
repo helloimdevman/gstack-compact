@@ -65,11 +65,15 @@ interface State {
   version: 1; cwd: string; configDir: string; sessionId?: string; seenIds: string[]; pending: Pending | null;
 }
 
+const sameTemp = (left: unknown, right: unknown) =>
+  typeof left === 'string' && typeof right === 'string' &&
+  left.replace(/^\/private\/(var|tmp)\//, '/$1/') === right.replace(/^\/private\/(var|tmp)\//, '/$1/');
+
 function readState(file: string, cwd: string, configDir: string): State {
   const stat = fs.lstatSync(file);
   if (!stat.isFile() || stat.size > MAX_BYTES) throw Error('invalid recorder file');
   const s = JSON.parse(fs.readFileSync(file, 'utf8'));
-  if (!object(s) || s.version !== 1 || s.cwd !== cwd || s.configDir !== configDir ||
+  if (!object(s) || s.version !== 1 || !sameTemp(s.cwd, cwd) || s.configDir !== configDir ||
       (s.sessionId !== undefined && !identifier(s.sessionId)) || !Array.isArray(s.seenIds) ||
       s.seenIds.length > MAX_IDS || !s.seenIds.every(identifier) || new Set(s.seenIds).size !== s.seenIds.length ||
       (s.pending !== null && (!object(s.pending) || !identifier(s.pending.sessionId) ||
@@ -125,14 +129,14 @@ export function recordPendingQuestion(input: string, file: string, cwd: string, 
     reason = 'invalid_event';
     const e = JSON.parse(input);
     // Foreign and sidechain events cannot cancel or supply the parent request.
-    if (object(e) && (e.agent_id !== undefined || (typeof e.cwd === 'string' && e.cwd !== cwd))) return;
+    if (object(e) && (e.agent_id !== undefined || (typeof e.cwd === 'string' && !sameTemp(e.cwd, cwd)))) return;
     if (fs.existsSync(file + '.invalid')) return;
     reason = 'lock_conflict';
     lock = fs.openSync(file + '.lock', 'wx', 0o600);
     reason = 'record_error';
     const old = readState(file, cwd, configDir);
     reason = 'invalid_event';
-    if (!object(e) || e.cwd !== cwd || !['PreToolUse', 'PostToolUse', 'PostToolUseFailure'].includes(e.hook_event_name) ||
+    if (!object(e) || !sameTemp(e.cwd, cwd) || !['PreToolUse', 'PostToolUse', 'PostToolUseFailure'].includes(e.hook_event_name) ||
         e.tool_name !== 'AskUserQuestion' || !identifier(e.session_id) || !identifier(e.tool_use_id) ||
         !scopedTranscript(e.transcript_path, configDir, e.session_id) ||
         !object(e.tool_input) || !questions(e.tool_input.questions) ||

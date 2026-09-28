@@ -1,4 +1,4 @@
-import { defineHost, CROSS_MODEL_RESOLVERS } from './define-host';
+import { defineHost } from './define-host';
 
 const hermes = defineHost({
   name: 'hermes',
@@ -20,13 +20,6 @@ const hermes = defineHost({
     'the Write tool': 'the patch tool',
     'the Edit tool': 'the patch tool',
   },
-
-  suppressedResolvers: [
-    ...CROSS_MODEL_RESOLVERS,
-    // GBRAIN_CONTEXT_LOAD and GBRAIN_SAVE_RESULTS are NOT suppressed.
-    // The resolvers handle GBrain-not-installed gracefully ("proceed without brain context").
-    // If Hermes has GBrain as a mod, brain features activate automatically.
-  ],
 
   // No full install arm — users can hand-copy the instruction-only digest
   // (setup's explainer arm prints this path; never auto-copied).

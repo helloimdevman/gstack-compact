@@ -70,6 +70,3 @@ console.log(JSON.stringify(bindReview(rec, process.env.GSTACK_REVIEW_TOKEN)));
 }
 
 echo "$STAMPED" >> "$GSTACK_HOME/projects/$SLUG/$BRANCH-reviews.jsonl"
-
-# gbrain-sync: enqueue for cross-machine sync (no-op if sync is off).
-"$SCRIPT_DIR/gstack-brain-enqueue" "projects/$SLUG/$BRANCH-reviews.jsonl" 2>/dev/null &

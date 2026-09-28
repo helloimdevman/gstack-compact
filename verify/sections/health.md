@@ -1,0 +1,5 @@
+<!-- AUTO-GENERATED from health.md.tmpl — do not edit directly -->
+<!-- Regenerate: bun run gen:skill-docs -->
+# Project health
+
+Run the project's existing type checker, linter, test selector, and dead-code or build checks that apply to the change. Preserve each command, revision, pass/fail/skip counts, and unhandled errors. Diagnose failures before modifying tests or code. Report coverage and tool gaps separately; a passing subset is not the full project health status. Do not use optional scanners as proof of a required check.

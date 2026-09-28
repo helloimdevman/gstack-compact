@@ -1,0 +1,8 @@
+{
+  "skill": "context",
+  "sections": [
+    { "id": "save", "file": "save.md", "title": "Save context", "trigger": "saving this task for a later session" },
+    { "id": "restore", "file": "restore.md", "title": "Restore context", "trigger": "resuming a saved task in the current checkout" },
+    { "id": "learn", "file": "learn.md", "title": "Manage learnings", "trigger": "searching, showing, pruning, or exporting project learnings" }
+  ]
+}

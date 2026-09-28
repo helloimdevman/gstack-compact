@@ -6,7 +6,6 @@
  * Inputs:
  *   - Skill SKILL.md.tmpl frontmatter (name, description) at root and one
  *     level deep, via scripts/discover-skills.ts
- *   - browse/src/commands.ts COMMAND_DESCRIPTIONS
  *   - design/src/commands.ts COMMAND_DESCRIPTIONS (if present)
  *
  * Output: gstack/llms.txt at repo root.
@@ -20,7 +19,6 @@
 import * as fs from 'fs';
 import * as path from 'path';
 import { discoverTemplates } from './discover-skills';
-import { COMMAND_DESCRIPTIONS as BROWSE_COMMANDS } from '../browse/src/commands';
 
 const ROOT = path.resolve(import.meta.dir, '..');
 const OUTPUT = path.join(ROOT, 'gstack', 'llms.txt');
@@ -123,7 +121,6 @@ interface GenerateOptions {
 export interface GenerateResult {
   content: string;
   skills: SkillEntry[];
-  browseCommands: string[];
   designCommands: string[];
   warnings: string[];
 }
@@ -148,17 +145,15 @@ export async function generateLlmsTxt(opts: GenerateOptions = {}): Promise<Gener
   }
   skills.sort((a, b) => a.name.localeCompare(b.name));
 
-  const browseCommands = Object.keys(BROWSE_COMMANDS).sort();
   const designCommands = Object.keys(await readDesignCommands()).sort();
 
   const lines: string[] = [];
   lines.push('# gstack');
   lines.push('');
-  lines.push("> gstack is Garry's Stack: AI coding skills + a fast headless browser binary + a design CLI. This file indexes every capability so agents can discover and invoke them without crawling individual SKILL.md files.");
+  lines.push("> gstack is Garry's Stack: AI engineering workflow skills and a design CLI. This file indexes every capability so agents can discover and invoke them without crawling individual SKILL.md files.");
   lines.push('');
   lines.push('Conventions:');
   lines.push('- Skills are invoked by name (e.g. `/ship`, `/plan-ceo-review`).');
-  lines.push('- Browse commands run as `browse <command> [args]` (or `$B` shorthand).');
   lines.push('- Design commands run as `design <command> [args]` (or `$D`).');
   lines.push('- Project-specific config lives in `CLAUDE.md`. Always read it first.');
   lines.push('');
@@ -170,26 +165,6 @@ export async function generateLlmsTxt(opts: GenerateOptions = {}): Promise<Gener
     lines.push(`- [/${skill.name}](${skill.name}/SKILL.md): ${summary}`);
   }
   lines.push('');
-
-  lines.push('## Browse Commands');
-  lines.push('');
-  lines.push('Run with `browse <command> [args]`. Full reference: `browse/SKILL.md`.');
-  lines.push('');
-  const byCategory: Record<string, Array<{ name: string; description: string; usage?: string }>> = {};
-  for (const cmd of browseCommands) {
-    const meta = BROWSE_COMMANDS[cmd];
-    const cat = meta.category || 'Other';
-    if (!byCategory[cat]) byCategory[cat] = [];
-    byCategory[cat].push({ name: cmd, description: meta.description, usage: meta.usage });
-  }
-  for (const cat of Object.keys(byCategory).sort()) {
-    lines.push(`### ${cat}`);
-    for (const cmd of byCategory[cat]) {
-      const usage = cmd.usage ? `\`${cmd.usage}\`` : `\`${cmd.name}\``;
-      lines.push(`- ${usage}: ${oneLine(cmd.description)}`);
-    }
-    lines.push('');
-  }
 
   if (designCommands.length > 0) {
     lines.push('## Design Commands');
@@ -215,7 +190,6 @@ export async function generateLlmsTxt(opts: GenerateOptions = {}): Promise<Gener
   return {
     content: lines.join('\n'),
     skills,
-    browseCommands,
     designCommands,
     warnings,
   };
@@ -253,7 +227,7 @@ if (import.meta.main) {
       console.log('[gen-llms-txt] up to date');
     } else {
       console.log(`[gen-llms-txt] wrote ${OUTPUT}`);
-      console.log(`[gen-llms-txt]   skills=${result.skills.length} browse=${result.browseCommands.length} design=${result.designCommands.length}`);
+      console.log(`[gen-llms-txt]   skills=${result.skills.length} design=${result.designCommands.length}`);
     }
   })();
 }

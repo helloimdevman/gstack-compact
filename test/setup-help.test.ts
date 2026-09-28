@@ -118,7 +118,7 @@ describe('setup: host accept-list ↔ hosts/index.ts registry cross-check (#2361
     expect(res.stdout).not.toMatch(/Installing|bun install|Building/);
   });
 
-  test.each(['slate', 'openclaw', 'hermes', 'gbrain'])('%s finishes before installation preflight commands', (host) => {
+  test.each(['slate', 'openclaw', 'hermes'])('%s finishes before installation preflight commands', (host) => {
     const temporary = fs.mkdtempSync(path.join(os.tmpdir(), 'setup-info-preflight-'));
     const startup = path.join(temporary, 'startup.bash');
     fs.writeFileSync(startup, `command() { echo 'unexpected installation preflight' >&2; return 97; }

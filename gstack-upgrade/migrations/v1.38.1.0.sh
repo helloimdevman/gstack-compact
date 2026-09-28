@@ -96,7 +96,6 @@ if [ "${added_any}" = "1" ]; then
 fi
 
 # NEVER `git commit + push` from this migration. The user controls when the
-# patches ship into their federated artifacts repo (next gstack-brain-sync
-# --once or a manual commit).
+# patches ship when they make a manual commit.
 
 exit 0

@@ -89,7 +89,7 @@ const record = {
 };
 fs.writeFileSync(process.env.RUNTIME_RECORD,JSON.stringify(record));
 if (process.env.RUNTIME_FAIL === '1') throw new Error('fixture startup failure');
-process.stdout.write('RUNTIME_PROBE_READY\n');
+fs.writeSync(1, 'RUNTIME_PROBE_READY\n');
 process.stdin.resume();
 `);
     fs.chmodSync(fake,0o755);
@@ -250,7 +250,7 @@ describe('hermetic skill runtime', () => {
       expect(read(path.join(runtime, 'alpha', 'sections', 'fallbacks.md')))
         .toBe(read(path.join(source, 'alpha', 'sections', 'fallbacks.md')));
       expect(read(old)).toContain('STALE_OPERATOR');
-      expect(fs.realpathSync(path.join(runtime, '.git'))).toBe(path.join(source, '.git'));
+      expect(fs.realpathSync(path.join(runtime, '.git'))).toBe(fs.realpathSync(path.join(source, '.git')));
       fs.rmSync(privateDir, { recursive: true, force: true });
       expect(read(path.join(source, '.git', 'HEAD'))).toBe('ref: refs/heads/main\n');
       expect(read(path.join(source, 'alpha', 'SKILL.md'))).toBe(script + '\n');
@@ -378,9 +378,10 @@ describe('hermetic skill runtime', () => {
       fs.chmodSync(path.join(commands, 'curl'), 0o755);
       write(path.join(state, 'config.yaml'), 'update_check: false\nartifacts_sync_mode_prompted: true\n');
       const env = { PATH: `${commands}${path.delimiter}${process.env.PATH!}`, HOME: runtimeHome, GSTACK_HOME: state };
-      const preamble = read(path.join(config, 'skills', 'autoplan', 'SKILL.md'))
-        .match(/## Preamble \(run first\)\n\n```bash\n([\s\S]*?)\n```/)![1];
-      const output = execFileSync('bash', ['-c', preamble], { cwd: home, env, encoding: 'utf8', timeout: 20_000 });
+      const installed = read(path.join(config, 'skills', 'autoplan', 'SKILL.md'));
+      expect(installed).toContain('## Shared contract');
+      expect(installed).not.toContain('## Preamble (run first)');
+      const output = execFileSync(path.join(runtime, 'bin', 'gstack-skill-start'), [], { cwd: home, env, encoding: 'utf8', timeout: 20_000 });
       expect(output).toContain('SKILL_START_PROTO: 1');
       expect(output).not.toContain('STALE_OPERATOR');
       const version = read(path.join(ROOT, 'VERSION')).trim();

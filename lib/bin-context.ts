@@ -254,8 +254,7 @@ export const NEEDS_NATIVE_SLUG_ON_WINDOWS = process.platform === "win32";
  * Resolve the project slug via the `gstack-slug` helper (parses `SLUG=...`).
  *
  * On Windows that spawn fails ENOENT (see NEEDS_NATIVE_SLUG_ON_WINDOWS) and `r.stdout`
- * is undefined — the same class of hazard as the gbrain shim spawns in lib/gbrain-exec.ts
- * (#1731). Returning the literal "unknown" filed every decision under
+ * is undefined. Returning the literal "unknown" filed every decision under
  * ~/.gstack/projects/unknown/ — one bucket shared by every project on the machine —
  * while the bash-side Context Recovery preamble resolved the real slug, found no
  * decisions.active.json there, and skipped through a bare `if [ -f … ]` with no else.

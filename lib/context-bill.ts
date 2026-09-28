@@ -8,12 +8,8 @@
  *   EAGER      SKILL.md plus any references the skill's prose forces "for
  *              every invocation".
  *
- * This is a STRIPPED port of the v2 fork's six-ledger bill: the CONDITIONAL,
- * TRANSITIVE, LAZY, and FAST-PATH parsers only understand the fork's
- * dispatcher-skill layout, which this repo's skills don't use, so they were
- * dropped rather than shipped dead. The tier fields stay in the report shape
- * (empty arrays / zeros / nulls) so re-adding a parser is additive: nothing
- * downstream needs a schema change.
+ * Conditional sections and canonical aliases are read from installed skill
+ * bodies. This is a static inventory, not evidence that a model read a file.
  *
  * Token figures come from one of two sources, always named in the output:
  *   ESTIMATE (default, offline)  bytes / TOKEN_DIVISOR, calibrated against real
@@ -39,6 +35,8 @@ const FORCED_PHRASE = "for every invocation";
 // Backticked reference in prose. `<...>` is excluded: a path template such as
 // `references/templates/<Name>.md` names a family of files, not one on disk.
 const PROSE_REF = /`(references\/[^`<>]+\.md)`/g;
+const SECTION_ROW = /^\|\s*([^|]+?)\s*\|\s*`(sections\/[a-z0-9-]+\.md)`\s*\|/;
+const CANONICAL_ALIAS = /Read `\.\.\/([a-z][a-z0-9-]+)\/SKILL\.md` relative to this installed SKILL\.md/;
 // Upstream frontmatter contract: the keys the router/host actually reads.
 const ROUTER_KEYS = new Set(["name", "description", "version", "allowed-tools", "triggers", "preamble-tier"]);
 // Skill-shaped files other hosts drop into scanner scope.
@@ -132,6 +130,7 @@ export function contentClass(key: string): string {
   if (key.endsWith("#frontmatter")) return "frontmatter";
   if (/references[/\\]legacy[/\\]/.test(key)) return "legacy";
   if (/references[/\\](artifacts|sections|support)[/\\]/.test(key)) return "artifact";
+  if (/[/\\]sections[/\\]/.test(key)) return "artifact";
   if (/(^|[/\\])SKILL\.md$/.test(key)) return "skillmd";
   if (/references[/\\]/.test(key)) return "reference";
   return "other";
@@ -203,18 +202,21 @@ function parseFrontmatter(text: string): { bytes: number; keys: string[]; block:
  */
 export function walkMd(dir: string): string[] {
   const out: string[] = [];
-  let entries: fs.Dirent[];
-  try {
-    entries = fs.readdirSync(dir, { withFileTypes: true });
-  } catch {
-    return out;
-  }
-  for (const e of entries) {
-    if (e.name.startsWith(".") || e.name === "node_modules") continue;
-    const p = path.join(dir, e.name);
-    if (e.isDirectory()) out.push(...walkMd(p));
-    else if (e.isFile() && e.name.endsWith(".md")) out.push(p);
-  }
+  const visit = (folder: string, ancestors: ReadonlySet<string>) => {
+    let real: string, entries: fs.Dirent[];
+    try { real = fs.realpathSync(folder); entries = fs.readdirSync(folder, { withFileTypes: true }); } catch { return; }
+    if (ancestors.has(real)) return;
+    const nextAncestors = new Set(ancestors).add(real);
+    for (const e of entries) {
+      if (e.name.startsWith('.') || e.name === 'node_modules') continue;
+      const p = path.join(folder, e.name);
+      let stat: fs.Stats;
+      try { stat = fs.statSync(p); } catch { continue; }
+      if (stat.isDirectory() && (e.isDirectory() || e.name === 'sections')) visit(p, nextAncestors);
+      else if (stat.isFile() && e.name.endsWith('.md')) out.push(p);
+    }
+  };
+  visit(dir, new Set());
   return out;
 }
 
@@ -243,7 +245,7 @@ function totalMd(dir: string, tokensOf: TokensOf): { bytes: number; tokens: numb
   return { bytes, tokens };
 }
 
-export function parseSkill(skillDir: string, name: string, tokensOf: TokensOf = estimateTokensOf): SkillBill {
+export function parseSkill(skillDir: string, name: string, tokensOf: TokensOf = estimateTokensOf, selectedSections: readonly string[] = []): SkillBill {
   const skillMdPath = path.join(skillDir, "SKILL.md");
   const text = fs.readFileSync(skillMdPath, "utf8");
   const skillMdBytes = bytesOf(skillMdPath) ?? 0;
@@ -271,6 +273,19 @@ export function parseSkill(skillDir: string, name: string, tokensOf: TokensOf = 
       }
     }
   }
+  const alias = text.match(CANONICAL_ALIAS);
+  if (alias) {
+    const target = `../${alias[1]}/SKILL.md`;
+    forcedRefs.push({ ...refEntry(skillDir, target, tokensOf), via: 'canonical alias' });
+  }
+
+  const conditionalRefs: RefEntry[] = [];
+  for (const line of text.split('\n')) {
+    const row = line.match(SECTION_ROW);
+    if (!row || conditionalRefs.some(ref => ref.path === row[2])) continue;
+    conditionalRefs.push({ ...refEntry(skillDir, row[2], tokensOf), condition: row[1].trim() });
+  }
+  const selected = conditionalRefs.filter(ref => selectedSections.includes(ref.path));
 
   // Foreign-host skill files sitting next to SKILL.md.
   const foreignFiles: { path: string; bytes: number; tokens: number }[] = [];
@@ -299,17 +314,17 @@ export function parseSkill(skillDir: string, name: string, tokensOf: TokensOf = 
     eagerTokens,
     // Stripped tiers, shape preserved (see the module docblock).
     fastPath: null,
-    conditionalRefs: [],
-    conditionalBytes: 0,
-    conditionalTokens: 0,
+    conditionalRefs,
+    conditionalBytes: sumBytes(conditionalRefs),
+    conditionalTokens: sumTokens(conditionalRefs),
     transitiveRefs: [],
     transitiveBytes: 0,
     transitiveTokens: 0,
     // With the conditional/transitive tiers stripped, the per-invocation
     // ceiling IS the eager figure. Re-adding a tier changes these sums only.
-    perInvocationBytes: eagerBytes,
-    perInvocationTokens: eagerTokens,
-    routeCeiling: null,
+    perInvocationBytes: eagerBytes + sumBytes(selected),
+    perInvocationTokens: eagerTokens + sumTokens(selected),
+    routeCeiling: conditionalRefs.length ? { label: 'all declared sections (static worst case)', bytes: eagerBytes + sumBytes(conditionalRefs), tokens: eagerTokens + sumTokens(conditionalRefs) } : null,
     lazy: [],
     orphans: [],
     foreignFiles,
@@ -399,24 +414,31 @@ export interface Bill {
     perInvocationTokensBySkill: Record<string, number>;
     totalMdBytes: number;
     totalMdTokens: number;
+    runtimeBytes: number;
+    runtimeTokens: number;
   };
 }
 
 export function buildBill(
   root: string,
-  { tokensOf = estimateTokensOf, tokenSource, calibration }: {
+  { tokensOf = estimateTokensOf, tokenSource, calibration, selectedSections = {} }: {
     tokensOf?: TokensOf;
     tokenSource?: string;
     calibration?: Calibration;
+    selectedSections?: Record<string, string[]>;
   } = {},
 ): Bill {
   const resolved = path.resolve(root);
   if (!fs.existsSync(resolved)) throw new Error(`No such tree: ${resolved}`);
-  const skills = findSkillDirs(resolved).map((dir) =>
-    parseSkill(dir, path.relative(resolved, dir) || path.basename(resolved), tokensOf),
-  );
+  const skills = findSkillDirs(resolved).map((dir) => {
+    const name = path.relative(resolved, dir) || path.basename(resolved);
+    return parseSkill(dir, name, tokensOf, selectedSections[name] ?? []);
+  });
   const total = skills.reduce((n, s) => n + s.totalMdBytes, 0);
   const totalTokens = skills.reduce((n, s) => n + s.totalMdTokens, 0);
+  const installedContract = path.join(resolved, 'gstack', 'CONTRACT.md');
+  const contract = fs.existsSync(installedContract) ? installedContract : path.join(resolved, 'CONTRACT.md');
+  const runtimeBytes = bytesOf(contract) ?? 0;
   return {
     root: resolved,
     // Named so a reader never has to guess whether a figure was measured.
@@ -438,6 +460,8 @@ export function buildBill(
       ),
       totalMdBytes: total,
       totalMdTokens: totalTokens,
+      runtimeBytes,
+      runtimeTokens: runtimeBytes ? tokensOf(contract, runtimeBytes) : 0,
     },
   };
 }
@@ -588,6 +612,15 @@ export function renderBill(bill: Bill, { skill }: { skill?: string } = {}): stri
     lines.push(`  ${s.name.padEnd(20)} ${size(s.eagerBytes, s.eagerTokens)}${refs}`);
     for (const r of s.forcedRefs.filter((r) => r.missing)) lines.push(`  ! ${s.name}: forced-read reference missing on disk: ${r.path}`);
   }
+  lines.push("");
+
+  lines.push('CONDITIONAL (declared sections; no read is inferred):');
+  for (const s of skills) {
+    if (!s.conditionalRefs.length) continue;
+    lines.push(`  ${s.name.padEnd(20)} selected ${size(s.perInvocationBytes - s.eagerBytes, s.perInvocationTokens - s.eagerTokens)}; all-section ceiling ${size(s.routeCeiling!.bytes, s.routeCeiling!.tokens)}`);
+    for (const ref of s.conditionalRefs) lines.push(`    ${ref.path}: ${size(ref.bytes, ref.tokens)}${ref.missing ? ' MISSING' : ''} — ${ref.condition}`);
+  }
+  lines.push(`RUNTIME contract: ${size(bill.totals.runtimeBytes, bill.totals.runtimeTokens)} (separate from frontmatter)`);
   lines.push("");
 
   lines.push(

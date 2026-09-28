@@ -19,32 +19,9 @@ import type { HostConfig } from '../scripts/host-config';
 type PathRewrite = { from: string; to: string };
 
 /**
- * Preamble resolvers that orchestrate cross-model second opinions (they shell
- * out to the selected outside provider or spin up the review army). Suppressed
- * on the non-Claude agent runtimes that already opt out (OpenClaw, Hermes,
- * GBrain). Codex keeps the outside-provider resolvers and suppresses only army.
- */
-export const CROSS_MODEL_RESOLVERS: string[] = [
-  'DESIGN_OUTSIDE_VOICES',  // design.ts — selected outside provider
-  'ADVERSARIAL_STEP',       // review.ts — adversarial outside review
-  'CODEX_SECOND_OPINION',   // review.ts — legacy token, selected provider
-  'CODEX_PLAN_REVIEW',      // review.ts — legacy token, selected provider
-  'REVIEW_ARMY',            // review-army.ts — multi-model orchestration
-];
-
-/**
- * Brain-aware resolvers. Suppressed by default on every host — only hosts
- * that can run with a GBrain (hermes, gbrain) leave these active.
- */
-export const GBRAIN_RESOLVERS: string[] = [
-  'GBRAIN_CONTEXT_LOAD',
-  'GBRAIN_SAVE_RESULTS',
-];
-
-/**
  * Tool-name rewrites for OpenClaw-style agent runtimes (lowercase exec /
  * read / write / edit tools, sessions_spawn for subagents). OpenClaw and
- * GBrain share these byte-for-byte; spread into `toolRewrites` at the use
+ * Other hosts share these byte-for-byte; spread into `toolRewrites` at the use
  * site so each config owns its own copy.
  */
 export const EXEC_STYLE_TOOL_REWRITES: Record<string, string> = {
@@ -103,9 +80,9 @@ export function defineHost<const N extends string>(overrides: HostOverrides<N>):
     pathRewrites,
     extraPathRewrites,
     toolRewrites,
-    suppressedResolvers = [...GBRAIN_RESOLVERS],
+    suppressedResolvers = [],
     runtimeRoot = {
-      globalSymlinks: ['bin', 'browse/dist', 'browse/bin', 'gstack-upgrade', 'ETHOS.md'],
+      globalSymlinks: ['bin', 'lib', 'gstack-upgrade', 'ETHOS.md', 'CONTRACT.md'],
       globalFiles: {
         'review': ['checklist.md', 'TODOS-format.md'],
       },

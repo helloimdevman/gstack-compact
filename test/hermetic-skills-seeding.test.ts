@@ -190,12 +190,6 @@ describe('hermeticSkillsConfigDir', () => {
     }
   });
 
-  test('connect-chrome collapses into a single open-gstack-browser entry', () => {
-    const seeded = fs.readdirSync(skillsDir);
-    expect(seeded.filter((n) => n === 'open-gstack-browser')).toHaveLength(1);
-    expect(seeded).not.toContain('connect-chrome');
-  });
-
   test('root router registered as _gstack-command pointing at the root SKILL.md', () => {
     const link = path.join(skillsDir, '_gstack-command', 'SKILL.md');
     expect(fs.realpathSync(link)).toBe(fs.realpathSync(path.join(ROOT, 'SKILL.md')));

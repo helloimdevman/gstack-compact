@@ -100,11 +100,7 @@ describe('gstack-telemetry-log', () => {
     expect(events[0].event_type).toBe('skill_run');
     expect(events[0].os).toBeTruthy();
     expect(events[0].gstack_version).toBeTruthy();
-    const requests = curlRequests();
-    expect(requests).toHaveLength(1);
-    expect(requests[0]).toContain(`${FIXTURE_SUPABASE_URL}/functions/v1/telemetry-ingest`);
-    expect(requests[0]).toContain('apikey: fixture-anon-key');
-    expect(requests[0][requests[0].indexOf('-X') + 1]).toBe('POST');
+
   });
 
   test('produces no output when tier=off', () => {
@@ -492,61 +488,6 @@ describe('gstack-analytics', () => {
     const output7d = run(`${BIN}/gstack-analytics 7d`);
     expect(output7d).toContain('/qa');
     expect(output7d).toContain('last 7 days');
-  });
-});
-
-describe('gstack-telemetry-sync', () => {
-  test('exits silently with no Supabase URL configured', () => {
-    const result = run(`${BIN}/gstack-telemetry-sync`, {
-      GSTACK_DIR: unconfiguredRoot(), GSTACK_SUPABASE_URL: '', GSTACK_SUPABASE_ANON_KEY: '',
-    });
-    expect(result).toBe('');
-    expect(curlRequests()).toEqual([]);
-  });
-
-  test('exits silently with no JSONL file', () => {
-    const result = run(`${BIN}/gstack-telemetry-sync`, { GSTACK_SUPABASE_URL: 'http://localhost:9999' });
-    expect(result).toBe('');
-  });
-
-  test('does not rename JSONL field names (edge function expects raw names)', () => {
-    setConfig('telemetry', 'anonymous');
-    run(`${BIN}/gstack-telemetry-log --skill qa --duration 60 --outcome success --session-id raw-fields-1`);
-
-    const events = parseJsonl();
-    expect(events).toHaveLength(1);
-    // Edge function expects these raw field names, NOT Postgres column names
-    expect(events[0]).toHaveProperty('v');
-    expect(events[0]).toHaveProperty('ts');
-    expect(events[0]).toHaveProperty('sessions');
-    // Should NOT have Postgres column names
-    expect(events[0]).not.toHaveProperty('schema_version');
-    expect(events[0]).not.toHaveProperty('event_timestamp');
-    expect(events[0]).not.toHaveProperty('concurrent_sessions');
-  });
-});
-
-describe('gstack-community-dashboard', () => {
-  test('shows unconfigured message when no Supabase config available', () => {
-    // Use a fake GSTACK_DIR with no supabase/config.sh
-    const output = run(`${BIN}/gstack-community-dashboard`, {
-      GSTACK_DIR: unconfiguredRoot(),
-      GSTACK_SUPABASE_URL: '',
-      GSTACK_SUPABASE_ANON_KEY: '',
-    });
-    expect(output).toContain('Supabase not configured');
-    expect(output).toContain('gstack-analytics');
-  });
-
-  test('requests configured community stats through the isolated transport', () => {
-    const output = run(`${BIN}/gstack-community-dashboard`);
-    expect(output).toContain('gstack community dashboard');
-    expect(output).not.toContain('Supabase not configured');
-    expect(output).toContain('Weekly active installs: 7');
-    const requests = curlRequests();
-    expect(requests).toHaveLength(1);
-    expect(requests[0]).toContain(`${FIXTURE_SUPABASE_URL}/functions/v1/community-pulse`);
-    expect(requests[0]).toContain('apikey: fixture-anon-key');
   });
 });
 

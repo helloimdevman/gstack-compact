@@ -60,16 +60,15 @@ export function resolveStartupLogPath(): string {
  * (in order): DESIGN_DAEMON_VERSION env, design/dist/.version baked at
  * build time, VERSION at the source-tree root (dev), then "unknown".
  *
- * Compiled binaries lose the source-tree relative path at runtime, so we
- * try the dist/.version sidecar (which build.sh writes) before falling
- * back. This keeps client.expectedVersion and daemon.VERSION coherent.
+ * Bundles use their adjacent .version sidecar; source runs use VERSION.
+ * This keeps client.expectedVersion and daemon.VERSION coherent.
  */
 export function readVersionString(): string {
   const env = process.env.DESIGN_DAEMON_VERSION;
   if (env) return env;
   const candidates = [
-    // Compiled binary: design/dist/design lives alongside design/dist/.version
-    path.join(path.dirname(process.execPath), ".version"),
+    // Installed bundle: design/dist/design and daemon.ts share this sidecar.
+    path.join(import.meta.dir, ".version"),
     // Dev: design/src/* → repo root is two levels up
     path.join(import.meta.dir, "..", "..", "VERSION"),
     // Defensive: design/dist sibling of source tree

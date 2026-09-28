@@ -17,12 +17,16 @@ const STOP_POINTER =
 /** Expand on-demand sections where the agent reads them, then take the requested excerpt. */
 export function readWorkflowExcerpt(skillPath: string, startMarker: string, endMarker: string | null): string {
   const secDir = path.join(ROOT, path.dirname(skillPath), 'sections');
-  const content = fs.readFileSync(path.join(ROOT, skillPath), 'utf-8').replace(STOP_POINTER, (_pointer, file: string) => {
-    const body = fs.readFileSync(path.join(secDir, file), 'utf-8')
-      .replace(/^<!--[^\n]*-->\n/gm, '').trim();
-    if (body.length < 200) throw new Error(`${skillPath}: section ${file} is empty/stub`);
-    return body;
-  });
+  let content = fs.readFileSync(path.join(ROOT, skillPath), 'utf-8');
+  for (let depth = 0; depth < 6 && STOP_POINTER.test(content); depth++) {
+    STOP_POINTER.lastIndex = 0;
+    content = content.replace(STOP_POINTER, (_pointer, file: string) => {
+      const body = fs.readFileSync(path.join(secDir, file), 'utf-8')
+        .replace(/^<!--[^\n]*-->\n/gm, '').trim();
+      if (body.length < 200) throw new Error(`${skillPath}: section ${file} is empty/stub`);
+      return body;
+    });
+  }
   const start = content.indexOf(startMarker);
   if (start < 0) throw new Error(`Start marker not found in ${skillPath}: "${startMarker}"`);
   const end = endMarker ? content.indexOf(endMarker, start) : content.length;

@@ -23,9 +23,6 @@ import { execFileSync, execSync, spawnSync } from 'child_process';
 import * as fs from 'fs';
 import * as os from 'os';
 import * as path from 'path';
-import { HOST_PATHS } from '../scripts/resolvers/types';
-import type { TemplateContext } from '../scripts/resolvers/types';
-import { generateContextRecovery } from '../scripts/resolvers/preamble/generate-context-recovery';
 import { ALL_HOST_CONFIGS } from '../hosts';
 import { discoverSkillFiles } from '../scripts/discover-skills';
 
@@ -105,26 +102,6 @@ describe('branch slug hygiene (#2550, #1851)', () => {
     expect(offenders).toEqual([]);
   });
 
-  test('Context Recovery probes reviews.jsonl with the slug-canonical $BRANCH', () => {
-    const ctx: TemplateContext = {
-      skillName: 'test-skill',
-      tmplPath: 'test.tmpl',
-      host: 'claude',
-      paths: HOST_PATHS.claude,
-      preambleTier: 2,
-    };
-    const out = generateContextRecovery(ctx);
-    expect(out).toContain('${BRANCH:-unknown}-reviews.jsonl');
-    expect(out).not.toContain('${_BRANCH}-reviews.jsonl');
-    // The gstack-slug eval that defines $BRANCH must render BEFORE the probe.
-    const evalIdx = out.indexOf('gstack-slug');
-    const probeIdx = out.indexOf('${BRANCH:-unknown}-reviews.jsonl');
-    expect(evalIdx).toBeGreaterThan(-1);
-    expect(evalIdx).toBeLessThan(probeIdx);
-    // Raw $_BRANCH stays for the timeline.jsonl content greps (writer stores raw).
-    expect(out).toContain('"branch\\":\\"${_BRANCH}');
-  });
-
   test('plan content-search BRANCH uses the full gstack-slug canonical pipeline', () => {
     const rendered = fs.readFileSync(
       path.join(ROOT, 'ship', 'sections', 'plan-completion.md'),
@@ -135,82 +112,21 @@ describe('branch slug hygiene (#2550, #1851)', () => {
     );
   });
 
-  test('live round-trip: Context Recovery finds slugged reviews and raw timeline branches in a fresh shell', () => {
-    const home = fs.mkdtempSync(path.join(os.tmpdir(), 'gstack-home-'));
-    const repo = fs.mkdtempSync(path.join(os.tmpdir(), 'gstack-repo-'));
+  test('review logging stores branch slugs without creating raw branch directories', () => {
+    const home = fs.mkdtempSync(path.join(os.tmpdir(), 'gstack-review-home-'));
+    const repo = fs.mkdtempSync(path.join(os.tmpdir(), 'gstack-review-repo-'));
     try {
       const env = { ...process.env, GSTACK_HOME: home };
-      execSync(
-        'git init -q && git -c user.email=t@t -c user.name=t commit -q --allow-empty -m init && git checkout -q -b feat/slug-hygiene',
-        { cwd: repo, encoding: 'utf-8', timeout: 30_000 },
-      );
-
-      // Writer: the real gstack-review-log (canonicalizes via gstack-slug).
-      execSync(
-        `"${path.join(ROOT, 'bin', 'gstack-review-log')}" '{"skill":"ship","status":"ok"}'`,
-        { cwd: repo, env, encoding: 'utf-8', timeout: 30_000 },
-      );
-
-      // The slug-canonical filename must exist; the raw form must not.
-      const slugVars = execSync(`"${path.join(ROOT, 'bin', 'gstack-slug')}"`, {
-        cwd: repo, env, encoding: 'utf-8', timeout: 30_000,
-      });
-      const slug = slugVars.match(/^SLUG=(.*)$/m)![1];
-      const branch = slugVars.match(/^BRANCH=(.*)$/m)![1];
+      execFileSync('git', ['init', '-q', '-b', 'feat/slug-hygiene'], { cwd: repo, timeout: 30_000 });
+      execFileSync('git', ['-c', 'user.name=Test', '-c', 'user.email=test@example.test', '-c', 'commit.gpgsign=false', 'commit', '--allow-empty', '-qm', 'seed'], { cwd: repo, timeout: 30_000 });
+      execFileSync(path.join(ROOT, 'bin/gstack-review-log'), ['{"skill":"ship","status":"ok"}'], { cwd: repo, env, timeout: 30_000 });
+      const vars = execFileSync(path.join(ROOT, 'bin/gstack-slug'), [], { cwd: repo, env, encoding: 'utf8', timeout: 30_000 });
+      const slug = vars.match(/^SLUG=(.*)$/m)![1];
+      const branch = vars.match(/^BRANCH=(.*)$/m)![1];
       expect(branch).toBe('feat-slug-hygiene');
-      const proj = path.join(home, 'projects', slug);
-      expect(fs.existsSync(path.join(proj, 'feat-slug-hygiene-reviews.jsonl'))).toBe(true);
-
-      // Reader: execute the complete rendered block without inheriting the
-      // external skill-start process's private shell variables.
-      const ctx: TemplateContext = {
-        skillName: 'test-skill', tmplPath: 'test.tmpl', host: 'claude',
-        paths: { ...HOST_PATHS.claude, binDir: '"$TEST_BIN"' }, preambleTier: 2,
-      };
-      const script = generateContextRecovery(ctx).match(/```bash\n([\s\S]*?)\n```/)![1];
-      fs.writeFileSync(path.join(proj, 'timeline.jsonl'), [
-        { branch: 'feat/slug-hygiene', event: 'completed', skill: 'review' },
-        { branch: 'feat/slug-hygiene', event: 'started', skill: 'unfinished' },
-        { branch, event: 'completed', skill: 'slugged-decoy' },
-        { branch: 'stale/parent-branch', event: 'completed', skill: 'inherited-decoy' },
-        { branch: 'unknown', event: 'completed', skill: 'fallback' },
-        { branch: 'feat/slug-hygiene', event: 'completed', skill: 'ship' },
-      ].map(entry => JSON.stringify(entry)).join('\n') + '\n');
-      const recover = (cwd: string, inheritedBranch?: string) => {
-        const result = spawnSync('bash', ['-c', script], {
-          cwd, encoding: 'utf8', timeout: 30_000,
-          env: { ...env, GSTACK_PROJECT_SLUG: slug, TEST_BIN: path.join(ROOT, 'bin'), _BRANCH: inheritedBranch },
-        });
-        expect(result.status, result.stderr).toBe(0);
-        expect(result.stderr).not.toContain('not a git repository');
-        return result.stdout;
-      };
-      for (const inheritedBranch of [undefined, 'stale/parent-branch']) {
-        const out = recover(repo, inheritedBranch);
-        expect(out).toContain('REVIEWS: 1 entries');
-        expect(out.split('\n').filter(line => line.startsWith('LAST_SESSION:'))).toEqual([
-          'LAST_SESSION: {"branch":"feat/slug-hygiene","event":"completed","skill":"ship"}',
-        ]);
-        expect(out.split('\n').filter(line => line.startsWith('RECENT_PATTERN:'))).toEqual([
-          'RECENT_PATTERN: review,ship,',
-        ]);
-      }
-
-      // Negative control: the raw-branch probe (the pre-fix shape) misses.
-      expect(fs.existsSync(path.join(proj, 'feat/slug-hygiene-reviews.jsonl'))).toBe(false);
-
-      // Both an unnamed checkout and a non-repository use the same unknown
-      // timeline identity as skill-start/end, never an inherited branch.
-      execSync('git checkout -q --detach', { cwd: repo, timeout: 30_000 });
-      for (const cwd of [repo, home]) {
-        const out = recover(cwd, 'stale/parent-branch');
-        expect(out.split('\n').filter(line => line.startsWith('LAST_SESSION:'))).toEqual([
-          'LAST_SESSION: {"branch":"unknown","event":"completed","skill":"fallback"}',
-        ]);
-        expect(out.split('\n').filter(line => line.startsWith('RECENT_PATTERN:'))).toEqual([
-          'RECENT_PATTERN: fallback,',
-        ]);
-      }
+      const project = path.join(home, 'projects', slug);
+      expect(fs.readFileSync(path.join(project, `${branch}-reviews.jsonl`), 'utf8')).toContain('"skill":"ship"');
+      expect(fs.existsSync(path.join(project, 'feat/slug-hygiene-reviews.jsonl'))).toBe(false);
     } finally {
       fs.rmSync(home, { recursive: true, force: true });
       fs.rmSync(repo, { recursive: true, force: true });

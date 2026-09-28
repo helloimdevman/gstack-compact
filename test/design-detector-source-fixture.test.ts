@@ -141,7 +141,7 @@ Then write <repo>/detector-output.md: one FINDING-NNN row per rule in the DETECT
   expect(start).toBeGreaterThan(0); expect(end).toBeGreaterThan(start);
   try {
     new Function(...Object.keys(args), new Bun.Transpiler({ loader: 'ts' }).transformSync(source.slice(start, end)))(...Object.values(args));
-    expect(callbacks.map(c => c.name)).toEqual([id, 'design-review-detector-shim-dom']);
+    expect(callbacks.map(c => c.name)).toEqual([id]);
     expect(callbacks[0]!.timeout).toBe(CAPTURE_MS);
     for (const fn of before) fn();
     for (; attempt < modes.length; attempt++) {

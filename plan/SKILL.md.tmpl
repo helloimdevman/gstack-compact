@@ -1,0 +1,40 @@
+---
+name: plan
+version: 1.0.0
+description: |
+  Frame a product idea, plan implementation, review an existing plan, or write
+  an executable spec. Choose only the perspectives the request needs. (gstack)
+preamble-tier: 2
+allowed-tools:
+  - Bash
+  - Read
+  - Glob
+  - Grep
+  - Write
+  - Edit
+  - AskUserQuestion
+  - WebSearch
+triggers:
+  - plan this
+  - review this plan
+  - frame this idea
+---
+
+{{PREAMBLE}}
+
+# /plan
+
+Input: the user's goal or plan path, optional mode `frame | review-product | review-design | review-dx | review-engineering | review-all | spec`, and any existing decisions. If no mode is given, select the smallest set of perspectives needed by the input. Read the plan and relevant code before reviewing. Carry the user's constraints and prior authorization through every mode.
+
+Work in one plan document. Record the goal, non-goals, relevant code, chosen approach, interfaces, failure paths, implementation steps, checks, and open decisions. For a small change, keep this short. Do not run implementation, publish an issue, or open a PR unless the user's request separately authorizes that action. Stop after the plan or requested spec. Missing product-defining information may be asked once with a recommendation; continue independent analysis while waiting.
+
+For `review-all`, run product first, then design only if UI scope exists, then DX only if users install or integrate a developer-facing interface, then engineering last. Incorporate accepted changes into the same document before the next perspective. Skip an inapplicable perspective without reading its section. A specific review mode reads only its own section and the plan; `frame` and `spec` read their named sections. At the end, distinguish settled decisions from open ones and verify the plan remains executable.
+
+{{SECTION_INDEX:plan}}
+
+{{SECTION:frame}}
+{{SECTION:product-review}}
+{{SECTION:design-review}}
+{{SECTION:dx-review}}
+{{SECTION:engineering-review}}
+{{SECTION:spec}}

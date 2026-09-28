@@ -1,4 +1,5 @@
 import * as fs from 'node:fs';
+import * as os from 'node:os';
 import * as path from 'node:path';
 import { createRequire } from 'node:module';
 
@@ -27,8 +28,10 @@ function loadTerminal(): Promise<any> {
         } }],
       });
       if (!build.success) throw new AggregateError(build.logs, 'Installed xterm headless build failed');
-      const encoded = Buffer.from(await build.outputs[0].text()).toString('base64');
-      return (await import(`data:text/javascript;base64,${encoded}`)).Terminal;
+      // A data: URL of this bundle exceeds the macOS path limit (ENAMETOOLONG).
+      const file = path.join(fs.mkdtempSync(path.join(os.tmpdir(), 'gstack-pty-')), 'terminal.mjs');
+      await Bun.write(file, await build.outputs[0].text());
+      return (await import(file)).Terminal;
     } catch (cause) {
       throw new Error('PTY screen unavailable; cannot safely observe terminal input.', { cause });
     }

@@ -9,12 +9,11 @@ import {
   ROOT, runId, evalsEnabled, selectedTests,
   describeIfSelected, testConcurrentIfSelected,
   copyDirSync, logCost, recordE2E,
-  createEvalCollector, finalizeEvalCollector, browseBin,
+  createEvalCollector, finalizeEvalCollector,
 } from './helpers/e2e-helpers';
-import { asideAvailable } from './helpers/aside-available';
 import { installFakeImpeccable, DETECT_SAMPLE } from './helpers/fake-impeccable';
 import { hermeticChildEnv } from './helpers/hermetic-env';
-import { sliceBetween, extractDesignResearchContract } from './helpers/skill-fixture';
+import { sliceBetween } from './helpers/skill-fixture';
 import { spawnSync } from 'child_process';
 import * as fs from 'fs';
 import * as path from 'path';
@@ -51,7 +50,6 @@ Return JSON: { "passed": true/false, "reasoning": "one paragraph explaining your
 describeIfSelected('Design Consultation E2E', [
   'design-consultation-core',
   'design-consultation-existing',
-  'design-consultation-research',
   'design-consultation-preview',
 ], () => {
   let designDir: string;
@@ -191,83 +189,6 @@ Write DESIGN.md and CLAUDE.md (or update it) in the working directory.`,
     }
   }, CAPTURE_LONG_MS);
 
-  testConcurrentIfSelected('design-consultation-research', async () => {
-    // Research phase only, no DESIGN.md generation. Web research runs in Aside
-    // first, WebSearch second ({{ASIDE_RESEARCH}}, rendered into
-    // design-consultation/SKILL.md). With Aside live the agent MUST search
-    // through `aside exec` — a straight-to-WebSearch run is the ordering bug
-    // this case pins. Without Aside (CI, or GSTACK_SKIP_ASIDE=1) it must use
-    // the WebSearch tool, or say the fallback sentence when that is missing
-    // too, and write the notes from in-distribution knowledge. Either way the
-    // notes file must exist.
-    const researchDir = fs.mkdtempSync(path.join(os.tmpdir(), 'skill-e2e-research-'));
-
-    // Extract only the research contract (CLAUDE.md: extract, don't copy). The tree's
-    // SKILL.md unless GSTACK_E2E_DOCS_ROOT points at a `gen:skill-docs --out-dir` render.
-    const skill = fs.readFileSync(path.join(process.env.GSTACK_E2E_DOCS_ROOT || ROOT, 'design-consultation', 'SKILL.md'), 'utf-8');
-    fs.writeFileSync(path.join(researchDir, 'research-contract.md'), extractDesignResearchContract(skill));
-    const live = asideAvailable();
-
-    const result = await runSkillTest({
-      prompt: `Read ${researchDir}/research-contract.md first and follow it exactly: it says how web research runs in this project.
-
-Research civic tech data platform designs. Run exactly 2 research queries:
-1. 'civic tech government data platform design 2025'
-2. 'open data portal UX best practices'
-
-Summarize the key design patterns you found to ${researchDir}/research-notes.md.
-Include: color trends, typography patterns, and layout conventions you observed.
-Do NOT generate a full DESIGN.md — just research notes.`,
-      workingDirectory: researchDir,
-      maxTurns: 10,
-      allowedTools: ['Bash', 'Read', 'Write', 'WebSearch'],
-      // 300s, not 90s: saturated-runner class (same as review-dashboard-via /
-      // retro-base-branch). PR #2533 CI observed the sibling preview test at
-      // 0 turns/$0.00 for 93s x3 attempts — session up, first completion
-      // queued past the budget under concurrent API load. 90s budgets cannot
-      // absorb one slow first completion; 300s is the repo's standard floor
-      // for CI SDK tests. Outer timeout below rises to 360s for headroom.
-      timeout: CAPTURE_MS,
-      testName: 'design-consultation-research',
-      runId,
-    });
-
-    logCost('/design-consultation research', result);
-
-    const notesPath = path.join(researchDir, 'research-notes.md');
-    const notesExist = fs.existsSync(notesPath);
-    const notesContent = notesExist ? fs.readFileSync(notesPath, 'utf-8') : '';
-
-    // Aside live: research went through `aside exec` in a Bash tool call (WebSearch
-    // alone is the wrong order). Aside absent: WebSearch tool, or the fallback sentence.
-    const asideExecCalls = result.toolCalls.filter(tc => tc.tool === 'Bash' && /\baside exec\b/.test(String(tc.input?.command ?? '')));
-    const webSearchCalls = result.toolCalls.filter(tc => tc.tool === 'WebSearch');
-    const searched = asideExecCalls.length > 0 || webSearchCalls.length > 0;
-    // Neither: the agent SAID the fallback. Assistant text blocks only — the
-    // contract file the agent Reads contains the same sentence, so tool_result
-    // content must not count.
-    const assistantText = result.transcript
-      .filter((e: any) => e?.type === 'assistant')
-      .flatMap((e: any) => (e.message?.content ?? []).filter((c: any) => c?.type === 'text').map((c: any) => String(c.text)))
-      .join('\n');
-    const saidFallback = assistantText.includes('Search unavailable');
-    const researchOk = live ? asideExecCalls.length > 0 : (searched || saidFallback);
-    console.log(`aside exec issued ${asideExecCalls.length} times; WebSearch called ${webSearchCalls.length} times; Aside live: ${live}; fallback said: ${saidFallback}`);
-
-    recordE2E(evalCollector, '/design-consultation research', 'Design Consultation E2E', result, {
-      passed: researchOk && notesExist && notesContent.length > 200 && ['success', 'error_max_turns'].includes(result.exitReason),
-    });
-
-    expect(['success', 'error_max_turns']).toContain(result.exitReason);
-    if (live) expect(asideExecCalls.length).toBeGreaterThan(0);
-    else expect(searched || saidFallback).toBe(true);
-    expect(notesExist).toBe(true);
-    if (notesExist) {
-      expect(notesContent.length).toBeGreaterThan(200);
-    }
-
-    try { fs.rmSync(researchDir, { recursive: true, force: true }); } catch {}
-  }, CAPTURE_LONG_MS);
 
   testConcurrentIfSelected('design-consultation-existing', async () => {
     // Pre-create a LEGACY-format DESIGN.md (gstack's pre-spec shape, no marker) so
@@ -575,175 +496,6 @@ IMPORTANT: Do NOT try to browse any URLs or use a browse binary. This is a plan 
   }, CAPTURE_MS);
 });
 
-// --- Design Review E2E (live-site audit + fix) ---
-
-/**
- * Concatenated tool_result text from the stream-json transcript. runSkillTest
- * leaves toolCalls[].output empty, and the agent's Bash INPUT also contains
- * the sentinel string — only the tool_result proves the script printed it.
- */
-function toolOutput(result: SkillTestResult): string {
-  const parts: string[] = [];
-  for (const e of result.transcript) {
-    if (e?.type !== 'user') continue;
-    for (const item of e.message?.content ?? []) {
-      if (item?.type !== 'tool_result') continue;
-      parts.push(typeof item.content === 'string' ? item.content : JSON.stringify(item.content ?? ''));
-    }
-  }
-  return parts.join('\n');
-}
-
-// /design-review drives the Aside browser; without it the skill's BROWSER SETUP stops at
-// NEEDS_ASIDE, so the block self-skips (CI runners have no Aside).
-describeIfSelected('Design Review E2E', ['design-review-fix'], () => {
-  // bun runs describe.skip callbacks too — probe only when this block is actually selected,
-  // so an unrelated eval run never pays the up-to-30s `aside repl` probe.
-  const selected = evalsEnabled && (selectedTests === null || selectedTests.includes('design-review-fix'));
-  if (selected && !asideAvailable()) { test.skip('needs Aside', () => {}); return; }
-
-  let qaDesignDir: string;
-  let qaDesignServer: ReturnType<typeof Bun.serve> | null = null;
-
-  beforeAll(() => {
-    qaDesignDir = fs.mkdtempSync(path.join(os.tmpdir(), 'skill-e2e-qa-design-'));
-
-    const run = (cmd: string, args: string[]) =>
-      spawnSync(cmd, args, { cwd: qaDesignDir, stdio: 'pipe', timeout: 5000 });
-
-    run('git', ['init', '-b', 'main']);
-    run('git', ['config', 'user.email', 'test@test.com']);
-    run('git', ['config', 'user.name', 'Test']);
-
-    // Create HTML/CSS with intentional design issues
-    fs.writeFileSync(path.join(qaDesignDir, 'index.html'), `<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Design Test App</title>
-  <link rel="stylesheet" href="style.css">
-</head>
-<body>
-  <header>
-    <h1 style="font-size: 48px; color: #333;">Welcome</h1>
-    <h2 style="font-size: 47px; color: #334;">Subtitle Here</h2>
-  </header>
-  <main>
-    <div class="card" style="padding: 10px; margin: 20px;">
-      <h3 style="color: blue;">Card Title</h3>
-      <p style="color: #666; font-size: 14px; line-height: 1.2;">Some content here with tight line height.</p>
-    </div>
-    <div class="card" style="padding: 30px; margin: 5px;">
-      <h3 style="color: green;">Another Card</h3>
-      <p style="color: #999; font-size: 16px;">Different spacing and colors for no reason.</p>
-    </div>
-    <button style="background: red; color: white; padding: 5px 10px; border: none;">Click Me</button>
-    <button style="background: #007bff; color: white; padding: 12px 24px; border: none; border-radius: 20px;">Also Click</button>
-  </main>
-</body>
-</html>`);
-
-    fs.writeFileSync(path.join(qaDesignDir, 'style.css'), `body {
-  font-family: Arial, sans-serif;
-  margin: 0;
-  padding: 20px;
-}
-.card {
-  border: 1px solid #ddd;
-  border-radius: 4px;
-}
-`);
-
-    run('git', ['add', '.']);
-    run('git', ['commit', '-m', 'initial design test page']);
-
-    // Start a simple file server for the design test page
-    qaDesignServer = Bun.serve({
-      port: 0,
-      fetch(req) {
-        const url = new URL(req.url);
-        const filePath = path.join(qaDesignDir, url.pathname === '/' ? 'index.html' : url.pathname.slice(1));
-        try {
-          const content = fs.readFileSync(filePath);
-          const ext = path.extname(filePath);
-          const contentType = ext === '.css' ? 'text/css' : ext === '.html' ? 'text/html' : 'text/plain';
-          return new Response(content, { headers: { 'Content-Type': contentType } });
-        } catch {
-          return new Response('Not Found', { status: 404 });
-        }
-      },
-    });
-
-    // Copy design-review skill
-    fs.mkdirSync(path.join(qaDesignDir, 'design-review'), { recursive: true });
-    fs.copyFileSync(
-      path.join(ROOT, 'design-review', 'SKILL.md'),
-      path.join(qaDesignDir, 'design-review', 'SKILL.md'),
-    );
-  });
-
-  afterAll(() => {
-    qaDesignServer?.stop();
-    try { fs.rmSync(qaDesignDir, { recursive: true, force: true }); } catch {}
-  });
-
-  testConcurrentIfSelected('design-review-fix', async () => {
-    const serverUrl = `http://localhost:${(qaDesignServer as any)?.port}`;
-
-    const result = await runSkillTest({
-      prompt: `The Aside browser is installed and running. Read design-review/SKILL.md for the design review + fix workflow and follow its BROWSER SETUP section: drive the browser with \`aside repl\` scripts shaped exactly like its cookbook. Do not look for any other browser binary.
-
-Review the site at ${serverUrl}. Use --quick mode. Skip any AskUserQuestion calls — this is non-interactive. Fix up to 3 issues max. Write your report to ./design-audit.md.`,
-      workingDirectory: qaDesignDir,
-      maxTurns: 30,
-      timeout: CAPTURE_LONG_MS,
-      testName: 'design-review-fix',
-      runId,
-    });
-
-    logCost('/design-review fix', result);
-
-    const reportPath = path.join(qaDesignDir, 'design-audit.md');
-    const reportExists = fs.existsSync(reportPath);
-
-    // Check if any design fix commits were made
-    const gitLog = spawnSync('git', ['log', '--oneline'], {
-      cwd: qaDesignDir, stdio: 'pipe', timeout: 30_000,
-    });
-    const commits = gitLog.stdout.toString().trim().split('\n');
-    const designFixCommits = commits.filter((c: string) => c.includes('style(design)'));
-
-    // The agent must actually drive Aside: an `aside repl` Bash call, a printed sentinel
-    // (from a tool_result, never the input), and no reach for the retired browse binary.
-    const bashCommands = result.toolCalls
-      .filter(t => t.tool === 'Bash')
-      .map(t => String(t.input?.command ?? ''));
-    const droveAside = bashCommands.some(c => /aside repl/.test(c));
-    const sentinelPrinted = /GSTACK_STEP_OK/.test(toolOutput(result));
-    const usedBrowseBin = bashCommands.some(c => /browse\/dist\/browse|\$B /.test(c));
-
-    recordE2E(evalCollector, '/design-review fix', 'Design Review E2E', result, {
-      passed: ['success', 'error_max_turns'].includes(result.exitReason) && droveAside && sentinelPrinted && !usedBrowseBin,
-    });
-
-    // Accept error_max_turns — the fix loop is complex
-    expect(['success', 'error_max_turns']).toContain(result.exitReason);
-    expect(droveAside).toBe(true);
-    expect(sentinelPrinted).toBe(true);
-    expect(usedBrowseBin).toBe(false);
-
-    // Report and commits are best-effort — log what happened
-    if (reportExists) {
-      const report = fs.readFileSync(reportPath, 'utf-8');
-      console.log(`Design audit report: ${report.length} chars`);
-    } else {
-      console.warn('No design-audit.md generated');
-    }
-    console.log(`Design fix commits: ${designFixCommits.length}`);
-  }, CAPTURE_LONG_MS);
-});
-
 // Module-level afterAll — finalize eval collector after all tests complete
 afterAll(async () => {
   await finalizeEvalCollector(evalCollector);
@@ -929,10 +681,9 @@ Write the probe's first line and skill-presence line, then one FINDING-NNN entry
   }, CAPTURE_MS);
 });
 
-describeIfSelected('Design review detector shim E2E', ['design-review-detector-shim', 'design-review-detector-shim-dom'], () => {
+describeIfSelected('Design review detector shim E2E', ['design-review-detector-shim'], () => {
   let repoDir: string;
   let engineDir: string;
-  let server: ReturnType<typeof Bun.serve> | null = null;
 
   beforeAll(() => {
     repoDir = fs.mkdtempSync(path.join(os.tmpdir(), 'skill-e2e-detector-shim-'));
@@ -957,14 +708,9 @@ describeIfSelected('Design review detector shim E2E', ['design-review-detector-s
         ['**Phase 0: mechanical scan**', '## Phases 1-6'],
       ]),
     );
-    fs.writeFileSync(
-      path.join(repoDir, 'design-review-dom-dump.md'),
-      detectorSkillText([['### DOM dump (DOM mode only', '### Auth Detection']]),
-    );
   });
 
   afterAll(() => {
-    server?.stop(true);
     try { fs.rmSync(repoDir, { recursive: true, force: true }); } catch {}
     try { fs.rmSync(engineDir, { recursive: true, force: true }); } catch {}
   });
@@ -1095,69 +841,7 @@ Then write ${repoDir}/detector-output.md: one FINDING-NNN row per rule in the DE
     }
   }, CAPTURE_MS);
 
-  // DOM mode needs a browser engine for the dump: gstack's own browse binary
-  // (CI builds it with build:gates). Self-skips when it is absent, like the
-  // other render gates.
-  testConcurrentIfSelected(
-    'design-review-detector-shim-dom',
-    async () => {
-      if (!fs.existsSync(browseBin)) {
-        console.log('design-review-detector-shim (dom mode): browse binary absent, skipping (build it with bun run build:gates)');
-        return;
-      }
-      const site = fs.mkdtempSync(path.join(os.tmpdir(), 'skill-e2e-detector-site-'));
-      fs.copyFileSync(path.join(ROOT, 'test', 'fixtures', 'review-eval-design-slop.html'), path.join(site, 'index.html'));
-      fs.copyFileSync(path.join(ROOT, 'test', 'fixtures', 'review-eval-design-slop.css'), path.join(site, 'styles.css'));
-      server = Bun.serve({
-        hostname: '127.0.0.1', port: 0,
-        fetch(req) {
-          const p = new URL(req.url).pathname.replace(/^\//, '') || 'index.html';
-          const f = path.join(site, p);
-          return fs.existsSync(f) ? new Response(Bun.file(f)) : new Response('not found', { status: 404 });
-        },
-      });
-      const url = `http://127.0.0.1:${server.port}/index.html`;
-      const reportDir = fs.mkdtempSync(path.join(os.tmpdir(), 'skill-e2e-detector-report-'));
-      const gstackHome = fs.mkdtempSync(path.join(os.tmpdir(), 'skill-e2e-detector-home-'));
-      // REPORT_DIR must sit under <gstack home>/projects/<slug>/designs/ for the wrapper's allow-list.
-      const allowed = path.join(gstackHome, 'projects', 'shim', 'designs', 'design-audit-20260908');
-      fs.mkdirSync(path.join(allowed, 'dom', 'run1'), { recursive: true });
-      // The agent's $B commands and this test's cleanup share ONE daemon, scoped to this run.
-      const browseState = path.join(gstackHome, 'browse.json');
-      try {
-        const result = await runSkillTest({
-          prompt: `Read design-review-detector.md (the /design-review detector block + Phase 0) and design-review-dom-dump.md (the Phase 3 DOM dump section).
-The target is the URL ${url}, so this is DOM mode: never scan source files.
-Aside is NOT available; use the fallback browser engine: $B is ${browseBin}. Run "$B goto ${url}" first, then follow the fallback-engine DOM dump steps exactly as written, with {page} = home, REPORT_DIR=${allowed}, RUN_ID=run1, and --host claude. Then run the single scan over ${allowed}/dom/run1 and write ${allowed}/detector-output.md with one FINDING-NNN row per rule in the DETECT_TOP block, each tagged [rule-id], and the line "static scan of the rendered DOM; cross-origin CSS not resolved".
-Do not run npx. Do not fix anything.`,
-          workingDirectory: repoDir,
-          maxTurns: 25,
-          timeout: CAPTURE_LONG_MS,
-          testName: 'design-review-detector-shim-dom',
-          runId,
-          env: { IMPECCABLE_BIN: path.join(engineDir, 'impeccable'), IMPECCABLE_FAKE_OUTPUT: DETECT_SAMPLE, GSTACK_HOME: gstackHome, BROWSE_STATE_FILE: browseState },
-        });
-        logCost('/design-review detector shim (dom)', result);
-        recordE2E(evalCollector, '/design-review detector shim (dom)', 'Design review detector shim E2E (DOM mode)', result);
-        expect(result.exitReason).toBe('success');
-        const bash = result.toolCalls.filter(c => c.tool === 'Bash').map(c => String(c.input?.command ?? ''));
-        expect(bash.some(c => c.includes('dom-dump.js') && c.includes('--out') && c.includes('--raw'))).toBe(true); // $B js '('"$_DUMP"')()' with the file spliced in
-        expect(bash.some(c => /gstack-design-detect\.ts scan /.test(c) && c.includes('dom/run1'))).toBe(true);
-        expect(bash.some(c => /gstack-design-detect\.ts scan --changed/.test(c))).toBe(false);
-        const dumps = fs.readdirSync(path.join(allowed, 'dom', 'run1')).filter(f => f.endsWith('.dom.html'));
-        expect(dumps.length).toBeGreaterThan(0);
-        expect(fs.readFileSync(path.join(allowed, 'dom', 'run1', dumps[0]), 'utf-8')).toContain('data-gstack-dom-css');
-        const out = fs.readFileSync(path.join(allowed, 'detector-output.md'), 'utf-8');
-        expect(out).toContain('[ai-color-palette]');
-        expect(out).toContain('static scan of the rendered DOM');
-      } finally {
-        server?.stop(true); server = null;
-        try { spawnSync(browseBin, ['stop'], { stdio: 'pipe', timeout: 10_000, env: { ...process.env, BROWSE_STATE_FILE: browseState } }); } catch {}
-        for (const d of [site, reportDir, gstackHome]) { try { fs.rmSync(d, { recursive: true, force: true }); } catch {} }
-      }
-    },
-    CAPTURE_LONG_MS,
-  );
+
 });
 
 describeIfSelected('Design HTML slop gate E2E', ['design-html-slop-gate'], () => {

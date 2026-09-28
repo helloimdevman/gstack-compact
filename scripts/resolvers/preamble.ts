@@ -1,70 +1,17 @@
-/**
- * Preamble composition root.
- *
- * Each generator lives in its own file under ./preamble/*.ts. This file only
- * wires them together via generatePreamble(). Keep composition declarative —
- * no inline logic beyond tier gating.
- *
- * Each skill runs independently via `claude -p` (or the host's equivalent).
- * There is no shared loader. The preamble provides: update checks, session
- * tracking, user preferences, repo mode detection, model overlays, and
- * telemetry.
- *
- * Telemetry data flow:
- *   1. Always: local JSONL append to ~/.gstack/analytics/ (inline, inspectable)
- *   2. If _TEL != "off" AND binary exists: gstack-telemetry-log for remote reporting
- */
-
-
+/** Installed bootstrap and shared contract; optional model guidance follows it. */
 import type { TemplateContext } from './types';
+import { getHostConfig } from '../../hosts/index';
 import { generateModelOverlay } from './model-overlay';
-import { generateQuestionTuning } from './question-tuning';
 
-// Core bootstrap
-import { generatePreambleBash } from './preamble/generate-preamble-bash';
-import { generateUpgradeCheck } from './preamble/generate-upgrade-check';
-import {
-  generateCompletionStatus,
-  generatePlanModeInfo,
-} from './preamble/generate-completion-status';
-
-// Host-specific instructions
-import { generateBrainHealthInstruction } from './preamble/generate-brain-health-instruction';
-
-// GBrain cross-machine sync (runs at skill start; end-side handled in completion-status)
-import { generateBrainSyncBlock } from './preamble/generate-brain-sync-block';
-
-// Behavioral / voice
-import { generateVoiceDirective } from './preamble/generate-voice-directive';
-
-// Tier 2+ context and interaction framework
-import { generateContextRecovery } from './preamble/generate-context-recovery';
-import { generateAskUserFormat } from './preamble/generate-ask-user-format';
-import { generateWritingStyle } from './preamble/generate-writing-style';
-import { generateCompletenessSection } from './preamble/generate-completeness-section';
-import { generateConfusionProtocol } from './preamble/generate-confusion-protocol';
-import { generateEvidenceDirective } from './preamble/generate-evidence-directive';
-import { generateContextHealth } from './preamble/generate-context-health';
-
-// Tier 3+ repo mode + search
-import { generateRepoModeSection } from './preamble/generate-repo-mode-section';
-import { generateSearchBeforeBuildingSection } from './preamble/generate-search-before-building';
-import { generateMakePdfSetup } from './make-pdf';
-
-// Standalone export used directly by the resolver registry
 export { generateTestFailureTriage } from './preamble/generate-test-failure-triage';
 
-// Preamble Composition (tier → sections)
-// ─────────────────────────────────────────────
-// T1: core + upgrade + lake + telemetry + voice(trimmed) + completion
-// T2: T1 + voice(full) + ask + completeness + context-recovery + confusion + context-health
-// T3: T2 + repo-mode + search
-// T4: (same as T3 — TEST_FAILURE_TRIAGE is a separate {{}} placeholder, not preamble)
-//
-// Which skill gets which tier lives in each template's frontmatter
-// (`preamble-tier: N`). Every template that resolves {{PREAMBLE}} must
-// declare it — there is no default.
-export function generatePreamble(ctx: TemplateContext): string {
+export const SHARED_CONTRACT_POINTER = [
+  '## Shared contract',
+  '',
+  'Read the printed `GSTACK_CONTRACT` file before acting. It owns common permissions and safety.',
+].join('\n');
+
+export function generateInstalledPreamble(ctx: TemplateContext): string {
   const tier = ctx.preambleTier;
   if (tier === undefined) {
     throw new Error(
@@ -75,41 +22,24 @@ export function generatePreamble(ctx: TemplateContext): string {
   if (tier < 1 || tier > 4) {
     throw new Error(`Invalid preamble-tier: ${tier} in ${ctx.tmplPath}. Must be 1-4.`);
   }
-  const sections = [
-    generatePreambleBash(ctx),
-    ...(ctx.skillName === 'make-pdf' ? [generateMakePdfSetup(ctx)] : []),
-    // Plan-mode-skill semantics stays near the top: after bash (so _SESSION_ID /
-    // _BRANCH / _TEL env vars are live) and before all onboarding gates so
-    // models read the authoritative "AskUserQuestion satisfies plan mode's
-    // end-of-turn" rule before any other instruction. Renders for all skills
-    // (not interactive-gated); the text applies universally.
-    generatePlanModeInfo(ctx),
-    generateUpgradeCheck(ctx),
-    // Phase 2: the 8 one-time onboarding generators (lake-intro, telemetry-
-    // prompt, proactive-prompt, first-run-guidance, routing-injection,
-    // vendoring-deprecation, spawned-session-check, writing-style-migration)
-    // moved into bin/gstack-skill-start's instruction-emission layer — their
-    // text appears at runtime only when its gate fires (plan Q2/OV6/F5).
-    generateBrainHealthInstruction(ctx),
-    // AskUserQuestion Format renders BEFORE the model overlay so the pacing rule
-    // is the ambient default; the overlay's behavioral nudges land as subordinate
-    // patches. Opus 4.7 reads top-to-bottom and absorbs the first pacing directive
-    // it hits; reversing this order regresses plan-review cadence (v1.6.4.0 bug).
-    ...(tier >= 2 ? [generateAskUserFormat(ctx)] : []),
-    generateBrainSyncBlock(ctx),
-    generateModelOverlay(ctx),
-    generateVoiceDirective(ctx, tier),
-    ...(tier >= 2 ? [
-      generateContextRecovery(ctx),
-      generateWritingStyle(ctx),
-      generateCompletenessSection(ctx),
-      generateConfusionProtocol(ctx),
-      generateEvidenceDirective(ctx),
-      generateContextHealth(ctx),
-      generateQuestionTuning(ctx),
-    ] : []),
-    ...(tier >= 3 ? [generateRepoModeSection(), generateSearchBeforeBuildingSection(ctx)] : []),
-    generateCompletionStatus(ctx),
-  ];
-  return sections.filter(s => s && s.trim().length > 0).join('\n\n');
+  if (SHARED_CONTRACT_POINTER.length >= 500) {
+    throw new Error('SHARED_CONTRACT_POINTER must stay under 500 characters');
+  }
+  const host = getHostConfig(ctx.host);
+  const globalRoot = ctx.host === 'codex'
+    ? '${CODEX_HOME:-$HOME/.codex}/skills/gstack'
+    : `$HOME/${host.globalRoot}`;
+  const overlay = generateModelOverlay(ctx);
+  return `## Start /${ctx.skillName}
+
+\`\`\`bash
+_G="${globalRoot}"
+_R=$(git rev-parse --show-toplevel 2>/dev/null)
+[ -n "$_R" ] && [ -x "$_R/${ctx.paths.localSkillRoot}/bin/gstack-skill-start" ] && _G="$_R/${ctx.paths.localSkillRoot}"
+"$_G/bin/gstack-skill-start" --skill "${ctx.skillName}" --model "${ctx.model ?? 'none'}" --parent-pid "$PPID" || echo 'SKILL_START: unavailable'
+\`\`\`
+
+Reuse printed \`GSTACK_BIN\`; shell variables reset. Missing \`GSTACK_CONTRACT\` or \`SKILL_START_PROTO: 1\` blocks protected /${ctx.skillName} steps. If \`SESSION_KIND\` is absent, treat \`SESSION_KIND\` as \`interactive\`; do NOT assume Conductor. Onboarding/telemetry: DEFERRED to the next healthy run. Keep \`SESSION_ID\` and \`TEL_START\`.
+
+${SHARED_CONTRACT_POINTER}${overlay ? `\n\n${overlay}` : ''}`;
 }

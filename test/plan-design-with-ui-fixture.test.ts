@@ -207,6 +207,7 @@ await import(${JSON.stringify(path.join(ROOT, 'test/skill-e2e-plan-design-with-u
     });
     const output = child.stdout.toString() + child.stderr.toString();
     expect(child.signalCode ?? null, output).toBeNull();
+    if (!fs.existsSync(facts)) throw new Error(`facts missing\n${output.slice(-4000)}`);
     const observed = JSON.parse(fs.readFileSync(facts, 'utf8'));
     expect(observed.calls, output).toBe(mode === 'missing-fixture' ? 0 : 1);
     if (mode !== 'missing-fixture') expect(observed.seeded, output).toBe(true);

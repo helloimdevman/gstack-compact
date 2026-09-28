@@ -1,0 +1,34 @@
+---
+name: build
+version: 1.0.0
+description: |
+  Implement an approved change, including focused regression checks and a
+  reviewable diff. Start directly when the task is already clear. (gstack)
+preamble-tier: 2
+allowed-tools:
+  - Bash
+  - Read
+  - Glob
+  - Grep
+  - Write
+  - Edit
+  - AskUserQuestion
+triggers:
+  - implement this
+  - build this
+  - fix this
+---
+
+{{PREAMBLE}}
+
+# /build
+
+Input: the user's implementation request or plan path and its acceptance conditions. A small, clear change needs only a brief scope check; do not require a product interview or architecture redesign. Use the user's existing authorization and project rules.
+
+1. Inspect the relevant code, callers, inputs, outputs, and current behavior. For a bug, preserve the original failure and establish its cause before editing.
+2. Reuse an existing helper, standard library, or platform feature where it covers the job. Make the smallest change that meets the acceptance conditions. Keep adjacent findings separate unless authorized.
+3. For nontrivial logic or a security/data boundary, leave a focused check that fails on the original defect. For a CLI change, exercise valid input, an invalid argument, exit status, stderr, and file effects. Do not start a browser for a non-web change.
+4. Run affected tests and required project checks. Classify a failure as product, test, detector, or environment before changing the code or the test. Recheck after any fix.
+5. Inspect the final diff and report the implemented behavior, checks with outcomes, and remaining limitations. Finish when the requested implementation is verified. Continue to review, PR, or deployment only when the user or a selected workflow requested it.
+
+If a missing product decision changes the result or a protected action lacks authority, ask only that decision with a recommendation and keep independent work moving. Do not mark an unrun check as passed.

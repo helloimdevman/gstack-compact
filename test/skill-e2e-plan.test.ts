@@ -11,7 +11,6 @@ import {
 } from './helpers/e2e-helpers';
 import { judgePosture } from './helpers/llm-judge';
 import { extractSkillSections } from './helpers/skill-fixture';
-import { buildCodexOfferingPrompt } from './helpers/codex-offering-fixture';
 import { validateOfficeHoursSpecSummary } from './helpers/office-hours-completion';
 import { spawnSync } from 'child_process';
 import * as fs from 'fs';
@@ -777,94 +776,6 @@ This review report at the bottom of the plan is the MOST IMPORTANT deliverable o
       if (planDir) try { fs.rmSync(planDir, { recursive: true, force: true }); } catch {}
     }
   }, CAPTURE_LONG_MS + OFFICE_HOURS_BUN_GRACE_MS);
-});
-
-// --- Codex Offering E2E ---
-// Verifies that Codex is properly offered (with availability check, user prompt,
-// and fallback) in office-hours, plan-ceo-review, plan-design-review, plan-eng-review.
-
-describeIfSelected('Codex Offering E2E', [
-  'codex-offered-office-hours', 'codex-offered-ceo-review',
-  'codex-offered-design-review', 'codex-offered-eng-review',
-], () => {
-  let testDir: string;
-
-  beforeAll(() => {
-    testDir = fs.mkdtempSync(path.join(os.tmpdir(), 'skill-e2e-codex-offer-'));
-    const run = (cmd: string, args: string[]) =>
-      spawnSync(cmd, args, { cwd: testDir, stdio: 'pipe', timeout: 5000 });
-
-    run('git', ['init', '-b', 'main']);
-    run('git', ['config', 'user.email', 'test@test.com']);
-    run('git', ['config', 'user.name', 'Test']);
-    fs.writeFileSync(path.join(testDir, 'README.md'), '# Test Project\n');
-    run('git', ['add', '.']);
-    run('git', ['commit', '-m', 'init']);
-
-    // Copy all 4 SKILL.md files
-    for (const skill of ['office-hours', 'plan-ceo-review', 'plan-design-review', 'plan-eng-review']) {
-      fs.mkdirSync(path.join(testDir, skill), { recursive: true });
-      fs.copyFileSync(
-        path.join(ROOT, skill, 'SKILL.md'),
-        path.join(testDir, skill, 'SKILL.md'),
-      );
-      // Carved skills (v2 plan T9): copy sections/ so codex/outside-voice content
-      // (carved into review-sections.md) is present for the search.
-      const _sec = path.join(ROOT, skill, 'sections');
-      if (fs.existsSync(_sec)) fs.cpSync(_sec, path.join(testDir, skill, 'sections'), { recursive: true });
-    }
-  });
-
-  afterAll(() => {
-    try { fs.rmSync(testDir, { recursive: true, force: true }); } catch {}
-  });
-
-  async function checkCodexOffering(skill: string, testName: string, featureName: string) {
-    const result = await runSkillTest({
-      prompt: buildCodexOfferingPrompt({
-        root: testDir, skill, featureName,
-        summaryPath: path.join(testDir, `${testName}-summary.md`),
-      }),
-      workingDirectory: testDir,
-      maxTurns: 8,
-      timeout: JUDGE_MS,
-      testName,
-      runId,
-    });
-
-    logCost(`/${skill} codex offering`, result);
-    recordE2E(evalCollector, `/${testName}`, 'Codex Offering E2E', result);
-    expect(result.exitReason).toBe('success');
-
-    const summaryPath = path.join(testDir, `${testName}-summary.md`);
-    expect(fs.existsSync(summaryPath)).toBe(true);
-
-    const summary = fs.readFileSync(summaryPath, 'utf-8').toLowerCase();
-    // All skills should have codex availability check (command -v per #1197)
-    expect(summary).toMatch(/command -v codex/);
-    // All skills should have fallback behavior
-    expect(summary).toMatch(/fallback|subagent|unavailable|not available|skip/);
-    // All skills should show it's optional/non-blocking
-    expect(summary).toMatch(/optional|non.?blocking|skip|not.*required/);
-
-    console.log(`${skill}: Codex offering verified`);
-  }
-
-  testConcurrentIfSelected('codex-offered-office-hours', async () => {
-    await checkCodexOffering('office-hours', 'codex-offered-office-hours', 'second opinion');
-  }, CAPTURE_MS);
-
-  testConcurrentIfSelected('codex-offered-ceo-review', async () => {
-    await checkCodexOffering('plan-ceo-review', 'codex-offered-ceo-review', 'outside voice');
-  }, CAPTURE_MS);
-
-  testConcurrentIfSelected('codex-offered-design-review', async () => {
-    await checkCodexOffering('plan-design-review', 'codex-offered-design-review', 'design outside voices');
-  }, CAPTURE_MS);
-
-  testConcurrentIfSelected('codex-offered-eng-review', async () => {
-    await checkCodexOffering('plan-eng-review', 'codex-offered-eng-review', 'outside voice');
-  }, CAPTURE_MS);
 });
 
 // Module-level afterAll — finalize eval collector after all tests complete

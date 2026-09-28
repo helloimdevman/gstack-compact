@@ -1,10 +1,9 @@
 # AskUserQuestion split rule — full reference
 
-Inline summary lives in the canonical preamble (`scripts/resolvers/preamble/generate-ask-user-format.ts`).
-That subsection is intentionally compressed because it injects into every
-tier-2+ skill's `SKILL.md`. This file is the deep reference the inline
-guidance points to — load it when N>4 options come up and you need
-worked examples or the full Hold / dependency / final-summary semantics.
+This reference preserves options when a question exceeds the host tool's
+option limit. Consult it for worked examples and the full Hold, dependency,
+and final-summary semantics. Installed skills use the shared contract;
+the former preamble essay is no longer injected.
 
 ## The bug this prevents
 

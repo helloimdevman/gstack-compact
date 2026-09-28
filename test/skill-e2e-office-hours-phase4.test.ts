@@ -38,7 +38,7 @@ const evalCollector = createEvalCollector('e2e-office-hours-phase4');
 
 // Format predicates. The strict `Recommendation:[*\s]*Choose` regex used by
 // skill-e2e-plan-format pins down a specific template-example wording ("Choose
-// [X]"). The format spec at scripts/resolvers/preamble/generate-ask-user-format.ts
+// [X]"). The format spec at the retired AskUserQuestion Format preamble
 // only requires `Recommendation: <choice> because <reason>` — `<choice>` can
 // be the bare option label. judgeRecommendation.present (deterministic) checks
 // this canonical shape correctly; we don't need a redundant strict regex here.

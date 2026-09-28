@@ -25,7 +25,7 @@ fi
 
 if [ -z "$INSTALL_DIR" ] || [ ! -d "$INSTALL_DIR" ]; then
   echo "Error: gstack install directory not found." >&2
-  echo "Run: cd ~/.claude/skills/gstack && ./setup" >&2
+  echo "Run ./setup from the source checkout (or inspect the install record's sourceRoot)." >&2
   exit 1
 fi
 
@@ -36,11 +36,21 @@ SKILLS_DIR="${GSTACK_SKILLS_DIR:-$(dirname "$INSTALL_DIR")}"
 # Read prefix setting
 PREFIX=$("$GSTACK_CONFIG" get skill_prefix 2>/dev/null || echo "false")
 
-# #2569: rendered :user variants (brain-aware blocks) live in an UNTRACKED
-# out-dir instead of the tracked install checkout. When a render exists for a
-# skill, relink serves it — otherwise a config change would silently flip
-# every skill back to the canonical (blockless) source.
+# Keep the old render path only for ownership checks during upgrades.
 RENDER_DIR="${GSTACK_USER_RENDER_DIR:-${GSTACK_HOME:-$HOME/.gstack}/render/claude}"
+
+if [ -f "$INSTALL_DIR/.gstack-install.json" ] && command -v bun >/dev/null 2>&1; then
+  CORE_INFO="$(bun -e 'const d=JSON.parse(await Bun.file(process.argv[1]).text()); if(d.version===1 && d.host==="claude" && ["core","compat"].includes(d.skillProfile)) process.stdout.write([d.sourceRoot,d.generationModel,d.skillProfile].join("\t"))' "$INSTALL_DIR/.gstack-install.json")"
+  if [ -n "$CORE_INFO" ]; then
+    IFS=$'\t' read -r CORE_SOURCE CORE_MODEL CORE_PROFILE <<< "$CORE_INFO"
+    CORE_ARGS=("$CORE_SOURCE/scripts/install-core-profile.ts" --host claude
+      --source-root "$CORE_SOURCE" --skills-dir "$SKILLS_DIR"
+      --state-root "${GSTACK_HOME:-$HOME/.gstack}/render/$CORE_PROFILE/claude" --model "$CORE_MODEL" --profile "$CORE_PROFILE")
+    if [ "$PREFIX" = true ]; then CORE_ARGS+=(--prefix); fi
+    bun "${CORE_ARGS[@]}"
+    exit 0
+  fi
+fi
 
 # ─── Ownership gate ───────────────────────────────────────────────────────────
 # relink runs on every ./setup and used to `rm -rf` any same-name entry with a
@@ -291,10 +301,7 @@ _link_root_skill_alias
 SKILL_COUNT=0
 for skill_dir in "$INSTALL_DIR"/*/; do
   [ -d "$skill_dir" ] || continue
-  # Skip symlinked skill dirs (connect-chrome → open-gstack-browser): linking
-  # one under the symlink's basename would duplicate the canonical frontmatter
-  # name and collide in Claude Code's skill registry (#2201). setup owns the
-  # rewritten-copy alias for those.
+  # Skip symlinked skill dirs to avoid duplicate frontmatter names.
   [ -L "${skill_dir%/}" ] && continue
   skill=$(basename "$skill_dir")
   # Skip non-skill directories
@@ -337,7 +344,6 @@ for skill_dir in "$INSTALL_DIR"/*/; do
   # Create real directory with symlinked SKILL.md (absolute path)
   mkdir -p "$target"
   skill_md_src="$INSTALL_DIR/$skill/SKILL.md"
-  [ -f "$RENDER_DIR/$skill/SKILL.md" ] && skill_md_src="$RENDER_DIR/$skill/SKILL.md"
   # A real-file SKILL.md we can only WEAKLY prove ours and whose content
   # differs from what we are about to serve is moved aside, not overwritten.
   if [ -f "$target/SKILL.md" ] && [ ! -L "$target/SKILL.md" ] && ! _entry_owned_strongly "$target" \
@@ -358,14 +364,8 @@ for skill_dir in "$INSTALL_DIR"/*/; do
   SKILL_COUNT=$((SKILL_COUNT + 1))
 done
 
-# Patch SKILL.md name: fields to match prefix setting. When a gbrain render
-# is active the loop above links SKILL.md from RENDER_DIR — the file the host
-# actually serves — so patch THAT tree too or skill_prefix=true is a no-op
-# for every brain-aware skill (#2738). gstack-patch-names takes an arbitrary
-# root, skips already-prefixed names (idempotent), and the render dir is
-# user-owned and untracked, so patching it never dirties a checkout.
+# Patch names in the canonical install tree.
 "$INSTALL_DIR/bin/gstack-patch-names" "$INSTALL_DIR" "$PREFIX"
-[ -d "$RENDER_DIR" ] && "$INSTALL_DIR/bin/gstack-patch-names" "$RENDER_DIR" "$PREFIX"
 
 if [ "$PREFIX" = "true" ]; then
   echo "Relinked $SKILL_COUNT skills as gstack-*"

@@ -132,8 +132,7 @@ fi
   UPDATE_URL=$(git -C "$GSTACK_DIR" remote get-url origin 2>/dev/null || echo "")
   UPDATE_HOST="${UPDATE_URL#*://}"; UPDATE_HOST="${UPDATE_HOST#*@}"; UPDATE_HOST="${UPDATE_HOST%%[/:]*}"
   # --autostash: locally-patched TRACKED files are the NORM on installs, not
-  # the exception — skill-prefix mode rewrites frontmatter names and
-  # `gstack-config gbrain-refresh` renders brain blocks into SKILL.md. A bare
+  # the exception — skill-prefix mode rewrites frontmatter names. A bare
   # --ff-only refuses over those edits, so auto-upgrade wedged permanently
   # (observed: 308 consecutive PULL_FAILED with the reason discarded, #2566).
   # Capture stderr: the log must carry WHY a pull failed, never just the code.
@@ -153,7 +152,7 @@ fi
     PULL_REASON=$(head -c 300 "$PULL_ERR_FILE" 2>/dev/null | tr '\n' ' ' | tr -s ' ')
     log_entry "PULL_FAILED exit=$PULL_EXIT reason=${PULL_REASON:-unknown}"
     # Autostash pop conflict leaves the stash behind and the tree half-merged.
-    # The local patches are REGENERABLE (prefix renames, gbrain blocks), so
+    # The local patches are REGENERABLE (prefix renames), so
     # recover to a clean upstream tree and re-render them below rather than
     # leaving conflict markers in a live install.
     if grep -qi "autostash" "$PULL_ERR_FILE" 2>/dev/null; then
@@ -162,7 +161,6 @@ fi
       log_entry "AUTOSTASH_CONFLICT_RECOVERED tree_reset=1"
       _PREFIX_CFG=$("$GSTACK_DIR/bin/gstack-config" get skill_prefix 2>/dev/null || echo false)
       "$GSTACK_DIR/bin/gstack-patch-names" "$GSTACK_DIR" "$_PREFIX_CFG" >/dev/null 2>&1 || true
-      "$GSTACK_DIR/bin/gstack-config" gbrain-refresh >/dev/null 2>&1 || true
     fi
     rm -f "$PULL_ERR_FILE" 2>/dev/null
     exit 0
@@ -173,7 +171,6 @@ fi
   # preserves them, but a clean re-render costs nothing and self-heals.
   _PREFIX_CFG=$("$GSTACK_DIR/bin/gstack-config" get skill_prefix 2>/dev/null || echo false)
   "$GSTACK_DIR/bin/gstack-patch-names" "$GSTACK_DIR" "$_PREFIX_CFG" >/dev/null 2>&1 || true
-  "$GSTACK_DIR/bin/gstack-config" gbrain-refresh >/dev/null 2>&1 || true
 
   # ── If HEAD moved, run setup -q ──
   if [ "$OLD_HEAD" != "$NEW_HEAD" ]; then

@@ -147,31 +147,10 @@ function egressGrants(args: string[], home: string): number {
   for (const arg of args) if (arg !== '--json') usage(`unknown option: ${arg}`);
   const configFile = path.join(home, 'config.yaml');
 
-  const telemetry = configGet('telemetry') || 'off';
-  const syncMode = configGet('artifacts_sync_mode') || 'off';
   const repoVisibility = configGet('redact_repo_visibility') || 'unknown';
   const prepushHook = configGet('redact_prepush_hook') || 'false';
-  const memorableRecall = configGet('memorable_recall') || 'off';
 
   const grants: Grant[] = [
-    {
-      grant: 'telemetry',
-      value: telemetry,
-      granted: telemetry !== 'off',
-      detail: 'anonymous and community tiers upload usage events to Supabase; off stays local-only',
-      file: configFile,
-      key: 'telemetry',
-      revoke: 'gstack-config set telemetry off',
-    },
-    {
-      grant: 'brain-sync',
-      value: syncMode,
-      granted: syncMode !== 'off' && syncMode !== '',
-      detail: 'git push of curated allowlisted memory to the user-configured artifacts remote',
-      file: configFile,
-      key: 'artifacts_sync_mode',
-      revoke: 'gstack-config set artifacts_sync_mode off',
-    },
     {
       grant: 'redact_repo_visibility',
       value: repoVisibility,
@@ -189,15 +168,6 @@ function egressGrants(args: string[], home: string): number {
       file: configFile,
       key: 'redact_prepush_hook',
       revoke: 'gstack-config set redact_prepush_hook false (disables the guard)',
-    },
-    {
-      grant: 'memorable-recall',
-      value: memorableRecall,
-      granted: memorableRecall === 'on',
-      detail: 'Claude Code UserPromptSubmit hook hands each prompt to the third-party memorable CLI (receipted per prompt as sink memorable-recall; the vendor\'s own capture consent is separate)',
-      file: configFile,
-      key: 'memorable_recall',
-      revoke: 'gstack-memorable disable (or gstack-config set memorable_recall off)',
     },
   ];
 

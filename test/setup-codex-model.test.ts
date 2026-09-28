@@ -1,33 +1,91 @@
 import { describe, expect, test } from 'bun:test';
 import * as fs from 'fs';
 import * as path from 'path';
+import * as os from 'os';
+import { runBashScript } from './helpers/bash-script';
 
 const ROOT = path.resolve(import.meta.dir, '..');
 const setup = fs.readFileSync(path.join(ROOT, 'setup'), 'utf8');
 
+test('setup renders each selected legacy host once and leaves isolated profiles to their installer', () => {
+  const slice = (from: string, to: string) => {
+    const start = setup.indexOf(from);
+    const end = setup.indexOf(to, start);
+    if (start < 0 || end <= start) throw new Error(`setup block missing: ${from}`);
+    return setup.slice(start, end);
+  };
+  const profiles = slice('CLAUDE_ISOLATED_PROFILE=0', '\nif [ "$MODEL_OVERRIDE_SET"');
+  const model = slice('# Resolve the model overlay', '# 1. Install runtime dependencies');
+  const render = slice('# Isolated core/compat installs', '# 3. Ensure');
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'gstack-render-'));
+  try {
+    const trace = path.join(root, 'calls');
+    const run = (overrides: Record<string, string> = {}) => {
+      fs.writeFileSync(trace, '');
+      const result = runBashScript(`set -e
+log() { :; }
+_prune_stale_generated() { :; }
+_install_field() { printf '%s' "$SAVED_MODEL"; }
+bun_cmd() {
+  printf '%s\\t' "$@" >> "$TRACE"
+  printf '\\n' >> "$TRACE"
+  [ "$FAIL_BUN" != "$2" ] || return 17
+  if [ "$2" = scripts/resolve-codex-generation-model.ts ]; then
+    printf 'gpt-5.6-sol\\tfixture\\n'
+  fi
+}
+${profiles}
+${model}
+${render}`, {
+        cwd: root, timeout: 10_000,
+        env: {
+          ...process.env, HOME: root, SOURCE_GSTACK_DIR: root,
+          CLAUDE_REGISTER_DIR: path.join(root, 'claude'), CODEX_GSTACK: path.join(root, 'codex'),
+          CODEX_SKILLS: path.join(root, 'skills'), TRACE: trace,
+          INSTALL_CLAUDE: '0', INSTALL_CODEX: '0', INSTALL_FACTORY: '0', INSTALL_OPENCODE: '0', INSTALL_CURSOR: '0',
+          CLAUDE_SKILL_PROFILE: 'compat', CODEX_SKILL_PROFILE: 'compat', SKILL_PROFILE_OVERRIDE: '',
+          MODEL_OVERRIDE_SET: '0', MODEL_OVERRIDE: '', SAVED_MODEL: '', FAIL_BUN: '', ...overrides,
+        },
+      });
+      return { ...result, calls: fs.readFileSync(trace, 'utf8').trim().split('\n').filter(Boolean).map(line => line.trim().split('\t')) };
+    };
+    for (const host of ['claude', 'codex', 'factory', 'opencode', 'cursor']) {
+      for (const build of ['0', '1']) {
+        const r = run({ [`INSTALL_${host.toUpperCase()}`]: '1', NEEDS_BUILD: build });
+        expect(r.status, r.stderr).toBe(0);
+        const generations = r.calls.filter(args => args[1] === 'gen:skill-docs');
+        expect(generations).toEqual([['run', 'gen:skill-docs', '--host', host,
+          ...(['claude', 'codex'].includes(host) ? ['--model', host === 'codex' ? 'gpt-5.6-sol' : 'claude'] : [])]]);
+        expect(r.calls.filter(args => args[1] === 'scripts/resolve-codex-generation-model.ts')).toHaveLength(host === 'codex' ? 1 : 0);
+      }
+    }
+    for (const profile of ['core', 'compat']) {
+      const r = run({ INSTALL_CLAUDE: '1', INSTALL_CODEX: '1', CLAUDE_SKILL_PROFILE: profile, CODEX_SKILL_PROFILE: profile, SKILL_PROFILE_OVERRIDE: profile });
+      expect(r.status, r.stderr).toBe(0);
+      expect(r.calls.filter(args => args[1] === 'gen:skill-docs')).toEqual([]);
+    }
+    const explicit = run({ INSTALL_CODEX: '1', MODEL_OVERRIDE_SET: '1', MODEL_OVERRIDE: 'model with spaces' });
+    expect(explicit.calls[0]).toEqual(['run', 'scripts/resolve-codex-generation-model.ts', '--explicit', 'model with spaces']);
+    fs.mkdirSync(path.join(root, 'codex'));
+    fs.writeFileSync(path.join(root, 'codex/.gstack-install.json'), '{}');
+    const saved = run({ INSTALL_CODEX: '1', SAVED_MODEL: 'gpt-5.6-sol' });
+    expect(saved.calls).toEqual([['run', 'scripts/resolve-codex-generation-model.ts', '--explicit', 'gpt-5.6-sol']]);
+    const failed = run({ INSTALL_FACTORY: '1', INSTALL_CURSOR: '1', FAIL_BUN: 'gen:skill-docs' });
+    expect(failed.status).toBe(17);
+    expect(failed.calls).toEqual([['run', 'gen:skill-docs', '--host', 'factory']]);
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});
+
 describe('setup Codex model activation', () => {
-  test('exposes --model and limits it to Codex installs', () => {
+  test('exposes --model for Claude and Codex generation', () => {
     expect(setup).toContain('--model <id>');
     expect(setup).toContain('MODEL_OVERRIDE_SET=1');
-    expect(setup).toContain('--model is supported only when Codex is selected');
+    expect(setup).toContain('--model is supported only for Claude or Codex skill generation');
     // The override reaches the resolver as QUOTED argv — an unquoted
     // regression would word-split/glob user input.
     expect(setup).toContain('--explicit "$MODEL_OVERRIDE"');
-  });
-
-  test('resolver runs on every setup, before any INSTALL_CODEX gate', () => {
-    // A plain `./setup` (claude host) still regenerates .agents/, and live
-    // ~/.codex/skills symlinks point into it — resolution must not be gated
-    // on the codex host being selected, or a Sol user's profile gets
-    // clobbered back to the hardcoded fallback.
-    const blockStart = setup.indexOf('# Resolve the model overlay');
-    const blockEnd = setup.indexOf('# 1. Build browse binary', blockStart);
-    expect(blockStart).toBeGreaterThan(-1);
-    const block = setup.slice(blockStart, blockEnd);
-    const resolverAt = block.indexOf('_CODEX_MODEL_OUTPUT=');
-    const firstGateAt = block.indexOf('INSTALL_CODEX');
-    expect(resolverAt).toBeGreaterThan(-1);
-    expect(firstGateAt === -1 || resolverAt < firstGateAt).toBe(true);
   });
 
   test('resolves the profile once, fails closed, and passes it as quoted argv', () => {
@@ -43,14 +101,6 @@ describe('setup Codex model activation', () => {
     const guardAt = setup.indexOf('gstack setup failed: Codex model resolver returned no model');
     expect(guardAt).toBeGreaterThan(-1);
     expect(setup.slice(guardAt, guardAt + 200)).toContain('exit 1');
-  });
-
-  test('regenerates Codex after both fresh and stale build paths', () => {
-    const generationStart = setup.indexOf('# 1b. Generate .agents/ Codex skill docs');
-    const generationEnd = setup.indexOf('# 1c. Generate .factory/', generationStart);
-    const block = setup.slice(generationStart, generationEnd);
-    expect(block).toContain('if [ "$NEEDS_AGENTS_GEN" -eq 1 ]; then');
-    expect(block).not.toContain('NEEDS_BUILD" -eq 0');
   });
 
   test('fallback generation and handoff preserve the selected profile', () => {

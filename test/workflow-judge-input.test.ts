@@ -227,9 +227,6 @@ describe('workflow judge file bundle', () => {
     expect(entrypoint.content).toContain('B) A plan or design doc');
     expect(entrypoint.content).toContain('## Scope gate');
     expect(entrypoint.content.indexOf('## Scope gate')).toBeLessThan(entrypoint.content.indexOf('### Step 0: Scope Challenge'));
-    expect(entrypoint.content).toContain('## Web research runs in Aside');
-    expect(entrypoint.content).toContain('echo "READY: aside');
-    expect(input.text.indexOf('echo "READY: aside')).toBeLessThan(input.text.indexOf('- **Search check:**'));
     expect(entrypoint.content).not.toContain('- **Search check:**');
     expect(occurrences(input.text, '- **Search check:**')).toBe(1);
     expect(occurrences(input.text, '## Scope gate')).toBe(1);

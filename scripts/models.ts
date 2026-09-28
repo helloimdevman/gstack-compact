@@ -20,6 +20,7 @@ export const ALL_MODEL_NAMES = [
   'opus-4-7',
   'fable-5',
   'opus-4-8',
+  'opus-5.5',
   'sonnet-5',
   'gpt',
   'gpt-5.4',
@@ -67,6 +68,8 @@ export function resolveModel(input: string): Model | null {
   if (/^gpt-5\.4(-|$)/.test(s)) return 'gpt-5.4';
   if (/^gpt(-|$)/.test(s)) return 'gpt';
   if (/^o[0-9]+(-|$)/.test(s)) return 'o-series';
+  if (/^opus-5\.5(-|$)/.test(s)) return 'opus-5.5';
+  if (/^claude-opus-5\.5(-|$)/.test(s)) return 'opus-5.5';
   if (/^claude-opus-4-7(-|$)/.test(s)) return 'opus-4-7';
   if (/^claude-fable-5(-|$)/.test(s)) return 'fable-5';
   if (/^claude-opus-4-8(-|$)/.test(s)) return 'opus-4-8';

@@ -61,82 +61,6 @@ jobs:
           path: ${{ runner.temp }}/free-plan.json
           if-no-files-found: error
 
-  cso-macos-launcher:
-    runs-on: macos-latest
-    timeout-minutes: 15
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
-        with:
-          persist-credentials: false
-      - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2
-        with:
-          bun-version: 1.4.0
-      - name: Install helper dependencies
-        run: bun install --frozen-lockfile --ignore-scripts
-      - name: Build and sign the native macOS startup boundary
-        run: bun run build:cso
-      - name: Exercise hardened-runtime startup and environment scrubbing
-        run: bun run test:cso:macos
-        env:
-          GSTACK_CSO_MACOS_TESTS: "1"
-      - name: Build browser lifecycle prerequisites
-        run: |
-          bunx playwright install chromium
-          bun run build
-      - name: Exercise native agent ownership and linked settings
-        env:
-          TMPDIR: /tmp
-        run: |
-          files=(browse/test/terminal-agent-lifecycle.test.ts browse/test/terminal-agent-native-observation.test.ts browse/test/terminal-agent-watchdog.test.ts browse/test/server-embedder-terminal-port.test.ts browse/test/server-factory.test.ts test/gstack-settings-hook-symlink.test.ts test/gstack-settings-hook-schema-aware.test.ts)
-          for file in "${files[@]}"; do test -f "$file"; done
-          bun test "${files[@]}"
-
-  cso-windows-launcher:
-    runs-on: windows-latest
-    timeout-minutes: 15
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
-        with:
-          persist-credentials: false
-      - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2
-        with:
-          bun-version: 1.4.0
-      - name: Install helper dependencies
-        run: bun install --frozen-lockfile --ignore-scripts
-      - name: Build the native Windows startup boundary from Git Bash
-        shell: bash
-        run: bun run build:cso
-      - name: Exercise native startup, environment, and argument forwarding
-        run: bun run test:cso:windows
-        env:
-          GSTACK_CSO_WINDOWS_TESTS: "1"
-
-  cso-docker-integration:
-    runs-on: ubuntu-24.04
-    timeout-minutes: 20
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
-        with:
-          persist-credentials: false
-      - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2
-        with:
-          bun-version: 1.4.0
-      - name: Require local Docker containment prerequisites
-        # A missing daemon is a failed gate, never a skipped integration test.
-        run: |
-          command -v docker
-          docker --host unix:///var/run/docker.sock info
-          command -v cc
-      - name: Install helper dependencies
-        run: bun install --frozen-lockfile --ignore-scripts
-      - name: Compile trusted CSO helper and watchdog
-        run: bun run build:cso
-      - name: Run CSO Docker integration gate
-        run: bun run test:cso:docker
-        env:
-          GSTACK_CSO_DOCKER_TESTS: "1"
-          DOCKER_HOST: unix:///var/run/docker.sock
-
   free-suite:
     needs: free-plan
     runs-on: ubicloud-standard-8
@@ -170,45 +94,6 @@ jobs:
       - name: Install dependencies
         run: bun install --frozen-lockfile
 
-      - uses: actions/cache@v6
-        with:
-          path: ~/.cache/ms-playwright
-          key: linux-playwright-${{ hashFiles('bun.lock') }}
-          restore-keys: |
-            linux-playwright-
-
-      # Cache restores browser binaries; install is still required for system
-      # deps and is a fast no-op for already-present browsers.
-      - name: Install Playwright Chromium
-        run: npx playwright install --with-deps chromium
-
-      - name: Configure the bundled Chromium sandbox helper
-        run: |
-          set -euo pipefail
-          chrome=$(bun -e 'import { chromium } from "playwright"; import { realpathSync } from "node:fs"; console.log(realpathSync(chromium.executablePath()))')
-          case "$chrome" in
-            "$HOME"/.cache/ms-playwright/chromium-*/chrome-linux*/chrome) ;;
-            *) echo "Unexpected Chromium installation path" >&2; exit 1 ;;
-          esac
-          helper="${chrome%/*}/chrome_sandbox"
-          installed="${chrome%/*}/chrome-sandbox"
-          test -f "$helper" && test ! -L "$helper"
-          sudo install -T -o root -g root -m 4755 "$helper" "$installed"
-          test "$(stat -c '%u:%a' "$installed")" = '0:4755'
-          cmp -s "$helper" "$installed"
-
-      # Headed-browser tests (handoff, extension sidepanel DOM) need a real
-      # DISPLAY — first Linux run failed with Playwright's "launched a headed
-      # browser without an XServer" banner. xvfb-run below provides it;
-      # x11-utils ships xdpyinfo for display probing. poppler-utils ships
-      # pdftotext/pdffonts/pdftoppm for the make-pdf e2e gates;
-      # fonts-noto-color-emoji is the emoji-gate's render font (playwright
-      # --with-deps usually installs it, but the gate must not depend on a
-      # transitive package list). Fonts must land BEFORE the first browse
-      # daemon launch — Chromium snapshots fontconfig at startup.
-      - name: Install Xvfb + X11 utilities + gate tools
-        run: sudo apt-get install -y --no-install-recommends xvfb x11-utils poppler-utils fonts-noto-color-emoji
-
       - name: Configure git identity (tests init temp repos)
         run: |
           git config --global user.email "free-tests-ci@gstack.test"
@@ -222,34 +107,9 @@ jobs:
         # Golden-file tests read generated host outputs that are gitignored.
         run: bun run gen:skill-docs --host all
 
-      - name: Vendor xterm assets into the extension
-        # extension/lib/xterm* are gitignored (vendored from npm at build
-        # time). Without them the sidepanel's terminal script bails and the
-        # sidepanel DOM tests time out waiting on init that never happens.
-        run: bun run vendor:xterm
-
-      - name: Build server-node bundle (loaded by browse cli imports)
-        run: bash browse/scripts/build-node-server.sh
-
-      # Narrowed gate build: the make-pdf e2e gates probe make-pdf/dist/pdf,
-      # browse/dist/browse, and the diagram-render bundle, then self-skip when
-      # absent — which made them silently skip on Linux for their whole life
-      # (this lane never built binaries). Full `bun run build` compiles five
-      # binaries and would add ~60-90s to the ONLY required check; the gates
-      # need exactly these three artifacts.
-      - name: Build gate binaries (make-pdf e2e gates)
-        run: bun run build:gates
-
-      - name: Build trusted CSO helper used by free contract tests
-        run: bun run build:cso
-
-      # GSTACK_EXPECT_BINARIES=1 arms make-pdf/test/e2e/ci-prereqs.test.ts:
-      # if a future edit drops the gate build (or poppler), the lane FAILS
-      # instead of the gates silently self-skipping back to false green.
       - name: Run free suite
-        run: xvfb-run -a bun run test:free --ci-run "$RUNNER_TEMP/free-plan.json" --shard ${{ matrix.shard }} --result "$RUNNER_TEMP/free-results/shard-${{ matrix.shard }}.json"
+        run: bun run test:free --ci-run "$RUNNER_TEMP/free-plan.json" --shard ${{ matrix.shard }} --result "$RUNNER_TEMP/free-results/shard-${{ matrix.shard }}.json"
         env:
-          GSTACK_EXPECT_BINARIES: "1"
           # WS1 flake telemetry: a single timing flake must not red the only
           # required lane — the runner's attribution-gated retry pass (cap 5,
           # truncation veto) re-runs failing files once, serially, and a
@@ -298,27 +158,19 @@ jobs:
           path: /tmp/gstack-free-test-*.log
           if-no-files-found: ignore
 
-  # Branch protection already requires the `free-tests` context. Keep that
-  # stable name as an always-running aggregate so every platform-specific CSO
-  # gate is merge-blocking without a separate branch-protection migration.
+  # Preserve the required aggregate check name for branch protection.
   free-tests:
     if: always()
-    needs: [free-suite, cso-macos-launcher, cso-windows-launcher, cso-docker-integration]
+    needs: [free-suite]
     runs-on: ubuntu-24.04
     timeout-minutes: 5
     steps:
-      - name: Require the free suite and every CSO platform gate
+      - name: Require the complete free suite
         env:
           FREE_SUITE_RESULT: ${{ needs.free-suite.result }}
-          CSO_MACOS_RESULT: ${{ needs.cso-macos-launcher.result }}
-          CSO_WINDOWS_RESULT: ${{ needs.cso-windows-launcher.result }}
-          CSO_DOCKER_RESULT: ${{ needs.cso-docker-integration.result }}
         run: |
           set -eu
           test "$FREE_SUITE_RESULT" = success
-          test "$CSO_MACOS_RESULT" = success
-          test "$CSO_WINDOWS_RESULT" = success
-          test "$CSO_DOCKER_RESULT" = success
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           persist-credentials: false

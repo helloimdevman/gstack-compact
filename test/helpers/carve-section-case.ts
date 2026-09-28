@@ -135,7 +135,7 @@ export function registerCarveSectionCase(skill: string): void {
           expected: guard.requiredReads,
           observed: [...readSections],
           missing,
-        }, `${guard.skill}: native exit=${exitReason}; reportWritten=${reportWritten}\n` +
+        }, `${guard.skill}: native exit=${exitReason}; reportWritten=${reportWritten}; "missing"=${JSON.stringify(missing)}; "reportProduced": ${reportProduced}\n` +
           `--- final output ---\n${output.slice(-2000)}`).toEqual({
           skill: guard.skill,
           reportProduced: true,

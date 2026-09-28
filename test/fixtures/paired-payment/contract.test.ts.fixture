@@ -41,9 +41,9 @@ test.each(['502', 'timeout'] as const)('recovery after one %s preserves the requ
     },
     sleep: async ms => { waits.push(ms); announceWait(); await waiting; },
   });
-  // Drain the microtask queue while the injected wait is still unresolved: a
-  // retry that merely calls sleep without awaiting it must not reach transport.
-  await sleepStarted;
+  // A retry that never waits must fail this test instead of leaving it pending.
+  const settled = result.then(() => 'ok' as const, () => 'fail' as const);
+  expect(await Promise.race([sleepStarted.then(() => 'sleep' as const), settled])).toBe('sleep');
   expect(requests).toHaveLength(1);
   releaseWait();
   expect(await result).toEqual({ chargeId: 'charge-42', amount: 1200, currency: 'usd' });

@@ -8,6 +8,9 @@ const MAX_RECORD_BYTES = 4096;
 const identifier = (value: unknown): value is string =>
   typeof value === 'string' && /^[A-Za-z0-9_-]{1,160}$/.test(value);
 const shellQuote = (value: string) => `'${(process.platform === 'win32' ? value.replaceAll('\\', '/') : value).replaceAll("'", "'\\''")}'`;
+const sameTemp = (left: unknown, right: unknown) =>
+  typeof left === 'string' && typeof right === 'string' &&
+  left.replace(/^\/private\/(var|tmp)\//, '/$1/') === right.replace(/^\/private\/(var|tmp)\//, '/$1/');
 
 export function createPendingExitRecorder(cwd: string, configDir: string) {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'gstack-pending-exit-'));
@@ -32,7 +35,7 @@ export function recordPendingExit(input: string, file: string, cwd: string, conf
     if (Buffer.byteLength(input) > 64 * 1024) throw new Error('hook input too large');
     const event = JSON.parse(input);
     // Subagents and other fixtures must never supply this main session's gate.
-    if (event?.agent_id !== undefined || event?.cwd !== cwd) return;
+    if (event?.agent_id !== undefined || !sameTemp(event?.cwd, cwd)) return;
     fs.rmSync(file, { force: true });
     if (event.hook_event_name !== 'PreToolUse' || event.tool_name !== 'ExitPlanMode' ||
         !identifier(event.session_id) || !identifier(event.tool_use_id) ||
@@ -79,7 +82,7 @@ export function withPendingExit(
     const time = Date.parse(record.timestamp);
     const sessions = new Set([...transcript.calls.map(call => call.sessionId),
       ...transcript.assistantMessages.map(message => message.sessionId)]);
-    if (record.cwd !== cwd || !identifier(record.sessionId) || !identifier(record.toolUseId) ||
+    if (!sameTemp(record.cwd, cwd) || !identifier(record.sessionId) || !identifier(record.toolUseId) ||
         sessions.size !== 1 || !sessions.has(record.sessionId) ||
         !scopedTranscript(record.transcriptPath, configDir, record.sessionId) ||
         !Number.isFinite(time) || time < startedAt || time > Date.now()) return transcript;

@@ -183,12 +183,10 @@ git diff <diff-base> HEAD -- VERSION
 
 ---
 
-{{CODEX_DOC_REVIEW}}
-
 ## Step 9: Commit & Output
 
 First finalize Step 7's completion stamps using Step 8's final VERSION (or date only).
-All approved cross-model doc fixes above are included in this commit, push, and summary.
+Include the final documentation changes in this commit, push, and summary.
 
 **Empty check first:** Run `git status` (never use `-uall`). If no documentation files were
 modified by this run (including approved VERSION/manifest updates), skip commit/push but still perform PR-body debt/title updates and produce the doc-health summary below.

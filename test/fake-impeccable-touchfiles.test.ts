@@ -7,7 +7,6 @@ describe('fake impeccable engine selection', () => {
   const consumers = [
     'design-html-slop-gate',
     'design-review-detector-shim',
-    'design-review-detector-shim-dom',
     'design-review-plugin-handoff',
     'review-design-lite',
   ];
@@ -28,7 +27,6 @@ describe('fake impeccable engine selection', () => {
     expect(consumers.map(name => [name, E2E_TIERS[name]])).toEqual([
       ['design-html-slop-gate', 'periodic'],
       ['design-review-detector-shim', 'gate'],
-      ['design-review-detector-shim-dom', 'gate'],
       ['design-review-plugin-handoff', 'gate'],
       ['review-design-lite', 'periodic'],
     ]);

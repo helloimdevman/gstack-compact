@@ -17,6 +17,15 @@
 import type { Model } from './models';
 import { validateModel } from './models';
 
+export type SkillProfile = 'core' | 'compat';
+export type InstallSelection = {
+  version: 1;
+  host: string;
+  skillProfile: SkillProfile;
+  generationModel: Model;
+  sourceRoot: string;
+};
+
 export interface HostConfig {
   /** Unique host identifier (e.g., 'opencode'). Must match filename in hosts/. */
   name: string;
@@ -64,6 +73,8 @@ export interface HostConfig {
   generation: {
     /** Whether to create a metadata file alongside skills (always openai.yaml; gen-skill-docs hardcodes the format). */
     generateMetadata: boolean;
+    /** Section delivery for this host. Omitted retains the legacy inline render. */
+    sectionMode?: 'files' | 'inline';
     /** Skill directories to exclude from generation for this host. */
     skipSkills?: string[];
     /** Skill directories to include (allowlist). Union logic: include minus skip. */
@@ -150,6 +161,9 @@ export function validateHostConfig(config: HostConfig, validResolverNames?: Read
   }
   if (!['real-dir-symlink', 'symlink-generated'].includes(config.install.linkingStrategy)) {
     errors.push(`install.linkingStrategy must be 'real-dir-symlink' or 'symlink-generated'`);
+  }
+  if (config.generation.sectionMode && !['files', 'inline'].includes(config.generation.sectionMode)) {
+    errors.push(`generation.sectionMode must be 'files' or 'inline'`);
   }
 
   // Cross-check suppressedResolvers against the known resolver names (injected to avoid a

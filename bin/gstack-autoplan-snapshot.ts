@@ -2,10 +2,18 @@
 /** Autoplan's blind reviewer inputs contain only the current implementation plan. */
 import { createHash } from 'node:crypto';
 import { linkSync, lstatSync, mkdirSync, mkdtempSync, readFileSync, realpathSync, renameSync, rmdirSync, rmSync, statSync, unlinkSync, writeFileSync } from 'node:fs';
-import { basename, dirname, isAbsolute, join } from 'node:path';
+import { basename, dirname, isAbsolute, join, resolve } from 'node:path';
 
 const PHASES = ['ceo', 'design', 'dx', 'eng'];
 const sha256 = (text: string | Buffer) => createHash('sha256').update(text).digest('hex');
+/** macOS /var and /tmp are symlinks. Keep the caller's path when it names the same file. */
+function callerPath(requested: string, canonical: string): string {
+  const asked = resolve(requested);
+  const fold = (p: string) => p.replace(/^\/private\/(var|tmp)\//, '/$1/');
+  try { if (realpathSync(asked) === realpathSync(canonical)) return asked; }
+  catch { if (fold(asked) === fold(canonical)) return asked; }
+  return canonical;
+}
 
 // Exact terms from Autoplan's existing Phase 0 DX trigger. Count occurrences,
 // not a subjective reinterpretation of whether an API is internal or external.
@@ -409,7 +417,7 @@ export function initializePlan(sourcePlan: string, activePlan: string, restorePa
     return Buffer.from(`<!-- /autoplan restore point: ${reference} -->\n${plan}`);
   };
   const result = (original: Buffer, reused: boolean) => ({
-    sourcePlan: source, activePlan: active.file, restorePath: restore.file,
+    sourcePlan: callerPath(sourcePlan, source), activePlan: callerPath(activePlan, active.file), restorePath: callerPath(restorePath, restore.file),
     originalSha256: sha256(original.toString('utf8')), originalBytes: original.length,
     reused, scope: detectDxScope(active.file),
   });

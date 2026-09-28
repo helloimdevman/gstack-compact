@@ -426,8 +426,7 @@ describe('one-way-doors classifier', () => {
     }
   });
 
-  test('skill-category fallback fires for cso:approval and land-and-deploy:approval', () => {
-    expect(isOneWayDoor({ skill: 'cso', category: 'approval' })).toBe(true);
+  test('skill-category fallback fires for land-and-deploy:approval', () => {
     expect(isOneWayDoor({ skill: 'land-and-deploy', category: 'approval' })).toBe(true);
   });
 
@@ -448,67 +447,24 @@ describe('one-way-doors classifier', () => {
     expect(DESTRUCTIVE_PATTERN_LIST.length).toBeGreaterThan(15);
   });
 
-  test('skill-category set covers security + deploy', () => {
-    expect(ONE_WAY_SKILL_CATEGORY_SET.has('cso:approval')).toBe(true);
+  test('skill-category set covers deployment approval', () => {
     expect(ONE_WAY_SKILL_CATEGORY_SET.has('land-and-deploy:approval')).toBe(true);
   });
 });
 
-// -----------------------------------------------------------------------
-// Preamble injection — the QUESTION_TUNING section must appear for tier >=2
-// -----------------------------------------------------------------------
-
-describe('preamble — QUESTION_TUNING injection', () => {
-  test('tier 2+ skills include the Question Tuning section', async () => {
-    const { generatePreamble } = await import('../scripts/resolvers/preamble');
-    const ctx = {
-      skillName: 'test-skill',
-      tmplPath: 'test.tmpl',
-      host: 'claude' as const,
-      paths: {
-        skillRoot: '~/.claude/skills/gstack',
-        localSkillRoot: '.claude/skills/gstack',
-        binDir: '~/.claude/skills/gstack/bin',
-        browseDir: '~/.claude/skills/gstack/browse/dist',
-        designDir: '~/.claude/skills/gstack/design/dist',
-      },
-      preambleTier: 2,
-    };
-    const out = generatePreamble(ctx);
-    // Phase 1: the config echo moved into bin/gstack-skill-start; the render's
-    // section gates itself on the echoed key.
-    const script = fs.readFileSync(
-      path.join(import.meta.dir, '..', 'bin', 'gstack-skill-start'),
-      'utf-8',
-    );
+// Tuning is available to hooks and its own skill, not injected into every entry.
+describe('question tuning boundaries', () => {
+  test('installed preambles reach runtime configuration without the retired tuning essay', async () => {
+    const { generateInstalledPreamble } = await import('../scripts/resolvers/preamble');
+    const { HOST_PATHS } = await import('../scripts/resolvers/types');
+    for (const preambleTier of [1, 2, 3, 4]) {
+      const out = generateInstalledPreamble({ skillName: 'review', tmplPath: 'review/SKILL.md.tmpl',
+        host: 'claude', paths: HOST_PATHS.claude, preambleTier });
+      expect(out).toContain('gstack-skill-start');
+      expect(out).not.toContain('## Question Tuning');
+    }
+    const script = fs.readFileSync(path.join(import.meta.dir, '..', 'bin/gstack-skill-start'), 'utf8');
     expect(script).toContain('echo "QUESTION_TUNING: $_QUESTION_TUNING"');
-    expect(out).toContain('QUESTION_TUNING: false');
-    expect(out).toContain('## Question Tuning');
-    expect(out).toContain('gstack-question-preference --check');
-    expect(out).toContain('gstack-question-log');
-    expect(out).toContain('profile-poisoning defense');
-    expect(out).toContain('inline-user');
-  });
-
-  test('tier 1 skills do NOT include Question Tuning section', async () => {
-    const { generatePreamble } = await import('../scripts/resolvers/preamble');
-    const ctx = {
-      skillName: 'test-skill',
-      tmplPath: 'test.tmpl',
-      host: 'claude' as const,
-      paths: {
-        skillRoot: '~/.claude/skills/gstack',
-        localSkillRoot: '.claude/skills/gstack',
-        binDir: '~/.claude/skills/gstack/bin',
-        browseDir: '~/.claude/skills/gstack/browse/dist',
-        designDir: '~/.claude/skills/gstack/design/dist',
-      },
-      preambleTier: 1,
-    };
-    const out = generatePreamble(ctx);
-    // QUESTION_TUNING config echo still fires (it's in the bash block which all tiers get),
-    // but the prose section should NOT be present for tier 1.
-    expect(out).not.toContain('## Question Tuning');
   });
 
   test('codex host produces different paths', async () => {

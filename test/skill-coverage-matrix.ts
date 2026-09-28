@@ -38,6 +38,12 @@ export interface SkillCoverage {
  */
 export const SKILL_COVERAGE: Record<string, SkillCoverage> = {
   // ─── Core loop ──────────────────────────────────────────────
+  build: { gate: ['test/skill-coverage-floor.test.ts'], periodic: [] },
+  context: { gate: ['test/skill-coverage-floor.test.ts'], periodic: [] },
+  design: { gate: ['test/skill-coverage-floor.test.ts'], periodic: [] },
+  plan: { gate: ['test/skill-coverage-floor.test.ts'], periodic: [] },
+  sprint: { gate: ['test/skill-coverage-floor.test.ts'], periodic: [] },
+  verify: { gate: ['test/skill-coverage-floor.test.ts'], periodic: [] },
   ship: {
     gate: ['test/skill-e2e-ship-idempotency.test.ts', 'test/skill-coverage-floor.test.ts'],
     periodic: ['test/skill-e2e-workflow.test.ts'],
@@ -48,13 +54,13 @@ export const SKILL_COVERAGE: Record<string, SkillCoverage> = {
   },
   'deslop-shared-libs': {
     gate: ['test/shared-libs-rendering.test.ts', 'test/skill-e2e-shared-libs.test.ts', 'test/skill-coverage-floor.test.ts'],
-    periodic: ['test/skill-e2e-shared-libs-periodic.test.ts', 'test/codex-e2e-shared-libs.test.ts'],
+    periodic: ['test/skill-e2e-shared-libs-periodic.test.ts'],
     rationale: 'Free host/discovery checks; native gate traces enforce read-only source access and the actual review advisory lifecycle. Periodic evaluates opportunity and PR coverage judgment.',
   },
   qa: {
-    gate: ['test/skill-e2e-qa-workflow.test.ts', 'test/skill-coverage-floor.test.ts'],
-    periodic: ['test/skill-e2e-qa-workflow.test.ts', 'test/skill-e2e-qa-bugs.test.ts', 'test/skill-e2e-aside.test.ts'],
-    rationale: 'qa-quick / qa-only-no-fix / qa-bootstrap are gate: the skill drives Aside when it is live and the gstack browse binary otherwise, so CI runs the fallback path. The planted-bug benchmarks, the fix loop and the live-Aside run (aside-qa-quick) are periodic.',
+    gate: ['test/skill-coverage-floor.test.ts'],
+    periodic: [],
+    rationale: 'Browser QA uses the host-provided user browser; the generated skill is checked structurally.',
   },
   'qa-only': {
     gate: ['test/skill-coverage-floor.test.ts'],
@@ -66,9 +72,9 @@ export const SKILL_COVERAGE: Record<string, SkillCoverage> = {
     periodic: [],
   },
   browse: {
-    gate: ['test/skill-e2e-bws.test.ts', 'test/skill-coverage-floor.test.ts'],
-    periodic: ['test/skill-e2e-aside.test.ts'],
-    rationale: '/browse drives the Aside browser first (the live E2E aside-browse-basic / aside-browse-flow needs a running Aside, so it is periodic) and the gstack browse binary as fallback (browse-basic / browse-snapshot exercise it, gate; the binary has its own integration suite under browse/test/). Local-HTML rendering (lib/aside-render.ts, bin/gstack-render.ts) is a library, covered by test/aside-render.test.ts.',
+    gate: ['test/skill-coverage-floor.test.ts'],
+    periodic: [],
+    rationale: '/browse uses the host-provided user browser; its selection contract is checked structurally.',
   },
   spec: {
     gate: [
@@ -127,7 +133,7 @@ export const SKILL_COVERAGE: Record<string, SkillCoverage> = {
   },
   autoplan: {
     gate: ['test/skill-coverage-floor.test.ts'],
-    periodic: ['test/skill-e2e-autoplan-chain.test.ts', 'test/skill-e2e-autoplan-dual-voice.test.ts'],
+    periodic: ['test/skill-e2e-autoplan-chain.test.ts'],
   },
   'office-hours': {
     gate: ['test/skill-e2e-office-hours.test.ts', 'test/skill-coverage-floor.test.ts'],
@@ -137,21 +143,16 @@ export const SKILL_COVERAGE: Record<string, SkillCoverage> = {
   // ─── Polish + design ────────────────────────────────────────
   'design-review': {
     gate: ['test/skill-coverage-floor.test.ts'],
-    periodic: ['test/skill-e2e-design.test.ts'],
-    rationale: 'design-review-fix drives the Aside browser (periodic; skips without one).',
+    periodic: [],
+    rationale: 'Design review uses the host-provided user browser; the generated skill is checked structurally.',
   },
   'design-consultation': { gate: ['test/skill-coverage-floor.test.ts'], periodic: [] },
   'design-shotgun': { gate: ['test/skill-coverage-floor.test.ts'], periodic: [] },
   'design-html': { gate: ['test/skill-coverage-floor.test.ts'], periodic: [] },
   diagram: {
-    gate: ['test/skill-e2e-diagram.test.ts', 'test/skill-coverage-floor.test.ts'],
-    periodic: ['test/skill-e2e-diagram.test.ts'],
-    rationale: 'Triplet contract is gate-tier deterministic (gstack-render drives Aside when live, the browse daemon otherwise, so CI runs it); authoring-quality judge is periodic (E2E_TIERS: diagram-triplet/diagram-authoring-quality). The renderer itself is pinned free by test/aside-render.test.ts.',
-  },
-  cso: {
-    gate: ['test/skill-e2e-cso.test.ts', 'test/cso-preserved.test.ts', 'test/skill-coverage-floor.test.ts'],
+    gate: ['test/skill-coverage-floor.test.ts'],
     periodic: [],
-    rationale: 'cso-preserved.test.ts pins must-not-strip security guidance phrases.',
+    rationale: 'Diagram rendering depends on the host-provided user browser; the generated skill is checked structurally.',
   },
   'document-release': { gate: ['test/skill-coverage-floor.test.ts'], periodic: [] },
   'document-generate': { gate: ['test/skill-coverage-floor.test.ts'], periodic: [] },
@@ -160,16 +161,14 @@ export const SKILL_COVERAGE: Record<string, SkillCoverage> = {
   'land-and-deploy': { gate: ['test/skill-e2e-deploy.test.ts', 'test/skill-coverage-floor.test.ts'], periodic: [] },
   canary: {
     gate: ['test/skill-e2e-deploy.test.ts', 'test/skill-coverage-floor.test.ts'],
-    periodic: ['test/skill-e2e-aside.test.ts'],
-    rationale: 'canary-workflow (gate) runs the skill in simulation without a browser; aside-canary-quick drives Aside live (periodic).',
+    periodic: [],
+    rationale: 'canary-workflow runs the skill in simulation without a browser.',
   },
   benchmark: {
-    gate: ['test/skill-e2e-deploy.test.ts', 'test/skill-e2e-benchmark-providers.test.ts', 'test/skill-coverage-floor.test.ts'],
+    gate: ['test/skill-e2e-deploy.test.ts', 'test/skill-coverage-floor.test.ts'],
     periodic: [],
     rationale: 'benchmark-workflow (gate) runs the skill in simulation without a browser.',
   },
-  'benchmark-models': { gate: ['test/skill-coverage-floor.test.ts'], periodic: [] },
-  codex: { gate: ['test/skill-coverage-floor.test.ts'], periodic: [] },
   retro: {
     gate: ['test/skill-coverage-floor.test.ts'],
     periodic: ['test/regression-1624-retro-stale-base.test.ts'],
@@ -178,28 +177,11 @@ export const SKILL_COVERAGE: Record<string, SkillCoverage> = {
   'context-save': { gate: ['test/skill-e2e-context-skills.test.ts', 'test/skill-coverage-floor.test.ts'], periodic: [] },
   'context-restore': { gate: ['test/skill-e2e-context-skills.test.ts', 'test/skill-coverage-floor.test.ts'], periodic: [] },
   'setup-deploy': { gate: ['test/skill-coverage-floor.test.ts'], periodic: [] },
-  'setup-browser-cookies': { gate: ['test/skill-coverage-floor.test.ts'], periodic: [] },
-  'setup-gbrain': {
-    gate: [
-      'test/skill-e2e-setup-gbrain-bad-token.test.ts',
-      'test/skill-e2e-setup-gbrain-path4-local-pglite.test.ts',
-      'test/skill-e2e-setup-gbrain-remote.test.ts',
-      'test/skill-coverage-floor.test.ts',
-    ],
-    periodic: [],
-  },
-  'sync-gbrain': {
-    gate: ['test/skill-coverage-floor.test.ts'],
-    periodic: ['test/regression-1611-gbrain-sync-resume.test.ts'],
-  },
-  'open-gstack-browser': { gate: ['test/skill-coverage-floor.test.ts'], periodic: [] },
-  'pair-agent': { gate: ['test/skill-coverage-floor.test.ts'], periodic: [] },
   scrape: {
     gate: ['test/skill-coverage-floor.test.ts'],
-    periodic: ['test/skill-e2e-skillify.test.ts', 'test/skill-e2e-aside.test.ts'],
-    rationale: '/scrape is Aside-first: aside-scrape-json drives Aside live and checks the JSON-only output discipline (periodic; skips without Aside). scrape-match-path / scrape-prototype-path assert the browser-skills `$B skill list` / `skill run` flow, which the Aside-first template no longer prescribes in its fallback — periodic until the fallback carries it again.',
+    periodic: [],
+    rationale: '/scrape uses the host-provided user browser; the generated skill is checked structurally.',
   },
-  skillify: { gate: ['test/skill-e2e-skillify.test.ts', 'test/skill-coverage-floor.test.ts'], periodic: [] },
   learn: { gate: ['test/skill-e2e-learnings.test.ts', 'test/skill-coverage-floor.test.ts'], periodic: [] },
   'plan-tune': { gate: ['test/skill-e2e-plan-tune.test.ts', 'test/skill-coverage-floor.test.ts'], periodic: [] },
 
@@ -220,7 +202,7 @@ export const SKILL_COVERAGE: Record<string, SkillCoverage> = {
   'make-pdf': {
     gate: ['test/skill-coverage-floor.test.ts'],
     periodic: [],
-    rationale: 'make-pdf is a binary with its own free suite under make-pdf/test/ (print pipeline via lib/aside-render.ts); the skill doc is structure-checked by the floor.',
+    rationale: 'The HTML helper has free tests; PDF export depends on the host-provided user browser.',
   },
   'devex-review': { gate: ['test/skill-coverage-floor.test.ts'], periodic: [] },
 };

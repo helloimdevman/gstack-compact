@@ -1,0 +1,9 @@
+{
+  "skill": "verify",
+  "sections": [
+    { "id": "browser", "file": "browser.md", "title": "Browser QA", "trigger": "running browser-fix or browser-report on a web flow" },
+    { "id": "visual", "file": "visual.md", "title": "Visual review", "trigger": "running visual-fix on a rendered UI" },
+    { "id": "developer-flow", "file": "developer-flow.md", "title": "Developer experience", "trigger": "running developer-flow on an install or integration flow" },
+    { "id": "health", "file": "health.md", "title": "Project health", "trigger": "running health mode for code-quality status" }
+  ]
+}

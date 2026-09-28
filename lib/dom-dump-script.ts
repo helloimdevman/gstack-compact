@@ -3,16 +3,13 @@
 //
 // Pure module: no I/O, no imports from scripts/. Consumers:
 //   scripts/resolvers/design.ts   Phase 3 prose tells the agent to load lib/dom-dump.js
-//   lib/dom-dump.js               committed copy gen-skill-docs writes; the engines load it at runtime
-//   test/fixtures/*.dom.html      captured by running it through the browse engine
+//   lib/dom-dump.js               committed copy gen-skill-docs writes; host browser tools may load it
+//   test/fixtures/*.dom.html      captured DOM examples
 //   test/impeccable-fixtures.test.ts  pins that the committed dump came from THIS script
 //
-// Contract (one script, two engines):
-//   - An arrow-FUNCTION expression, never a self-calling IIFE: Aside's
-//     `pg.evaluate(fn)` receives the function and runs it in the page (an IIFE
-//     would execute in the repl sandbox, where there is no `document`), and the
-//     fallback engine calls it with `$B js "($_DUMP)()"`. Both splice the file's
-//     text into bash, so it contains NO single quotes, no backticks, and no `${`.
+// Contract (host browser evaluation):
+//   - An arrow-FUNCTION expression, never a self-calling IIFE. A host tool
+//     that supports page evaluation calls the function inside the page.
 //   - Works on a CLONE of document.documentElement, never the live page.
 //   - Inlines only the stylesheets a <link> owns (inline <style> nodes are
 //     already in the markup; re-serializing them double-counts) as one
@@ -110,10 +107,9 @@ export const DOM_DUMP_SCRIPT = String.raw`() => {
 }`;
 
 /**
- * Committed copy of DOM_DUMP_SCRIPT for the browser engines to load at runtime
+ * Committed copy of DOM_DUMP_SCRIPT for host browser tools to load at runtime
  * (written by gen-skill-docs, pinned byte-equal by test/impeccable-fixtures.test.ts).
- * Skills `cat` it into an Aside script or `cp` it beside `$B eval`; the prose
- * never carries the script text.
+ * Skills evaluate it only when the host browser supports page evaluation.
  */
 export const DOM_DUMP_FILE = 'lib/dom-dump.js';
 

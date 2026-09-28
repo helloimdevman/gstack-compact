@@ -50,6 +50,7 @@ interface CommandResult {
   learningsWritten: boolean;
   libIsSymlink: boolean | null;
   supabaseConfigPresent: boolean;
+  contractPresent: boolean;
   reviewStatus: number | null;
   reviewFreshness?: string;
 }
@@ -117,6 +118,7 @@ TOKEN=$("$1/bin/gstack-review-log" --start review)
       // [ -f ... ] guard means a missing file degrades SILENTLY, so only a
       // presence check on the installed root catches it.
       supabaseConfigPresent: fs.existsSync(path.join(rootDir, 'supabase', 'config.sh')),
+      contractPresent: fs.existsSync(path.join(rootDir, 'CONTRACT.md')),
       reviewStatus: review.status,
       reviewFreshness: reviewRow ? JSON.parse(reviewRow).review_freshness?.status : undefined,
     };
@@ -186,6 +188,7 @@ describe.skipIf(process.platform === 'win32')('setup: bin commands resolve sibli
       expect(r.runStatus, r.runStderr).toBe(0);
       expect(r.learningsWritten).toBe(true);
       expect(r.supabaseConfigPresent).toBe(true);
+      expect(r.contractPresent).toBe(true);
       expect(r.reviewStatus).toBe(0);
       expect(r.reviewFreshness).toBe('CURRENT');
     });
@@ -199,6 +202,7 @@ describe.skipIf(process.platform === 'win32')('setup: bin commands resolve sibli
       expect(r.runStatus, r.runStderr).toBe(0);
       expect(r.learningsWritten).toBe(true);
       expect(r.supabaseConfigPresent).toBe(true);
+      expect(r.contractPresent).toBe(true);
       expect(r.reviewStatus).toBe(0);
       expect(r.reviewFreshness).toBe('CURRENT');
     });

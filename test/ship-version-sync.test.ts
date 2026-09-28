@@ -114,30 +114,23 @@ node -e 'const fs=require("fs"),p=require("./package.json");p.version=process.ar
 const pkgVersion = () =>
   JSON.parse(readFileSync(join(dir, "package.json"), "utf8")).version;
 
-test("rendered drift repair rejoins the existing-version queue check", () => {
+test("version section repairs drift before checking the queue", () => {
   const ship = readFileSync(join(import.meta.dir, '../ship/SKILL.md'), 'utf8');
-  const version = ship.slice(ship.indexOf('## Step 12:'), ship.indexOf('## Step 14:'));
-  expect(version).toMatch(/DRIFT_STALE_PKG[^\n]+repair[^\n]+reclassify[^\n]+ALREADY_BUMPED[^\n]+queue/);
-  expect(version).toContain('--current-version "$BASE_VERSION"');
-  expect(version).toContain('CANDIDATE_VERSION');
-  expect(version).toMatch(/keep[^\n]+NEW_VERSION[^\n]+currentVersion/);
+  const version = readFileSync(join(import.meta.dir, '../ship/sections/version.md'), 'utf8');
+  expect(ship).toContain('`sections/version.md`');
+  expect(version.indexOf('gstack-version-bump repair')).toBeLessThan(version.indexOf('gstack-next-version'));
+  expect(version).toContain('classify again');
+  expect(version).toContain('--current-version');
+  expect(version).toContain('keep `currentVersion` unless');
 });
 
-test("rendered queue dispatch preserves offline git candidates without empty fallback fallthrough", () => {
-  const ship = readFileSync(join(import.meta.dir, '../ship/SKILL.md'), 'utf8');
-  const usableAt = ship.indexOf('**Usable candidate**');
-  const missingAt = ship.indexOf('**No usable candidate**');
-  expect(usableAt).toBeGreaterThanOrEqual(0);
-  expect(missingAt).toBeGreaterThan(usableAt);
-  const usable = ship.slice(usableAt, missingAt);
-  const missing = ship.slice(missingAt, ship.indexOf('4. **Write the bump**', missingAt));
-  expect(usable).toContain('offline:true');
-  expect(usable).toContain('fallback:"git"');
-  expect(usable).toContain('warnings and any claimed queue');
-  expect(usable).toContain('CANDIDATE_VERSION');
-  expect(missing).toContain('local `BUMP_LEVEL` arithmetic');
-  expect(missing).toContain('ALREADY_BUMPED keeps `currentVersion`');
-  expect(missing).not.toContain('CANDIDATE_VERSION');
+test("version section preserves offline git candidates and rejects empty ones", () => {
+  const version = readFileSync(join(import.meta.dir, '../ship/sections/version.md'), 'utf8');
+  expect(version).toContain('offline:true');
+  expect(version).toContain('fallback:"git"');
+  expect(version).toContain('warnings and claimed queue');
+  expect(version).toContain('Do not treat an empty candidate as permission');
+  expect(version).toContain('gstack-version-bump write --version <candidate>');
 });
 
 // --- Idempotency classification: 6 cases ---

@@ -20,7 +20,8 @@ import type { Host, TemplateContext } from './resolvers/types';
 import { HOST_PATHS } from './resolvers/types';
 import { RESOLVERS } from './resolvers/index';
 import { ALL_HOST_NAMES, resolveHostArg, getHostConfig } from '../hosts/index';
-import type { HostConfig } from './host-config';
+import type { HostConfig, SkillProfile } from './host-config';
+import { loadRouterMap, validateRouterMap } from './resolvers/router-map';
 
 const ROOT = path.resolve(import.meta.dir, '..');
 import { ALL_MODEL_NAMES, resolveModel, type Model } from './models';
@@ -35,9 +36,9 @@ export interface GenerationOptions {
   outputRoot?: string;
   contentLinkRoot?: string | null;
   model?: Model | null;
+  skillProfile?: SkillProfile;
   catalogMode?: 'trim' | 'full';
   explainLevel?: 'default' | 'terse';
-  respectDetection?: boolean;
   log?: (message: string) => void;
 }
 
@@ -45,9 +46,9 @@ interface RenderOptions {
   outputRoot: string;
   contentLinkRoot: string | null;
   model: Model | null;
+  skillProfile: SkillProfile;
   catalogMode: 'trim' | 'full';
   explainLevel: 'default' | 'terse';
-  gbrainDetected: boolean;
 }
 
 export interface GeneratedArtifact {
@@ -69,25 +70,8 @@ export interface GenerationResult {
   diagnostics: GenerationDiagnostic[];
 }
 
-/** Canonical generation never reads local detection state unless opted in. */
-function loadGbrainOverride(respectDetection: boolean): boolean {
-  if (!respectDetection) return false;
-  const stateDir = process.env.GSTACK_HOME || path.join(process.env.HOME || '', '.gstack');
-  try {
-    const json = JSON.parse(fs.readFileSync(path.join(stateDir, 'gbrain-detection.json'), 'utf-8'));
-    // Slow, remote, and locked engines are still usable (#1964/#2051/#2456).
-    return ['ok', 'timeout', 'thin-client', 'engine-locked'].includes(json.gbrain_local_status ?? '');
-  } catch {
-    return false;
-  }
-}
-
-function effectiveSuppressedResolvers(hostConfig: HostConfig, options: RenderOptions): Set<string> {
-  let list = hostConfig.suppressedResolvers || [];
-  if (options.gbrainDetected) {
-    list = list.filter(r => r !== 'GBRAIN_CONTEXT_LOAD' && r !== 'GBRAIN_SAVE_RESULTS');
-  }
-  return new Set(list);
+function effectiveSuppressedResolvers(hostConfig: HostConfig): Set<string> {
+  return new Set(hostConfig.suppressedResolvers || []);
 }
 
 /** Parse CLI settings only when executing, never when imported by tests/checks. */
@@ -107,6 +91,10 @@ function parseGenerationArgs(args: string[]): GenerationOptions {
   if (modelValue !== undefined && !model) {
     throw new Error(`Unknown model: ${modelValue}. Use ${ALL_MODEL_NAMES.join(', ')}, or a family variant (e.g., claude-opus-4-7, gpt-5.4-mini, o3).`);
   }
+  const skillProfile = value('--skill-profile') ?? 'compat';
+  if (skillProfile !== 'core' && skillProfile !== 'compat') {
+    throw new Error(`Unknown skill profile: ${skillProfile}. Use 'core' or 'compat'.`);
+  }
   const catalogMode = value('--catalog-mode') ?? 'trim';
   if (catalogMode !== 'trim' && catalogMode !== 'full') {
     throw new Error(`Unknown catalog mode: ${catalogMode}. Use 'trim' (default) or 'full'.`);
@@ -120,9 +108,8 @@ function parseGenerationArgs(args: string[]): GenerationOptions {
   // Swap-in callers use --link-root for the FINAL serving path (#2692).
   // Direct --out-dir callers retain their existing links into the render.
   return {
-    host, model, catalogMode, explainLevel,
+    host, model, skillProfile, catalogMode, explainLevel,
     dryRun: args.includes('--dry-run'),
-    respectDetection: args.includes('--respect-detection'),
     outputRoot: outDir === undefined ? ROOT : path.resolve(outDir),
     contentLinkRoot: linkRoot !== undefined ? path.resolve(linkRoot)
       : outDir !== undefined ? path.resolve(outDir) : null,
@@ -661,10 +648,7 @@ function resolvePlaceholders(
   options: RenderOptions,
 ): string {
   assertSinglePreamble(tmplContent, relTmplPath);
-  // effectiveSuppressedResolvers() honors --respect-detection: when gbrain is
-  // detected locally, GBRAIN_* resolvers un-suppress. Shared by SKILL.md and
-  // section generation so both paths get the same gbrain-aware behavior.
-  const suppressed = effectiveSuppressedResolvers(hostConfig, options);
+  const suppressed = effectiveSuppressedResolvers(hostConfig);
   const onePass = (input: string): string =>
     input.replace(/\{\{(\w+(?::[^}]+)?)\}\}/g, (_match, fullKey) => {
       const parts = fullKey.split(':');
@@ -722,6 +706,7 @@ function buildContext(
   return {
     skillName, tmplPath, benefitsFrom, host, paths: HOST_PATHS[host],
     preambleTier, model: options.model ?? getHostConfig(host).defaultModel, interactive, explainLevel: options.explainLevel,
+    skillProfile: options.skillProfile,
   };
 }
 
@@ -937,9 +922,9 @@ export async function runGeneration(settings: GenerationOptions = {}): Promise<G
     outputRoot: path.resolve(settings.outputRoot ?? ROOT),
     contentLinkRoot: settings.contentLinkRoot ?? null,
     model: settings.model ?? null,
+    skillProfile: settings.skillProfile ?? 'compat',
     catalogMode: settings.catalogMode ?? 'trim',
     explainLevel: settings.explainLevel ?? 'default',
-    gbrainDetected: loadGbrainOverride(settings.respectDetection ?? false),
   };
   const hosts = settings.host === 'all' ? ALL_HOST_NAMES as Host[] : [settings.host ?? 'claude'];
   const log = settings.log ?? (() => {});
@@ -947,6 +932,22 @@ export async function runGeneration(settings: GenerationOptions = {}): Promise<G
   const diagnostics: GenerationDiagnostic[] = [];
   const templates = discoverTemplates(ROOT);
   const sections = discoverSectionTemplates(ROOT);
+  const skillIds = new Set(templates.map(t => t.tmpl === 'SKILL.md.tmpl' ? 'gstack' : t.tmpl.split('/')[0]));
+  // Partial source fixtures used by the generator have no router map. Core
+  // always needs one; compat can still render those isolated fixtures.
+  const routerMap = fs.existsSync(path.join(ROOT, 'gstack/router-map.json')) ? loadRouterMap() : null;
+  if (!routerMap && options.skillProfile === 'core') {
+    return { exitCode: 1, artifacts: [], diagnostics: [{ kind: 'error', message: 'core generation requires gstack/router-map.json' }] };
+  }
+  const mapErrors = routerMap ? validateRouterMap(routerMap, skillIds) : [];
+  if (mapErrors.length) return { exitCode: 1, artifacts: [], diagnostics: mapErrors.map(message => ({ kind: 'error', message })) };
+  const selected = options.skillProfile === 'core' ? new Set(routerMap!.core) : undefined;
+  if (options.skillProfile === 'core' && (settings.outputRoot === undefined || path.resolve(settings.outputRoot) === ROOT)) {
+    return { exitCode: 1, artifacts: [], diagnostics: [{ kind: 'error', message: 'core generation requires an isolated --out-dir outside the source checkout' }] };
+  }
+  if (options.skillProfile === 'core' && hosts.some(host => host !== 'claude' && host !== 'codex')) {
+    return { exitCode: 1, artifacts: [], diagnostics: [{ kind: 'error', message: 'core profile is supported only for Claude Code and Codex' }] };
+  }
   const rel = (outputPath: string) => path.relative(options.outputRoot, outputPath).split(path.sep).join('/');
 
   function emit(outputPath: string, content: string, kind: GeneratedArtifact['kind'], host?: Host): void {
@@ -1004,7 +1005,7 @@ export async function runGeneration(settings: GenerationOptions = {}): Promise<G
       const renderedNames = new Set<string>();
       for (const template of templates) {
         const skillDir = path.dirname(template.tmpl);
-        if (!includesSkill(hostConfig, skillDir)) continue;
+        if (!includesSkill(hostConfig, skillDir, selected)) continue;
         const result = processTemplate(path.join(ROOT, template.tmpl), host, options);
         const relativePath = rel(result.outputPath);
         if (host !== 'claude') renderedNames.add(path.basename(path.dirname(result.outputPath)));
@@ -1023,9 +1024,9 @@ export async function runGeneration(settings: GenerationOptions = {}): Promise<G
         }
       }
 
-      // Claude carves sections; every external host inlines these templates.
-      for (const section of host === 'claude' ? sections : []) {
-        if (!includesSkill(hostConfig, section.skillDir)) continue;
+      // Hosts using file sections install them beside their skill entry.
+      for (const section of hostConfig.generation.sectionMode === 'files' ? sections : []) {
+        if (!includesSkill(hostConfig, section.skillDir, selected)) continue;
         const result = processSectionTemplate(path.join(ROOT, section.tmpl), section.skillDir, host, options);
         emit(result.outputPath, result.content, 'section', host);
         tokenBudget.push({ skill: rel(result.outputPath), lines: result.content.split('\n').length, tokens: Math.round(result.content.length / 4) });
@@ -1033,10 +1034,10 @@ export async function runGeneration(settings: GenerationOptions = {}): Promise<G
 
       // Claude owns these catalog-derived runtime assets. Use the same host
       // inclusion rule and compare-or-write path as every other artifact.
-      if (host === 'claude' && includesSkill(hostConfig, 'review')) {
+      if (host === 'claude' && includesSkill(hostConfig, 'review', selected)) {
+        emit(path.join(options.outputRoot, DOM_DUMP_FILE), DOM_DUMP_SCRIPT + '\n', 'asset', host);
         emit(path.join(options.outputRoot, 'review', 'design-checklist.md'),
           generateDesignChecklistMd(), 'asset', host);
-        emit(path.join(options.outputRoot, DOM_DUMP_FILE), DOM_DUMP_SCRIPT + '\n', 'asset', host);
       }
 
       if (host === 'openclaw') {
@@ -1133,7 +1134,7 @@ export async function main(args = process.argv.slice(2)): Promise<number> {
       try {
         const config = fs.readFileSync(path.join(process.env.HOME || '', '.gstack', 'config.yaml'), 'utf-8');
         if (/^skill_prefix:\s*true/m.test(config)) {
-          console.log('\nNote: skill_prefix is true. Run gstack-relink to re-apply name: patches (it patches both the install and any active gbrain render).');
+          console.log('\nNote: skill_prefix is true. Run gstack-relink to re-apply name: patches.');
         }
       } catch { /* optional local install note */ }
     }

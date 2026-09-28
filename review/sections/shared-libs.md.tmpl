@@ -1,0 +1,3 @@
+# Shared-library advice
+
+Inspect recent changed code for two or more genuinely equivalent implementations with stable callers. Recommend extraction only when it removes meaningful maintenance cost. Report the original source paths and lines as `evidence_paths`, the proposed helper location and symbol as `helper_target`, and the concrete call sites that would change. Re-read source before reusing an old advisory; a suggested fingerprint or summary is not source evidence. Do not edit code in this mode, and do not treat silence as approval to extract.

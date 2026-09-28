@@ -1,5 +1,4 @@
 import { toShellPath, type TemplateContext } from './types';
-import { outsideVoiceRuntime } from './outside-voice';
 import * as path from 'path';
 import { getHostConfig } from '../../hosts';
 
@@ -45,6 +44,15 @@ export function generateInvokeSkill(ctx: TemplateContext, args?: string[]): stri
     throw new Error('{{INVOKE_SKILL}} requires a skill name, e.g. {{INVOKE_SKILL:plan-ceo-review}}');
   }
 
+  const mode = args?.slice(1).find(a => a.startsWith('mode='))?.slice(5);
+  if (mode !== undefined) {
+    if (!/^[a-z][a-z0-9-]*$/.test(mode) || args?.length !== 2) {
+      throw new Error(`Invalid INVOKE_SKILL mode: ${mode}`);
+    }
+    const directory = ctx.host === 'claude' ? skillName : `gstack-${skillName}`;
+    return `Read \`../${directory}/SKILL.md\` relative to this installed SKILL.md and execute its \`${mode}\` mode with the user's original request, scope, decisions, and paths. If the target is missing or unreadable, report that exact missing path and stop this mode; do not mark it complete. The target owns bootstrap and completion reporting.`;
+  }
+
   // Parse optional skip= parameter from args[1+]
   const extraSkips = (args?.slice(1) || [])
     .filter(a => a.startsWith('skip='))
@@ -55,7 +63,7 @@ export function generateInvokeSkill(ctx: TemplateContext, args?: string[]): stri
   const DEFAULT_SKIPS = [
     'Preamble (run first)',
     'AskUserQuestion Format',
-    'Completeness Principle — Boil the Ocean',
+    'Completeness preamble (parent already applied it)',
     'Search Before Building',
     'Contributor Mode',
     'Completion Status Protocol',
@@ -111,7 +119,6 @@ export function generateAutoplanReviewFile(ctx: TemplateContext, args?: string[]
 /** Resolve once to a literal path; later phase commands run in fresh shells. */
 export function generateAutoplanSnapshotTool(ctx: TemplateContext): string {
   return `\`\`\`bash
-${outsideVoiceRuntime(ctx)}
 bun -e 'console.log(require("fs").realpathSync(process.argv[1]))' "${toShellPath(ctx.paths.binDir)}/gstack-autoplan-snapshot.ts"
 \`\`\``;
 }

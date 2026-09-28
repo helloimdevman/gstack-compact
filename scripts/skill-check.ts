@@ -8,10 +8,17 @@ import * as path from 'path';
 import { spawnSync } from 'child_process';
 import { validateSkill, externalHostPathLeaks } from '../test/helpers/skill-parser';
 import { ALL_HOST_CONFIGS } from '../hosts/index';
+import { parse as parseYaml } from 'yaml';
 import {
   runGeneration,
   type GeneratedArtifact,
 } from './gen-skill-docs';
+
+function parseYamlText(text: string): unknown {
+  const bunYaml = (Bun as { YAML?: { parse?: (source: string) => unknown } }).YAML;
+  if (bunYaml?.parse) return bunYaml.parse(text);
+  return parseYaml(text);
+}
 
 const ROOT = path.resolve(import.meta.dir, '..');
 
@@ -28,7 +35,7 @@ export function validateSkillFrontmatter(content: string): string[] {
   if (!block) return ['frontmatter must have opening and closing delimiters'];
   let parsed: unknown;
   try {
-    parsed = Bun.YAML.parse(block[1]);
+    parsed = parseYamlText(block[1]);
   } catch (error) {
     return [`frontmatter must be valid YAML: ${error instanceof Error ? error.message : String(error)}`];
   }
@@ -38,7 +45,7 @@ export function validateSkillFrontmatter(content: string): string[] {
       ? [] : [`frontmatter ${field} must be a nonempty string`]);
 }
 
-/** Reuse the command/snapshot validator and host smoke-test content rules. */
+/** Reject removed bundled-browser commands and check host-rendered content. */
 export function validateGeneratedArtifact(renderRoot: string, artifact: GeneratedArtifact): CheckDiagnostic[] {
   const diagnostics: CheckDiagnostic[] = [];
   const invalid = (message: string) => diagnostics.push({ kind: 'invalid', relativePath: artifact.relativePath, message });
@@ -54,7 +61,7 @@ export function validateGeneratedArtifact(renderRoot: string, artifact: Generate
       for (const command of validation.invalid) invalid(`line ${command.line}: unknown command '${command.command}'`);
       for (const error of validation.snapshotFlagErrors) invalid(`line ${error.command.line}: ${error.error}`);
       if (artifact.host && artifact.host !== 'claude') {
-        // Host smoke tests permit legitimate fallback paths in bash examples.
+        // Bash examples may contain installation paths.
         if (externalHostPathLeaks(content).length) invalid('contains .claude/skills reference outside a bash block');
       }
     }

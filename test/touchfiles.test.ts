@@ -38,13 +38,13 @@ function registeredJudgeTestNames(source: string): string[] {
 
 describe('matchGlob', () => {
   test('** matches any depth of path segments', () => {
-    expect(matchGlob('browse/src/commands.ts', 'browse/src/**')).toBe(true);
-    expect(matchGlob('browse/src/deep/nested/file.ts', 'browse/src/**')).toBe(true);
-    expect(matchGlob('browse/src/cli.ts', 'browse/src/**')).toBe(true);
+    expect(matchGlob('src/commands.ts', 'src/**')).toBe(true);
+    expect(matchGlob('src/deep/nested/file.ts', 'src/**')).toBe(true);
+    expect(matchGlob('src/cli.ts', 'src/**')).toBe(true);
   });
 
   test('** does not match unrelated paths', () => {
-    expect(matchGlob('browse/src/commands.ts', 'qa/**')).toBe(false);
+    expect(matchGlob('src/commands.ts', 'qa/**')).toBe(false);
     expect(matchGlob('review/SKILL.md', 'qa/**')).toBe(false);
   });
 
@@ -120,26 +120,6 @@ describe('selectTests', () => {
     },
   );
 
-  test.each(['lib/cso/cli.ts', 'lib/cso/state.ts', 'test/cso-cli.test.ts', 'test/cso-snapshot-state.test.ts'])(
-    'CSO runtime and report regressions select all three audit cases: %s', (file) => {
-      const result = selectTests([file], E2E_TOUCHFILES);
-      expect(result.reason).toBe('diff');
-      expect(result.selected.sort()).toEqual(['cso-diff-mode', 'cso-full-audit', 'cso-infra-scope']);
-      expect(E2E_TIERS['cso-diff-mode']).toBe('gate');
-      expect(E2E_TIERS['cso-full-audit']).toBe('periodic');
-      expect(E2E_TIERS['cso-infra-scope']).toBe('periodic');
-    },
-  );
-
-  test.each(['lib/redact-engine.ts', 'lib/redact-patterns.ts'])(
-    'shared redaction changes retain CSO audit consumers: %s', (file) => {
-      const result = selectTests([file], E2E_TOUCHFILES);
-      for (const id of ['cso-diff-mode', 'cso-full-audit', 'cso-infra-scope']) {
-        expect(result.selected).toContain(id);
-      }
-    },
-  );
-
   test.each(['test/helpers/coverage-audit.ts', 'test/coverage-audit.test.ts'])(
     'coverage-audit validation changes select all three gate cases: %s', (file) => {
       const result = selectTests([file], E2E_TOUCHFILES);
@@ -206,11 +186,11 @@ describe('selectTests', () => {
     for (const source of ['scripts/resolvers/learnings.ts', 'scripts/resolvers/testing.ts']) {
       expect(selectTests([source], E2E_TOUCHFILES).selected).not.toContain('shared-libs-plan-callers');
     }
+    expect(excerpt).toContain('## Shared contract');
     expect(excerpt).toContain('## Confidence Calibration');
-    expect(excerpt).toContain('## AskUserQuestion Format');
     expect(excerpt).toContain('### Shared-code evaluation rubric');
     for (const source of ['scripts/resolvers/confidence.ts',
-      'scripts/resolvers/preamble/generate-ask-user-format.ts', 'scripts/resolvers/shared-libs.ts',
+      'scripts/resolvers/preamble.ts', 'scripts/resolvers/shared-libs.ts',
       'test/helpers/shared-libs-plan-excerpt.ts']) {
       expect(selectTests([source], E2E_TOUCHFILES).selected).toContain('shared-libs-plan-callers');
     }
@@ -248,7 +228,6 @@ describe('selectTests', () => {
     const expected = {
       'office-hours-forcing-energy': 'periodic',
       'office-hours-builder-wildness': 'periodic',
-      'office-hours-brain-writeback': 'periodic',
       'plan-design-review-plan-mode': 'periodic',
       'plan-ceo-review-format-mode': 'periodic',
       'plan-ceo-review-format-approach': 'periodic',
@@ -258,9 +237,6 @@ describe('selectTests', () => {
       'plan-review-prosons-format': 'periodic',
       'plan-review-prosons-hardstop-neg': 'periodic',
       'plan-review-prosons-neutral-neg': 'periodic',
-      'setup-gbrain-bad-token': 'periodic',
-      'setup-gbrain-path4-local-pglite': 'periodic',
-      'setup-gbrain-remote': 'periodic',
       'review-army-red-team': 'periodic',
       'review-coverage-audit': 'gate',
       'plan-eng-coverage-audit': 'gate',
@@ -271,27 +247,9 @@ describe('selectTests', () => {
     for (const [id, tier] of Object.entries(expected)) expect(E2E_TIERS[id]).toBe(tier);
   });
 
-  test('browse/src change selects browse and qa tests', () => {
-    const result = selectTests(['browse/src/commands.ts'], E2E_TOUCHFILES);
-    expect(result.selected).toContain('browse-basic');
-    expect(result.selected).toContain('browse-snapshot');
-    expect(result.selected).toContain('qa-quick');
-    expect(result.selected).toContain('qa-fix-loop');
-    expect(result.selected).toContain('design-review-fix');
-    expect(result.reason).toBe('diff');
-    // Should NOT include unrelated tests
-    expect(result.selected).not.toContain('plan-ceo-review');
-    expect(result.selected).not.toContain('retro');
-    expect(result.selected).not.toContain('document-release');
-  });
-
-  test('aside resolver change selects the Aside-driven skill tests', () => {
-    const result = selectTests(['scripts/resolvers/aside.ts'], E2E_TOUCHFILES);
-    expect(result.selected).toContain('aside-browse-basic');
-    expect(result.selected).toContain('aside-browse-flow');
-    expect(result.selected).toContain('qa-quick');
-    expect(result.selected).toContain('qa-fix-loop');
-    expect(result.selected).toContain('design-review-fix');
+  test('browser resolver change selects its remaining skill tests', () => {
+    const result = selectTests(['scripts/resolvers/browser.ts'], E2E_TOUCHFILES);
+    expect(result.selected).toContain('canary-workflow');
     expect(result.reason).toBe('diff');
     expect(result.selected).not.toContain('plan-ceo-review');
     expect(result.selected).not.toContain('retro');
@@ -333,7 +291,6 @@ describe('selectTests', () => {
     expect(result.selected).toContain('plan-ceo-review-selective');
     expect(result.selected).toContain('plan-ceo-review-benefits');
     expect(result.selected).toContain('plan-ceo-review-expansion-energy');
-    expect(result.selected).toContain('codex-offered-ceo-review');
     expect(result.selected).toContain('plan-ceo-review-format-mode');
     expect(result.selected).toContain('plan-ceo-review-format-approach');
     // v1.10.2.0 plan-mode handshake entries also depend on plan-ceo-review/**
@@ -347,8 +304,6 @@ describe('selectTests', () => {
     expect(result.selected).toContain('auq-format-gate');
     expect(result.selected).toContain('plan-ceo-mode-routing');
     expect(result.selected).toContain('autoplan-chain-pty');
-    // The dual-voice fixture loads the CEO skill as its Phase 1 dependency.
-    expect(result.selected).toContain('autoplan-dual-voice');
     // Per-finding count + review-report-at-bottom (v1.21.x)
     expect(result.selected).toContain('plan-ceo-finding-count');
     // v1.22+ AskUserQuestion-blocked regression: auto-decide-preserved
@@ -365,9 +320,8 @@ describe('selectTests', () => {
     expect(result.selected).toContain('plan-ceo-section-loading');
     expect(result.selected).toContain('codex-plan-ceo-format-mode');
     expect(result.selected).toContain('codex-plan-ceo-format-approach');
-    expect(result.selected).toContain('outside-plan-disabled-no-fallback');
-    expect(result.selected.length).toBe(25);
-    expect(result.skipped.length).toBe(Object.keys(E2E_TOUCHFILES).length - 25);
+    expect(result.selected.length).toBe(22);
+    expect(result.skipped.length).toBe(Object.keys(E2E_TOUCHFILES).length - 22);
   });
 
   test('global touchfile triggers ALL tests', () => {
@@ -407,12 +361,9 @@ describe('selectTests', () => {
     expect(result.selected.length).toBeLessThan(Object.keys(E2E_TOUCHFILES).length);
     expect(result.reason).toBe('diff');
     // Should include tests that depend on gen-skill-docs.ts
-    expect(result.selected).toContain('skillmd-setup-discovery');
-    expect(result.selected).toContain('session-awareness');
     expect(result.selected).toContain('journey-ideation');
     // Should NOT include tests that don't depend on it
     expect(result.selected).not.toContain('retro');
-    expect(result.selected).not.toContain('cso-full-audit');
   });
 
   test.each(['test/helpers/ceo-finding-fixture.ts', 'test/ceo-finding-fixture.test.ts', 'test/ceo-mode-routing-fixture.test.ts'])('mode input dependency selects its periodic eval: %s', file => {
@@ -455,10 +406,7 @@ describe('selectTests', () => {
 
   test('SKILL.md.tmpl root template selects root-dependent tests and routing tests', () => {
     const result = selectTests(['SKILL.md.tmpl'], E2E_TOUCHFILES);
-    // Should select the 7 tests that depend on root SKILL.md
-    expect(result.selected).toContain('skillmd-setup-discovery');
-    expect(result.selected).toContain('session-awareness');
-    expect(result.selected).toContain('session-awareness');
+    // Root template still selects the journey routing tests.
     // Also selects journey routing tests (SKILL.md.tmpl in their touchfiles)
     expect(result.selected).toContain('journey-ideation');
     // Should NOT select unrelated non-routing tests
@@ -626,7 +574,7 @@ describe('TOUCHFILES completeness', () => {
 // --- dependency paths exist on disk ---
 //
 // The axis nobody guarded: a dep-list entry can point at a file that was
-// deleted long ago (browse/src/sidebar-agent.ts sat in three entries for 48
+// deleted long ago (a removed source file sat in three entries for 48
 // versions), and diff-based selection then silently never triggers those
 // tests. Globs are skipped (they describe patterns, not files); every literal
 // path must exist.

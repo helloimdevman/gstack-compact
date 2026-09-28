@@ -36,18 +36,7 @@ describe('gstack-upgrade template: ff-only precedes the gated reset (#2517)', ()
 });
 
 describe('untrusted-content warning injection points (#2441)', () => {
-  test('scrape and skillify templates carry the shared token', () => {
-    // The wording lives in ONE exported const (resolvers/browse.ts); these
-    // pins keep the injection POINTS from silently disappearing.
+  test('scrape template carries the shared token', () => {
     expect(read('scrape/SKILL.md.tmpl')).toContain('{{UNTRUSTED_CONTENT_WARNING}}');
-    expect(read('skillify/SKILL.md.tmpl')).toContain('{{UNTRUSTED_CONTENT_WARNING}}');
-  });
-});
-
-describe('brain-uninstall removes the spool queue', () => {
-  test('uninstall cleans .brain-queue.d alongside the legacy queue file', () => {
-    const src = read('bin/gstack-brain-uninstall');
-    expect(src).toContain('.brain-queue.d');
-    expect(src).toContain('.brain-queue.jsonl');
   });
 });

@@ -82,24 +82,15 @@ describe('agents-digest', () => {
     expect(writers).toEqual([]);
   });
 
-  test('the digest reuse-ladder text stays in lockstep with the preamble resolver', () => {
-    // The ladder and root-cause rules are hand-rendered into the digest (it
-    // ships to hosts that never load the preamble). The freshness test above
-    // pins digest-vs-generator; this pins generator-vs-resolver so an edit to
-    // scripts/resolvers/preamble/generate-search-before-building.ts fails CI
-    // instead of silently shipping a stale digest.
+  test('the instruction-only digest retains its reuse ladder and root-cause guidance', () => {
+    // This standalone digest owns these rules after the unused essay resolver retires.
     const { content } = generateAgentsDigest();
-    const resolver = fs.readFileSync(
-      path.join(ROOT, 'scripts', 'resolvers', 'preamble', 'generate-search-before-building.ts'),
-      'utf-8',
-    );
     for (const shared of [
       'stop at the first rung that holds',
       'Then build the complete version of what remains',
       'one guard in the shared function beats a guard in every caller',
     ]) {
       expect(content).toContain(shared);
-      expect(resolver).toContain(shared);
     }
   });
 

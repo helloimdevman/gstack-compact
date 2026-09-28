@@ -4,7 +4,7 @@
 #
 # Usage: gstack-session-kind            → prints one of: spawned | headless | interactive
 #
-# Used by the preamble (generate-preamble-bash.ts) which echoes
+# Used by gstack-skill-start, which echoes
 #   SESSION_KIND: <value>
 # so the AskUserQuestion-failure fallback rule can branch without a shell-out at
 # failure time:

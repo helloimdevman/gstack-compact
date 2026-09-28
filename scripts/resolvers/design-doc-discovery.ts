@@ -33,6 +33,10 @@ export const DESIGN_DOC_DISCOVERY_BLOCK = `_LOCALDOC=$(ls -t ~/.gstack/projects/
 # docs/designs/ alongside ~/.gstack, and the committed copy is what teammates
 # see. A stale old repo doc never shadows a newer private session.
 _REPOTOP=$(git rev-parse --show-toplevel 2>/dev/null || echo "")
+# git rev-parse prints the physical /private/var prefix. Callers pass the /var path.
+case "$_REPOTOP" in
+  /private/var/*|/private/tmp/*) _REPOTOP="\${_REPOTOP#/private}" ;;
+esac
 _REPODOC=""
 if [ -n "$_REPOTOP" ]; then
   [ -f "$_REPOTOP/DESIGN.md" ] && _REPODOC="$_REPOTOP/DESIGN.md"

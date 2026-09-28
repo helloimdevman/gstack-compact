@@ -1,157 +1,20 @@
-/**
- * SKILL.md parser and validator.
- *
- * Extracts $B commands from code blocks, validates them against
- * the command registry and snapshot flags.
- *
- * Used by:
- *   - test/skill-validation.test.ts (Tier 1 static tests)
- *   - scripts/skill-check.ts (health summary)
- *   - scripts/dev-skill.ts (watch mode)
- */
-
-import { ALL_COMMANDS } from '../../browse/src/commands';
-import { parseSnapshotArgs } from '../../browse/src/snapshot';
+/** Shared skill-doc validation helpers. */
 import * as fs from 'fs';
 import * as path from 'path';
 
-/** CLI-only commands: valid $B invocations that are handled by the CLI, not the server */
-const CLI_COMMANDS = new Set([
-  'status', 'pair-agent', 'tunnel', '--help',
-]);
-
-export interface BrowseCommand {
-  command: string;
-  args: string[];
-  line: number;
-  raw: string;
-}
-
-export interface ValidationResult {
-  valid: BrowseCommand[];
-  invalid: BrowseCommand[];
-  snapshotFlagErrors: Array<{ command: BrowseCommand; error: string }>;
-  warnings: string[];
-}
-
-/** External-host prose must not retain Claude install paths. Bash examples
- * may legitimately describe fallback paths, matching the host smoke tests. */
+/** External-host prose must not retain Claude install paths. */
 export function externalHostPathLeaks(content: string): string[] {
   return content.replace(/```bash\n[\s\S]*?```/g, '').split('\n')
     .filter(line => line.includes('.claude/skills'));
 }
 
-/**
- * Extract all $B invocations from bash code blocks in a SKILL.md file.
- */
-export function extractBrowseCommands(skillPath: string): BrowseCommand[] {
-  const content = fs.readFileSync(skillPath, 'utf-8');
-  const lines = content.split('\n');
-  const commands: BrowseCommand[] = [];
-
-  let inCodeBlock = false;
-  let inBashBlock = false;
-
-  for (let i = 0; i < lines.length; i++) {
-    const line = lines[i];
-
-    // Detect code block boundaries
-    if (line.trimStart().startsWith('```')) {
-      inCodeBlock = !inCodeBlock;
-      inBashBlock = inCodeBlock && line.trimStart().startsWith('```bash');
-      continue;
-    }
-
-    let source: string;
-    if (!inCodeBlock) {
-      // Prose and table rows: the {{BROWSE_FALLBACK}} mapping table carries its
-      // `$B` shapes in backticks — validate them like code-block commands.
-      // `[flags]`-style placeholders are documentation, not arguments.
-      const spans = [...line.matchAll(/`(\$B\s+[^`]+)`/g)].map(m => m[1].replace(/\[[^\]]*\]/g, ''));
-      if (spans.length === 0) continue;
-      source = spans.join('   ');
-    } else if (inBashBlock) {
-      source = line;
-    } else {
-      continue; // Non-bash code blocks (```json, ```, ```js, etc.) are skipped
-    }
-
-    // Match $B command invocations
-    // Handle multiple $B commands on one line (e.g., "$B click @e3       $B fill @e4 "value"")
-    const matches = source.matchAll(/\$B\s+(\S+)(?:\s+([^\$]*))?/g);
-    for (const match of matches) {
-      const command = match[1];
-      let argsStr = (match[2] || '').trim();
-
-      // Strip inline comments (# ...) — but not inside quotes
-      // Simple approach: remove everything from first unquoted # onward
-      let inQuote = false;
-      for (let j = 0; j < argsStr.length; j++) {
-        if (argsStr[j] === '"') inQuote = !inQuote;
-        if (argsStr[j] === '#' && !inQuote) {
-          argsStr = argsStr.slice(0, j).trim();
-          break;
-        }
-      }
-
-      // Parse args — handle quoted strings
-      const args: string[] = [];
-      if (argsStr) {
-        const argMatches = argsStr.matchAll(/"([^"]*)"|(\S+)/g);
-        for (const am of argMatches) {
-          args.push(am[1] ?? am[2]);
-        }
-      }
-
-      commands.push({
-        command,
-        args,
-        line: i + 1, // 1-based
-        raw: match[0].trim(),
-      });
-    }
-  }
-
-  return commands;
-}
-
-/**
- * Extract and validate all $B commands in a SKILL.md file.
- */
-export function validateSkill(skillPath: string): ValidationResult {
-  const commands = extractBrowseCommands(skillPath);
-  const result: ValidationResult = {
-    valid: [],
-    invalid: [],
-    snapshotFlagErrors: [],
-    warnings: [],
-  };
-
-  if (commands.length === 0) {
-    result.warnings.push('no $B commands found');
-    return result;
-  }
-
-  for (const cmd of commands) {
-    if (!ALL_COMMANDS.has(cmd.command) && !CLI_COMMANDS.has(cmd.command)) {
-      result.invalid.push(cmd);
-      continue;
-    }
-
-    // Validate snapshot flags
-    if (cmd.command === 'snapshot' && cmd.args.length > 0) {
-      try {
-        parseSnapshotArgs(cmd.args);
-      } catch (err: any) {
-        result.snapshotFlagErrors.push({ command: cmd, error: err.message });
-        continue;
-      }
-    }
-
-    result.valid.push(cmd);
-  }
-
-  return result;
+/** Reject invocations of the removed bundled-browser CLI in generated skills. */
+export function validateSkill(skillPath: string) {
+  const invalid = fs.readFileSync(skillPath, 'utf8').split('\n').flatMap((line, index) =>
+    /(?:^|\s)\$B(?:\s|$)/.test(line)
+      ? [{ command: '$B', args: [], line: index + 1, raw: line.trim() }]
+      : []);
+  return { valid: [], invalid, snapshotFlagErrors: [], warnings: [] };
 }
 
 /**

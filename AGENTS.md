@@ -6,8 +6,23 @@ designer, QA lead, release engineer, debugger, and more.
 
 ## Available skills
 
-Skills live in `.agents/skills/` (or `~/.claude/skills/gstack/` on Claude Code).
-Invoke them by name (e.g., `/office-hours`).
+Skills live in `.agents/skills/` (or the Claude Code skill directory).
+New Claude/Codex installs register the 11 core commands below. The specialist
+commands in the later tables require `./setup --skill-profile compat`.
+
+| Core command | Result |
+|--------------|--------|
+| `/plan` | Frame, write, or review a plan or spec. |
+| `/build` | Implement an authorized change. |
+| `/review` | Review the current diff; report by default. |
+| `/verify` | Check code, CLI, or UI behavior; report by default. |
+| `/ship` | Prepare, verify, review, and publish an authorized PR. |
+| `/investigate` | Reproduce and repair a defect within scope. |
+| `/design` | Create a design system, variants, or HTML. |
+| `/context` | Save, restore, or manage learnings. |
+| `/gstack` | Route to an installed skill. |
+| `/browse` | Drive the available browser. |
+| `/sprint` | Carry one task from plan through authorized PR publication. |
 
 ### Plan-mode reviews
 
@@ -19,9 +34,9 @@ Invoke them by name (e.g., `/office-hours`).
 | `/plan-design-review` | Rate each design dimension 0-10, explain what a 10 looks like. |
 | `/plan-devex-review` | DX-mode review: TTHW, magical moments, friction points, persona traces. |
 | `/plan-tune` | Self-tune AskUserQuestion sensitivity per question. |
-| `/autoplan` | One command runs CEO → design → DX → eng review (eng always last). |
+| `/autoplan` | Compatibility alias for `/plan` review-all; applicable perspectives only, engineering last, then stop. |
 | `/design-consultation` | Build a complete design system from scratch. |
-| `/spec` | Turn vague intent into a precise, executable spec in five phases. Files a GitHub issue, optionally spawns a Claude Code agent in a fresh worktree, and lets `/ship` close the source issue on merge. |
+| `/spec` | Compatibility alias for `/plan` spec; files an issue only when the user requested it. |
 
 ### Implementation + review
 
@@ -29,8 +44,6 @@ Invoke them by name (e.g., `/office-hours`).
 |-------|-------------|
 | `/review` | Pre-landing PR review. Finds bugs that pass CI but break in prod. |
 | `/deslop-shared-libs` | Find worthwhile shared-code extractions in recent work. Recommendations only. |
-| `/codex` | Second opinion via OpenAI Codex. Review, challenge, or consult modes. Available outside the Codex harness. |
-| `/claude-code` | Second opinion via Claude Code. Review, challenge, or consult modes. Available outside the Claude Code harness. |
 | `/investigate` | Systematic root-cause debugging. No fixes without investigation. |
 | `/design-review` | Live-site visual audit + fix loop with atomic commits. |
 | `/design-shotgun` | Generate multiple AI design variants, comparison board, iterate. |
@@ -38,8 +51,7 @@ Invoke them by name (e.g., `/office-hours`).
 | `/devex-review` | Live developer experience audit (TTHW measured against the real flow). |
 | `/qa` | Open a real browser, find bugs, fix them, re-verify. |
 | `/qa-only` | Same methodology as /qa but report only — no code changes. |
-| `/scrape` | Pull data from a web page in your Aside browser, with your real logged-in state. Read-only. On the fallback browser a codified browser-skill answers a repeat intent in ~200ms. |
-| `/skillify` | Codify the most recent successful `/scrape` flow into a permanent browser-skill (fallback browser only). |
+| `/scrape` | Pull data from a web page in the browser supplied by the user's agent host. Read-only. |
 
 ### Release + deploy
 
@@ -47,7 +59,7 @@ Invoke them by name (e.g., `/office-hours`).
 |-------|-------------|
 | `/ship` | Run tests, review, push, open PR. Workspace-aware version queue. |
 | `/land-and-deploy` | Merge the PR, wait for CI and deploy, verify production health. |
-| `/canary` | Post-deploy monitoring loop in your Aside browser (or gstack's own when Aside is absent). |
+| `/canary` | Post-deploy monitoring loop in the user's host-provided browser. |
 | `/landing-report` | Read-only dashboard for the workspace-aware ship queue. |
 | `/document-release` | Update all docs to match what you just shipped. |
 | `/document-generate` | Generate Diataxis docs (tutorial / how-to / reference / explanation) from code. |
@@ -64,25 +76,17 @@ Invoke them by name (e.g., `/office-hours`).
 | `/retro` | Weekly retro with per-person breakdowns and shipping streaks. |
 | `/health` | Code quality dashboard (type checker, linter, tests, dead code). |
 | `/benchmark` | Performance regression detection (page load, Core Web Vitals). |
-| `/benchmark-models` | Cross-model benchmark for skills (Claude, GPT, Gemini side-by-side). |
-| `/cso` | Supported security findings with explicit coverage. Static assessment remains available without catalog profiles; contained runtime/scanner execution requires matching qualified profiles. Runtime-tested bundles authenticate separate external assertions. Project-test completion remains `self_reported` because target code controls the test process; `tested` is reserved for a future target-independent completion witness. |
-| `/setup-gbrain` | Set up gbrain for cross-machine session memory sync. |
-| `/sync-gbrain` | Keep gbrain current with this repo's code; refresh agent search guidance in CLAUDE.md. |
 
-### Browser + agent integration
+### Browser integration
 
-Every browser skill drives the Aside AI browser first (macOS 15+, aside.com) —
-the user's real browser with their real sessions, through `aside repl` scripts;
-gstack never installs it. When Aside is not installed or not running (Linux,
-Windows, a closed Aside app) the same skills fall back automatically to gstack's
-own headless Chromium (`$B`), which is where the three skills under `/browse` apply.
+Browser skills use the browser capability supplied by the user's agent host,
+connected to the browser and profile the user uses. gstack does not install
+or launch another browser. If the host lacks that capability, browser steps
+report unavailable; the other skills remain available.
 
 | Skill | What it does |
 |-------|-------------|
-| `/browse` | Drive a browser: open a page, read it, click through a flow, screenshots, console errors. Aside first; gstack's own Chromium (~100ms/command) as the fallback. Every other browser skill stands on it. |
-| `/open-gstack-browser` | Launch the visible GStack Browser with sidebar + stealth — the headed face of the fallback engine. |
-| `/setup-browser-cookies` | Import cookies from your real browser into the fallback engine for authenticated testing. Unnecessary on Aside. |
-| `/pair-agent` | Pair a remote AI agent (OpenClaw, Codex, etc.) with gstack's own browser over a scoped tunnel. |
+| `/browse` | Open a page, read it, click through a flow, take screenshots, and check console errors in the user's browser. |
 
 ### iOS QA — drive real iPhones over USB or Tailscale (v1.43.0.0+)
 
@@ -112,8 +116,8 @@ End-to-end walkthrough: [docs/howto-ios-testing-with-gstack.md](docs/howto-ios-t
 | `/freeze` | Lock edits to one directory. Hard block, not just a warning. |
 | `/guard` | Activate both careful + freeze at once. |
 | `/unfreeze` | Remove directory edit restrictions. |
-| `/make-pdf` | Turn any markdown file into a publication-quality PDF. Renders through Aside, or gstack's own browser when Aside is absent. |
-| `/diagram` | English in, diagram out: mermaid source + editable .excalidraw + SVG/PNG, offline. Renders through Aside, or gstack's own browser when Aside is absent. |
+| `/make-pdf` | Prepare print-ready HTML from Markdown; export PDF through the user's browser when the host supports it. |
+| `/diagram` | English in, diagram out: mermaid source and, when the host browser supports offline page evaluation, editable .excalidraw + SVG/PNG. |
 
 ## Validation discipline
 
@@ -252,21 +256,14 @@ bun run skill:check      # health dashboard for all skills
   MSYS today; native PowerShell support is a future expansion. The `bin/gstack-paths`
   helper resolves state roots through `CLAUDE_PLUGIN_DATA` / `GSTACK_HOME` so plugin
   installs work on every platform.
-- **CSO native helper**: `/cso` additionally needs Bun's four
-  `--no-compile-autoload-*` flags and a native toolchain (static-capable C on
-  Linux, Xcode command-line tools on macOS, or VS 2022 C++ Build Tools on
-  Windows). Setup installs everything else and leaves `/cso` explicitly
-  unavailable when that optional toolchain is absent.
-- **Browser and renderer**: the browser skills, `/make-pdf`, and `/diagram` drive
-  the Aside browser first, which is macOS 15+ only. On Linux and Windows (or a
-  Mac with Aside closed) the readiness check says so once and the same skills use
-  gstack's own bundled browser, built by `./setup`.
+- **Browser and renderer**: browser skills and PDF/diagram export use the browser
+  capability supplied by the agent host. Unsupported steps report unavailable.
 
 ## Key conventions
 
 - SKILL.md files are **generated** from `.tmpl` templates. Edit the template, not the output.
 - Run `bun run gen:skill-docs --host codex` to regenerate Codex-specific output.
-- Browser steps in skills are `aside repl` scripts per `scripts/resolvers/aside.ts` (Aside first), each with a `$B` equivalent for the fallback engine — `$B <command>` is the browse binary and is a legitimate tool when the Aside probe does not print `READY`. Local HTML renders through `bin/gstack-render.ts`, which picks the same way.
+- Browser steps follow `scripts/resolvers/browser.ts` and the host's own browser tool instructions.
 - Safety skills (careful, freeze, guard) use inline advisory prose — always confirm before destructive operations.
 - State paths resolve via `bin/gstack-paths` (sourced via `eval "$(...)"`). Honors `GSTACK_HOME`, `CLAUDE_PLUGIN_DATA`, `CLAUDE_PLANS_DIR`.
-- The `claude` CLI binary resolves via `lib/claude-bin.ts` (re-exported from `browse/src/claude-bin.ts` for browse internals; `Bun.which()` + `GSTACK_CLAUDE_BIN` override). Set `GSTACK_CLAUDE_BIN=wsl` plus `GSTACK_CLAUDE_BIN_ARGS='["claude"]'` to run Claude through WSL on Windows.
+- The `claude` CLI binary resolves via `lib/claude-bin.ts` (`Bun.which()` + `GSTACK_CLAUDE_BIN` override). Set `GSTACK_CLAUDE_BIN=wsl` plus `GSTACK_CLAUDE_BIN_ARGS='["claude"]'` to run Claude through WSL on Windows.

@@ -177,7 +177,7 @@ describe('--check --summary-stdin (#2024 keyword net plumb-through)', () => {
 
 // Split-chain carve-out: question_ids matching <skill>-split-<option-slug>
 // must always ASK_NORMALLY regardless of stored preferences.
-// See scripts/resolvers/preamble/generate-ask-user-format.ts
+// See the retired AskUserQuestion Format preamble
 // "Handling 5+ options — split, never drop" for the surrounding mechanism.
 describe('--check split-chain carve-out (*-split-* always ASK_NORMALLY)', () => {
   function setPref(id: string, pref: string) {

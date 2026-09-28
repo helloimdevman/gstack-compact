@@ -205,15 +205,16 @@ export function refreshHermeticSkillRuntime(sourceRoot: string, privateDir: stri
  * Keep both lexical and real paths: the CLI checks every symlink resolution.
  */
 export function questionCompanionReadSettings(sourceRoot: string, runtimeRoot: string): { permissions: { allow: string[] } } {
-  const source = fs.realpathSync(sourceRoot);
+  const canonical = fs.realpathSync(sourceRoot);
   const files = new Set<string>();
   for (const name of ['askuserquestion-split.md', 'askuserquestion-cjk.md']) {
-    const expected = path.join(source, 'docs', name);
+    const expected = path.join(canonical, 'docs', name);
+    const callerFile = path.join(sourceRoot, 'docs', name);
     const lexical = path.resolve(runtimeRoot, 'docs', name);
-    if (!fs.lstatSync(expected).isFile() || fs.realpathSync(lexical) !== expected) {
+    if (!fs.lstatSync(expected).isFile() || fs.realpathSync(lexical) !== expected || fs.realpathSync(callerFile) !== expected) {
       throw new Error('Question companion must resolve to its exact source document');
     }
-    files.add(lexical); files.add(expected);
+    files.add(lexical); files.add(callerFile);
   }
   const allow = [...files].map(file => {
     const absolute = file.split(path.sep).join('/');

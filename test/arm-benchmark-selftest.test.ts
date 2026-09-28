@@ -17,6 +17,7 @@ import {
 } from './helpers/llm-judge';
 import * as fs from 'fs';
 import * as path from 'path';
+import { E2E_TOUCHFILES, selectTests } from './helpers/touchfiles';
 
 describe('arm benchmark selftest (free, no API)', () => {
   test('fixtures exist with their planted content; decoy credentials are obviously fake', () => {
@@ -44,13 +45,13 @@ describe('arm benchmark selftest (free, no API)', () => {
     expect(readme).toContain('plugin architecture');
   });
 
-  test('behavioral skill is an extraction (ladder + bounded closer), not a whole-file copy', () => {
+  test('behavioral skill extracts the current build steps without bootstrap or telemetry', () => {
     const skill = buildBehavioralSkill();
     expect(skill).toContain(`name: ${SKILL_NAME}`);
-    expect(skill).toContain('## Search Before Building');
-    expect(skill).toContain('first rung that holds');
-    expect(skill).toContain('## Voice');
-    expect(skill).toContain('**Bounded closer.**');
+    const source = fs.readFileSync(path.resolve(import.meta.dir, '../build/SKILL.md.tmpl'), 'utf8');
+    expect(skill).toContain(source.slice(source.indexOf('1. Inspect '), source.indexOf('\nIf a missing product decision')).trim());
+    expect(skill).toContain('Reuse an existing helper, standard library, or platform feature');
+    expect(skill).toContain('Run affected tests');
     // Telemetry tail stripped: a hermetic child must not write to the
     // operator's real ~/.gstack.
     expect(skill).not.toContain('Eureka');
@@ -58,6 +59,10 @@ describe('arm benchmark selftest (free, no API)', () => {
     expect(skill).not.toContain('## Preamble (run first)');
     expect(skill).not.toContain('Review Readiness');
     expect(skill.length).toBeLessThan(8192);
+    const selected = selectTests(['build/SKILL.md.tmpl'], E2E_TOUCHFILES, []).selected;
+    for (const name of ['native-overbuild', 'crud-endpoint', 'bugfix-decoys']) {
+      expect(selected).toContain(`arm-benchmark-${name}`);
+    }
   });
 
   test('with-arm installs the skill + routing line; without-arm installs neither; both get git + bare origin', () => {

@@ -24,9 +24,12 @@ export interface WorkflowJudgeReuse {
 export function workflowJudgeDependencies(root: string, documents: string[]): string[] {
   const seen = new Set<string>();
   const scan = new Bun.Transpiler({ loader: 'tsx' });
+  // macOS reports /var and /private/var for the same temp checkout. Fold only that prefix.
+  const fold = (value: string) => path.resolve(value).replace(/^\/private\/(var|tmp)\//, '/$1/');
+  const checkout = fold(root);
   const visit = (file: string) => {
     file = path.resolve(file);
-    const relative = path.relative(root, file).split(path.sep).join('/');
+    const relative = path.relative(checkout, fold(file)).split(path.sep).join('/');
     if (relative.startsWith('../') || path.isAbsolute(relative)) throw new Error('Dependency outside checkout');
     // Root version labels collector output only; its remaining semantic fields
     // are hashed separately. Installed package manifests remain byte-exact.
@@ -42,11 +45,13 @@ export function workflowJudgeDependencies(root: string, documents: string[]): st
       const resolved = Bun.resolveSync(entry.path, path.dirname(file));
       visit(resolved);
       // Package export maps/defaults affect resolution independently of code.
-      let directory = path.dirname(resolved);
-      while (directory !== root && directory.startsWith(root + path.sep)) {
+      let directory = fold(path.dirname(resolved));
+      for (let hop = 0; hop < 64 && directory !== checkout && directory.startsWith(checkout + path.sep); hop++) {
         const manifest = path.join(directory, 'package.json');
+        const parent = path.dirname(directory);
         if (fs.existsSync(manifest)) { visit(manifest); break; }
-        directory = path.dirname(directory);
+        if (parent === directory) break;
+        directory = parent;
       }
     }
   };

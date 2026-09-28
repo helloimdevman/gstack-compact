@@ -331,7 +331,7 @@ ${text}`, undefined, { signal });
  * Returns reason_substance = 1 with diagnostic reasoning when the because-clause
  * is missing — no LLM call needed; substance is implicitly absent.
  *
- * Format spec: scripts/resolvers/preamble/generate-ask-user-format.ts
+ * Format spec: the retired AskUserQuestion Format preamble
  *   Recommendation: <choice> because <one-line reason>
  */
 export async function judgeRecommendation(askUserText: string, signal?: AbortSignal): Promise<RecommendationScore> {

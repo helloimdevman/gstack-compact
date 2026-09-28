@@ -102,7 +102,7 @@ const dir=path.join(process.env.CLAUDE_CONFIG_DIR,'projects','mode-prerequisite'
 const native=(role,content,extra={})=>fs.appendFileSync(path.join(dir,call.sessionId+'.jsonl'),JSON.stringify({cwd:process.cwd(),sessionId:call.sessionId,isSidechain:false,timestamp:new Date().toISOString(),message:{role,content},...extra})+'\\n');
 const record=e=>fs.appendFileSync(out,JSON.stringify(e)+'\\n');const show=s=>process.stdout.write('\\x1b[2J\\x1b[H'+s.replace(/\\n/g,'\\r\\n'));
 const mode={header:'Review mode',question:'Which mode?',options:[{label:'SELECTIVE EXPANSION'},{label:'HOLD SCOPE'},{label:'SCOPE EXPANSION'},{label:'SCOPE REDUCTION'}]};
-let at=0,started=false;const answers={};record({type:'pid',pid:process.pid,identity:execFileSync('ps',['-p',String(process.pid),'-o','lstart=','-o','command='],{encoding:'utf8',timeout:5000}).trim()});process.stdin.setRawMode?.(true);process.stdout.write('FIXTURE_READY');
+let at=0,started=false;const answers={};record({type:'pid',pid:process.pid,identity:execFileSync('ps',['-p',String(process.pid),'-o','lstart=','-o','command='],{encoding:'utf8',timeout:5000}).trim()});process.stdin.setRawMode?.(true);fs.writeSync(1,'FIXTURE_READY');
 process.stdin.on('data',data=>{const input=data.toString();record({type:'input',input});
 if(!started){started=true;native('assistant',[{type:'tool_use',id:call.toolUseId,name:'AskUserQuestion',input:{questions:call.questions}}]);show(screens[0]);return;}
 if(at<expected.length){if(input!==expected[at]){show('Office-hours diversion');return;}answers[call.questions[at].question]=call.questions[at].options[Number(input)-1].label;at++;if(at<expected.length){show(screens[at]);return;}

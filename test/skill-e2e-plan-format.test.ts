@@ -40,12 +40,12 @@ const evalCollector = createEvalCollector('e2e-plan-format');
 // (deterministic regex for present/commits/has_because, Haiku for substance);
 // the prior strict `[Rr]ecommendation:[*\s]*Choose` regex pinned down a
 // template-example wording ("Choose [X]") that the format spec doesn't require
-// — the canonical form per generate-ask-user-format.ts is just
+// — the captured canonical form is just
 // `Recommendation: <choice> because <reason>`, where <choice> is the bare
 // option label. judgeRecommendation.present covers the canonical shape.
 // COMPLETENESS regex matches both legacy bare form (`Completeness: 10/10`) and
 // the canonical option-prefixed form (`Completeness: A=10/10, B=7/10`) per
-// scripts/resolvers/preamble/generate-ask-user-format.ts. The optional
+// the retired AskUserQuestion Format preamble. The optional
 // `[A-Z]=` prefix tolerates either shape; both are acceptable spec output.
 const COMPLETENESS_RE = /Completeness:\s*(?:[A-Z]=)?\d{1,2}\/10/;
 const KIND_NOTE_RE = /options differ in kind/i;

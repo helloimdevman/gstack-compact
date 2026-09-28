@@ -8,7 +8,6 @@
  * discovered only when the periodic run burned money on a dead instrument.
  */
 import { ROOT, copyDirSync } from './e2e-helpers';
-import { extractSkillSections } from './skill-fixture';
 import { spawnSync } from 'child_process';
 import * as fs from 'fs';
 import * as path from 'path';
@@ -85,35 +84,18 @@ Leave your changes uncommitted in the working tree.`,
 
 // --- Skill under test: extracted behavioral layer ---
 
-/** Drop the Eureka telemetry tail from the extracted Search Before Building
- *  section: it appends to the OPERATOR's real ~/.gstack from inside a
- *  hermetic child, and telemetry is not the behavior under test. */
-export function stripEureka(text: string): string {
-  const start = text.indexOf('**Eureka:**');
-  if (start === -1) return text;
-  const next = text.indexOf('\n## ', start);
-  return text.slice(0, start) + (next === -1 ? '' : text.slice(next + 1));
-}
-
-/**
- * Assemble the behavioral-layer skill: the WS3 reuse ladder (## Search Before
- * Building) + the WS7 bounded closer (## Voice), extracted from the rendered
- * ship/SKILL.md (tier 4 — carries both sections) and wrapped in this
- * benchmark's own frontmatter. Extract, don't copy (CLAUDE.md rule).
- */
+/** Read the implementation steps from the current canonical build template. */
 export function buildBehavioralSkill(): string {
-  const extracted = extractSkillSections(path.join(ROOT, 'ship'), ['Search Before Building', 'Voice']);
-  const body = stripEureka(extracted.replace(/^---\n[\s\S]*?\n---\n/, '')).trim();
+  const source = fs.readFileSync(path.join(ROOT, 'build/SKILL.md.tmpl'), 'utf8');
+  const start = source.indexOf('1. Inspect ');
+  const end = source.indexOf('\nIf a missing product decision', start);
+  if (start < 0 || end < 0) throw new Error('build implementation steps missing');
   return `---
 name: ${SKILL_NAME}
-description: Build discipline for implementation tickets — the reuse ladder (stop at the first rung that holds) plus bounded completion reports. Invoke before implementing any ticket.
+description: Implementation discipline from the current gstack build skill.
 ---
 
-# Build discipline
-
-Apply these rules to the implementation work you are about to do.
-
-${body}
+${source.slice(start, end).trim()}
 `;
 }
 

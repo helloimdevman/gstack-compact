@@ -1,8 +1,8 @@
 {
   "schema_version": 1,
   "test_name": "setup-browser-cookies/SKILL.md workflow",
-  "prompt_sha256": "7f7f76f49912818d51f25c86d686aab6ad2c95ccdea60ac912c1e4c8b6936e5f",
-  "prompt_bytes": 10159,
+  "prompt_sha256": "620f1f7db236bb003bb4d1abedd4d3f6c67a459838cd16c6b518cca2d1d4fc35",
+  "prompt_bytes": 10158,
   "model": "claude-fable-5-1",
   "max_tokens": 8192,
   "thresholds": { "clarity": 4, "completeness": 3, "actionability": 4 },

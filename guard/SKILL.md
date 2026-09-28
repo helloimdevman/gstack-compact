@@ -27,6 +27,7 @@ hooks:
         - type: command
           command: "bash $HOME/.claude/skills/gstack/freeze/bin/check-freeze.sh"
           statusMessage: "Checking freeze boundary..."
+preamble-tier: 2
 ---
 <!-- AUTO-GENERATED from SKILL.md.tmpl — do not edit directly -->
 <!-- Regenerate: bun run gen:skill-docs -->
@@ -39,52 +40,46 @@ Combines /careful (warns before rm -rf, DROP TABLE, force-push, etc.) with
 when touching prod or debugging live systems. Use when asked to "guard mode",
 "full safety", "lock it down", or "maximum safety".
 
-# /guard — Full Safety Mode
-
-Activates both destructive command warnings and directory-scoped edit restrictions.
-This is the combination of `/careful` + `/freeze` in a single command.
-
-**Dependency note:** This skill references hook scripts from the sibling `/careful`
-and `/freeze` skill directories. Both must be installed (they are installed together
-by the gstack setup script).
+## Start /guard
 
 ```bash
-mkdir -p ~/.gstack/analytics
-echo '{"skill":"guard","ts":"'$(date -u +%Y-%m-%dT%H:%M:%SZ)'","repo":"'$(basename "$(git rev-parse --show-toplevel 2>/dev/null)" 2>/dev/null || echo "unknown")'"}'  >> ~/.gstack/analytics/skill-usage.jsonl 2>/dev/null || true
+_G="$HOME/.claude/skills/gstack"
+_R=$(git rev-parse --show-toplevel 2>/dev/null)
+[ -n "$_R" ] && [ -x "$_R/.claude/skills/gstack/bin/gstack-skill-start" ] && _G="$_R/.claude/skills/gstack"
+"$_G/bin/gstack-skill-start" --skill "guard" --model "claude" --parent-pid "$PPID" || echo 'SKILL_START: unavailable'
 ```
 
-## Setup
+Reuse printed `GSTACK_BIN`; shell variables reset. Missing `GSTACK_CONTRACT` or `SKILL_START_PROTO: 1` blocks protected /guard steps. If `SESSION_KIND` is absent, treat `SESSION_KIND` as `interactive`; do NOT assume Conductor. Onboarding/telemetry: DEFERRED to the next healthy run. Keep `SESSION_ID` and `TEL_START`.
 
-Ask the user which directory to restrict edits to. Use AskUserQuestion:
+## Shared contract
 
-- Question: "Guard mode: which directory should edits be restricted to? Destructive command warnings are always on. Files outside the chosen path will be blocked from editing."
-- Text input (not multiple choice) — the user types a path.
+Read the printed `GSTACK_CONTRACT` file before acting. It owns common permissions and safety.
 
-Once the user provides a directory path:
+## Model-Specific Behavioral Patch (claude)
 
-1. Resolve it to an absolute path:
-```bash
-FREEZE_DIR=$(cd "<user-provided-path>" 2>/dev/null && pwd)
-echo "$FREEZE_DIR"
-```
+The following nudges are tuned for the claude model family. They are
+**subordinate** to skill workflow, STOP points, AskUserQuestion gates, plan-mode
+safety, and /ship review gates. If a nudge below conflicts with skill instructions,
+the skill wins. Treat these as preferences, not rules.
 
-2. Ensure trailing slash and save to the freeze state file:
-```bash
-FREEZE_DIR="${FREEZE_DIR%/}/"
-eval "$(~/.claude/skills/gstack/bin/gstack-paths)"
-STATE_DIR="$GSTACK_STATE_ROOT"
-mkdir -p "$STATE_DIR"
-echo "$FREEZE_DIR" > "$STATE_DIR/freeze-dir.txt"
-echo "Freeze boundary set: $FREEZE_DIR"
-```
+**Todo-list discipline.** When working through a multi-step plan, mark each task
+complete individually as you finish it. Do not batch-complete at the end. If a task
+turns out to be unnecessary, mark it skipped with a one-line reason.
 
-Tell the user:
-- "**Guard mode active.** Two protections are now running:"
-- "1. **Destructive command guard** — rm -rf, DROP TABLE, force-push, etc. warn before executing (overridable); catastrophic shapes (recursive delete of / or ~, force-push to the default branch) are hard-denied"
-- "2. **Edit boundary** — file edits restricted to `<path>/`. Edits outside this directory are blocked."
-- "To remove the edit boundary, run `/unfreeze`. To deactivate everything, end the session."
+**Think before heavy actions.** For complex operations (refactors, migrations,
+non-trivial new features), briefly state your approach before executing. This lets
+the user course-correct cheaply instead of mid-flight.
 
-## What's protected
+**Dedicated tools over Bash.** Prefer Read, Edit, Write, Glob, Grep over shell
+equivalents (cat, sed, find, grep). The dedicated tools are cheaper and clearer.
 
-See `/careful` for the full list of destructive command patterns and safe exceptions.
-See `/freeze` for how edit boundary enforcement works.
+# /guard
+
+## Outcome
+Activate both destructive-command checks and the chosen edit boundary.
+
+## Stop
+Verify both checks are active, then stop. Ask only if the directory is missing.
+
+## Tool contract
+Turn on both careful-command checks and a freeze directory. Name the directory before editing. Destructive-command policy is the careful policy in `CONTRACT.md`.

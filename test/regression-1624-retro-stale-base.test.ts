@@ -30,7 +30,9 @@ const RETRO_TMPL = path.join(ROOT, "retro", "SKILL.md.tmpl");
 const METRICS_SCRIPT = path.join(ROOT, "bin", "gstack-retro-metrics");
 
 function readTmpl(): string {
-  return fs.readFileSync(RETRO_TMPL, "utf-8");
+  // The fetch fence and stale-base guard live in the instructions section the skeleton reads.
+  const section = path.join(ROOT, "retro", "sections", "instructions.md.tmpl");
+  return fs.readFileSync(section, "utf-8") + "\n" + fs.readFileSync(RETRO_TMPL, "utf-8");
 }
 
 function readScript(): string {

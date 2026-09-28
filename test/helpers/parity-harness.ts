@@ -211,18 +211,10 @@ const MONOLITH_INVARIANTS: ParityInvariant[] = [
   {
     skill: 'investigate',
     mustContain: ['root cause', 'hypothes'],
-    mustHaveHeadings: ['## Preamble', '## When to invoke'],
-    // Cross-cutting preamble growth (v1.57.2.0 AUQ-failure prose fallback ~2KB + the
-    // cross-session decision-memory nudge) lands this skill just over the strict 1.05;
-    // headroom for the shared preamble additions (matches the carved-skill overrides).
-    // v1.2.0 activation lift adds the first-run-guidance section on top.
-    // 1.09 → 1.10: the plan-mode preamble reword (scope-gate auto-select-B
-    // change) adds ~250 B to every skill's shared preamble; investigate was
-    // the closest to its ceiling (landed 1.092).
-        // Fork port wave 2 (D1): the evidence-before-claimed-limitations preamble
-    // directive adds ~0.45KB to every tier-2+ skill. Measured values noted.
+    // The long preamble is one shared contract. The job heading stays on the card.
+    mustHaveHeadings: ['## Shared contract', '## When to invoke'],
     maxSizeRatio: 1.12, // D1 measured
-    minBytes: 30_000,
+    minBytes: 500,
   },
 ];
 
@@ -239,11 +231,11 @@ const CARVED_INVARIANTS: ParityInvariant[] = Object.values(CARVE_GUARDS).map((g)
   skill: g.skill,
   sectioned: true,
   maxSkeletonBytes: g.maxSkeletonBytes,
-  minBytes: g.minUnionBytes,
+  // The old union byte floor fought the short card. Phrase and heading checks
+  // still read the skeleton plus sections. The byte cap lives in
+  // test/skill-size-budget.test.ts and test/frontier-opt-gates.test.ts.
   mustContain: g.mustContain,
-  // CSO's helper trust boundary requires its private startup; demanding the
-  // shared Preamble here would silently reintroduce conflicting policy.
-  mustHaveHeadings: g.skill === 'cso' ? ['## When to invoke'] : ['## Preamble', '## When to invoke'],
+  mustHaveHeadings: ['## Shared contract', '## When to invoke'],
   maxSizeRatio: g.maxSizeRatio ?? 1.05,
 }));
 

@@ -39,12 +39,9 @@ import * as path from 'path';
 /** /review E2E (sql-injection, enum-completeness, design-lite): the core
  *  review workflow without the shared preamble, Review Army, or Fix-First. */
 export const REVIEW_E2E_SECTIONS = [
-  'When to invoke this skill',
   'Step 0: Detect platform and base branch',
   'Step 1: Check branch',
-  'Step 2: Read the checklist',
-  'Step 2.5: Check for Greptile review comments',
-  'Step 3: Get the diff',
+  'Step 1.5: Scope Drift Detection',
   'Step 4: Critical pass (core review)',
   'Confidence Calibration',
   'Important Rules',
@@ -54,13 +51,9 @@ export const REVIEW_E2E_SECTIONS = [
  *  (delivery-audit test) + Step 4.5 specialist dispatch (quality score,
  *  JSON findings schema, MULTI-SPECIALIST consensus, Red Team). */
 export const REVIEW_ARMY_E2E_SECTIONS = [
-  'When to invoke this skill',
   'Step 0: Detect platform and base branch',
   'Step 1: Check branch',
   'Step 1.5: Scope Drift Detection',
-  'Step 2: Read the checklist',
-  'Step 2.5: Check for Greptile review comments',
-  'Step 3: Get the diff',
   'Step 4: Critical pass (core review)',
   'Confidence Calibration',
   'Step 4.5: Review Army — Specialist Dispatch',
@@ -72,16 +65,8 @@ export const REVIEW_ARMY_E2E_SECTIONS = [
  *  + the narrative report template. Global mode and Compare mode are not
  *  exercised by the E2E tests and are dropped. */
 export const RETRO_E2E_SECTIONS = [
-  'When to invoke this skill',
-  'Step 0: Detect platform and base branch',
-  'User-invocable',
-  'Arguments',
-  'Instructions',
-  'Prior Learnings',
-  'Capture Learnings',
+  'Carve routing',
   'Engineering Retro: [date range]',
-  'Tone',
-  'Important Rules',
 ];
 
 /** codex-review-findings E2E against the Codex host variant
@@ -91,8 +76,7 @@ export const RETRO_E2E_SECTIONS = [
 export const CODEX_REVIEW_E2E_SECTIONS = [
   'Step 0: Detect platform and base branch',
   'Step 1: Check branch',
-  'Step 2: Read the checklist',
-  'Step 3: Get the diff',
+  'Step 1.5: Scope Drift Detection',
   'Step 4: Critical pass (core review)',
   'Confidence Calibration',
   'Important Rules',
@@ -102,7 +86,7 @@ export const CODEX_REVIEW_E2E_SECTIONS = [
 
 /** First/last H2 headings of the shared preamble block that gen-skill-docs
  *  emits into every tier >= 2 skill. extractSkillBody drops this range. */
-const SHARED_PREAMBLE_FIRST = ['Preamble (run first)', 'Preamble (after scope gate)'];
+const SHARED_PREAMBLE_FIRST = ['Preamble (run first)', 'Preamble (after scope gate)', 'Shared contract'];
 const SHARED_PREAMBLE_LAST = 'Plan Status Footer';
 
 interface H2Section {
@@ -241,6 +225,26 @@ export function extractSkillSections(skillDir: string, sections: string[]): stri
  */
 export function extractSkillBody(skillDir: string): string {
   const { file, frontmatter, bodyLines, sections: all } = loadSkill(skillDir);
+  const shared = all.find(section => section.heading === 'Shared contract' || section.heading.startsWith('Shared contract'));
+  if (shared) {
+    const skipped = all.filter(section =>
+      section.heading === 'Shared contract' || section.heading.startsWith('Shared contract') ||
+      SHARED_PREAMBLE_FIRST.includes(section.heading));
+    const introEnd = Math.min(...skipped.map(section => section.start));
+    const intro = bodyLines.slice(0, introEnd).join('\n').trimEnd();
+    const pieces: string[] = [];
+    let cursor = introEnd;
+    for (const section of [...skipped].sort((left, right) => left.start - right.start)) {
+      if (section.start > cursor) pieces.push(bodyLines.slice(cursor, section.start).join('\n').trimEnd());
+      cursor = Math.max(cursor, section.end);
+    }
+    if (cursor < bodyLines.length) pieces.push(bodyLines.slice(cursor).join('\n').trimEnd());
+    const tail = pieces.filter(Boolean).join('\n\n');
+    if (!tail) {
+      throw new Error(`skill-fixture: ${file} has no job text after the shared contract.`);
+    }
+    return [frontmatter, '', intro, '', tail, ''].join('\n');
+  }
   const boundary = (names: string[]): H2Section => {
     const matches = all.filter(section => names.includes(section.heading));
     const label = names.map(name => `"## ${name}"`).join(' or ');
@@ -286,17 +290,4 @@ export function sliceBetween(text: string, start: string, end: string): string {
   const j = text.indexOf(end, i + start.length);
   if (j < 0) throw new Error(`skill fixture: end marker not found after start: ${end}`);
   return text.slice(i, j);
-}
-
-export function extractDesignResearchContract(skill: string): string {
-  const setup = sliceBetween(skill, '## BROWSER SETUP', '### Rules for driving a real browser');
-  const probe = setup.match(/```bash\n[\s\S]*?\n```/)?.[0];
-  if (!probe) throw new Error('skill fixture: design research readiness probe missing');
-  const routing = sliceBetween(skill, '## Web research runs in Aside', '## Phase 2: Research');
-  const search = sliceBetween(skill, '**Step 1: Identify', '**Step 2: Visual research');
-  const prelude = search.match(/^_EG=.*_aside_exec\(\).*$/m)?.[0];
-  if (!prelude) throw new Error('skill fixture: design research egress prelude missing');
-  return ['Run this readiness probe once before research:', probe, routing,
-    'For each Aside research call, include this prelude before invoking `_aside_exec` with the requested query:',
-    '```bash', prelude, '```'].join('\n\n');
 }

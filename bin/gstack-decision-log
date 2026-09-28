@@ -17,7 +17,6 @@
 
 import { dirname } from "path";
 import { mkdirpSync } from "../lib/fs-utils";
-import { spawnSync } from "child_process";
 import {
   DECISION_SCOPES,
   DECISION_SOURCES,
@@ -81,11 +80,6 @@ const paths = decisionPaths(slug);
 // recursive mkdir on an existing dir (#2635), and this runs on every log call.
 mkdirpSync(dirname(paths.log));
 
-function enqueue(): void {
-  // Fire-and-forget cross-machine sync (no-op when artifacts_sync is off).
-  spawnSync(`${HERE}/gstack-brain-enqueue`, [`projects/${slug}/decisions.jsonl`], { stdio: "ignore" });
-}
-
 if (args.includes("--compact")) {
   const r = compact(paths);
   if (r.skipped) {
@@ -93,7 +87,6 @@ if (args.includes("--compact")) {
     process.exit(0);
   }
   console.log(`compacted: ${r.activeCount} active, ${r.archivedCount} archived, ${r.expungedCount} expunged`);
-  enqueue();
   process.exit(0);
 }
 
@@ -142,7 +135,6 @@ if (supersedeId || redactId) {
   if (replacement) appendEvent(paths, replacement);
   appendEvent(paths, makeRefEvent(kind, targetId, { source: "agent" }));
   rebuildSnapshot(paths);
-  enqueue();
   console.log(replacement ? `${kind}: ${targetId} -> ${replacement.id}` : `${kind}: ${targetId}`);
   process.exit(0);
 }
@@ -156,5 +148,4 @@ if (!jsonArg) {
 const event = validPayload(jsonArg);
 appendEvent(paths, event);
 rebuildSnapshot(paths);
-enqueue();
 console.log(event.id);

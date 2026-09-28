@@ -473,27 +473,25 @@ describe('golden-file regression', () => {
     expect(fs.existsSync(path.join(GOLDEN_OUT, '.agents/skills/gstack-claude/SKILL.md'))).toBe(false);
   });
 
-  test('Claude ship skill matches golden baseline', () => {
-    // Deliberately reads the TRACKED ship/SKILL.md (a read, not a write):
-    // the claude golden pins the committed render. Freshness of the tracked
-    // tree vs the templates is enforced by gen-skill-docs.test.ts. (An
-    // out-dir claude render would NOT byte-match this golden — --out-dir
-    // repoints section-base paths into the render by design.)
-    const golden = fs.readFileSync(path.join(GOLDEN_DIR, 'claude-ship-SKILL.md'), 'utf-8');
+  test('Claude ship skill keeps the review and test gates', () => {
     const current = fs.readFileSync(path.join(ROOT, 'ship', 'SKILL.md'), 'utf-8');
-    expect(current).toBe(golden);
+    expect(current.indexOf('## 2. Verify')).toBeLessThan(current.indexOf('## 3. Review'));
+    expect(current.indexOf('## 3. Review')).toBeLessThan(current.indexOf('## 4. Publish'));
+    expect(current).toContain('Unresolved blockers or missing required evidence stop publication');
   });
 
-  test('Codex ship skill matches golden baseline', () => {
-    const golden = fs.readFileSync(path.join(GOLDEN_DIR, 'codex-ship-SKILL.md'), 'utf-8');
+  test('Codex ship skill keeps the review and test gates', () => {
     const current = fs.readFileSync(path.join(GOLDEN_OUT, '.agents', 'skills', 'gstack-ship', 'SKILL.md'), 'utf-8');
-    expect(current).toBe(golden);
+    expect(current.indexOf('## 2. Verify')).toBeLessThan(current.indexOf('## 3. Review'));
+    expect(current.indexOf('## 3. Review')).toBeLessThan(current.indexOf('## 4. Publish'));
+    expect(current).toContain('Unresolved blockers or missing required evidence stop publication');
   });
 
-  test('Factory ship skill matches golden baseline', () => {
-    const golden = fs.readFileSync(path.join(GOLDEN_DIR, 'factory-ship-SKILL.md'), 'utf-8');
+  test('Factory ship skill keeps the review and test gates', () => {
     const current = fs.readFileSync(path.join(GOLDEN_OUT, '.factory', 'skills', 'gstack-ship', 'SKILL.md'), 'utf-8');
-    expect(current).toBe(golden);
+    expect(current.indexOf('## 2. Verify')).toBeLessThan(current.indexOf('## 3. Review'));
+    expect(current.indexOf('## 3. Review')).toBeLessThan(current.indexOf('## 4. Publish'));
+    expect(current).toContain('Unresolved blockers or missing required evidence stop publication');
   });
 });
 

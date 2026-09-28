@@ -64,22 +64,14 @@ describe('periodic fixture dependencies select their behavioral cases', () => {
     ['test/autoplan-artifact-windows-argv.test.ts', ['autoplan-chain-pty', 'plan-eng-finding-count']],
     ['test/fixtures/eng-current-choice-cab3.json', ['plan-eng-finding-count']],
     ['test/fixtures/eng-completed-navigation-cab3.json', ['plan-eng-finding-count']],
-    ['test/autoplan-dual-voice-fixture.test.ts', ['autoplan-dual-voice']],
-    ['test/helpers/autoplan-dual-voice-evidence.ts', ['autoplan-dual-voice']],
-    ['test/autoplan-dual-voice-evidence.test.ts', ['autoplan-dual-voice']],
-    ['test/fixtures/autoplan-dual-false-positive-6bd.json', ['autoplan-dual-voice']],
-    ['test/helpers/autoplan-method-read-audit.ts', ['autoplan-chain-pty', 'autoplan-dual-voice']],
+    ['test/helpers/autoplan-method-read-audit.ts', ['autoplan-chain-pty']],
     ['test/fixtures/autoplan-phase-entry-alias-f359.json', ['autoplan-chain-pty']],
-    ['test/fixtures/autoplan-method-read-aa-events.json', ['autoplan-chain-pty', 'autoplan-dual-voice']],
-    ['test/helpers/outside-voice-evidence.ts', ['autoplan-dual-voice', 'outside-plan-disabled-no-fallback',
-      'outside-voice-claude-code-to-codex', 'outside-voice-codex-to-claude-code']],
-    ['test/fixtures/outside-async-task-m-events.json', ['autoplan-dual-voice',
-      'outside-voice-claude-code-to-codex', 'outside-voice-codex-to-claude-code']],
+    ['test/fixtures/autoplan-method-read-aa-events.json', ['autoplan-chain-pty']],
     ['test/fixtures/devex-journey-evidence-cab3.json', ['plan-devex-finding-count']],
-    ['test/autoplan-phase-handoff.test.ts', ['carve-section-loading', 'autoplan-chain-pty', 'autoplan-dual-voice']],
-    ['test/autoplan-amend-input.test.ts', ['carve-section-loading', 'autoplan-chain-pty', 'autoplan-dual-voice']],
-    ['test/fixtures/autoplan-amend-input-77.json', ['carve-section-loading', 'autoplan-chain-pty', 'autoplan-dual-voice']],
-    ['test/fixtures/autoplan-phase-handoff-6714.json', ['carve-section-loading', 'autoplan-chain-pty', 'autoplan-dual-voice']],
+    ['test/autoplan-phase-handoff.test.ts', ['carve-section-loading', 'autoplan-chain-pty']],
+    ['test/autoplan-amend-input.test.ts', ['carve-section-loading', 'autoplan-chain-pty']],
+    ['test/fixtures/autoplan-amend-input-77.json', ['carve-section-loading', 'autoplan-chain-pty']],
+    ['test/fixtures/autoplan-phase-handoff-6714.json', ['carve-section-loading', 'autoplan-chain-pty']],
     ['test/fixtures/autoplan-owned-state-edit.json', ['autoplan-chain-pty']],
     ['test/eng-finding-retry-budget.test.ts', ['plan-ceo-finding-count', 'plan-ceo-split-overflow', 'plan-design-finding-count', 'plan-devex-finding-count', 'plan-eng-finding-count', 'plan-eng-multi-finding-batching', 'autoplan-chain-pty']],
     ['test/design-count-native-8525.test.ts', ['plan-design-finding-count']],
@@ -89,7 +81,6 @@ describe('periodic fixture dependencies select their behavioral cases', () => {
     ['test/eng-published-navigation.test.ts', ['plan-eng-finding-count']],
     ['test/fixtures/eng-published-navigation.json', ['plan-eng-finding-count']],
     ['test/fixtures/eng-6aef-count-public.json', ['plan-eng-finding-count', 'plan-eng-multi-finding-batching']],
-    ['test/fixtures/disabled-retained-record.json', ['outside-plan-disabled-no-fallback']],
     ['test/ceo-native-ledger-replay.test.ts', ['plan-ceo-finding-count']],
     ['test/fixtures/ceo-native-ledger-8525.json', ['plan-ceo-finding-count']],
     ['test/fixtures/ceo-option-metadata-list-6f6730f4.json', ['plan-ceo-finding-count']],
@@ -115,12 +106,8 @@ describe('periodic fixture dependencies select their behavioral cases', () => {
     ['test/fixtures/ceo-source-attribution-6aef.json', ['plan-ceo-finding-count']],
     ['test/fixtures/ceo-current-record-6aef.json', ['plan-ceo-finding-count']],
     ['test/fixtures/ceo-payment-ledger-decisions.json', ['plan-ceo-finding-count']],
-    ['test/setup-gbrain-remote-caller.test.ts', ['setup-gbrain-remote']],
     ['test/skill-fixture.test.ts', ['journey-ideation', 'journey-plan-eng', 'journey-debug', 'journey-qa', 'journey-code-review', 'journey-ship', 'journey-docs', 'journey-retro', 'journey-design-system', 'journey-visual-qa']],
-    ['test/office-hours-writeback-env.test.ts', ['office-hours-brain-writeback']],
     ['test/review-army-budget.test.ts', ['review-army-red-team', 'review-army-consensus']],
-    ['test/helpers/setup-gbrain-sandbox.ts', ['setup-gbrain-bad-token', 'setup-gbrain-path4-local-pglite', 'setup-gbrain-remote']],
-    ['test/helpers/setup-gbrain-fixture-command.ts', ['setup-gbrain-bad-token', 'setup-gbrain-path4-local-pglite']],
     ['test/fixtures/autoplan-caller.fixture.test.ts', ['autoplan-chain-pty']],
     ['test/gstack-paths.test.ts', ['autoplan-chain-pty', 'carve-section-loading', 'design-html-slop-gate']],
     ['test/gstack-brain-context-load.test.ts', ['autoplan-chain-pty', 'plan-ceo-section-loading']],
@@ -191,8 +178,7 @@ describe('periodic fixture dependencies select their behavioral cases', () => {
   }
 
   test('SDK runner changes retain the native gate and existing periodic consumers', () => {
-    const periodic = ['brain-privacy-gate', 'setup-gbrain-remote', 'setup-gbrain-bad-token',
-      'setup-gbrain-path4-local-pglite', ...OVERLAY_FIXTURES.map(fixture => `overlay-harness-${fixture.id}`)];
+    const periodic = OVERLAY_FIXTURES.map(fixture => `overlay-harness-${fixture.id}`);
     const result = selectTests(['test/agent-sdk-runner.test.ts'], E2E_TOUCHFILES);
     expect(result.reason).toBe('diff');
     expect(result.selected.sort()).toEqual(['auq-format-gate', ...periodic].sort());
@@ -220,25 +206,8 @@ test('Eng section local review helpers select their carve evaluation', () => {
   expect(E2E_TIERS['carve-section-loading']).toBe('periodic');
 });
 
-test('offering source lookup dependencies select all four gate audits', () => {
-  const expected = ['codex-offered-office-hours', 'codex-offered-ceo-review',
-    'codex-offered-design-review', 'codex-offered-eng-review'].sort();
-  for (const file of ['test/helpers/codex-offering-fixture.ts', 'test/codex-offering-fixture.test.ts',
-    'test/fixtures/codex-offering-cdd-public.json', 'test/fixtures/codex-offering-timeout-public.json', 'test/helpers/workflow-judge-input.ts',
-    'test/workflow-judge-input.test.ts', 'test/helpers/workflow-excerpt.ts']) {
-    const result = selectTests([file], E2E_TOUCHFILES);
-    expect(result.reason).toBe('diff');
-    expect(result.selected.sort()).toEqual(expected);
-    for (const id of expected) expect(E2E_TIERS[id]).toBe('gate');
-  }
-  for (const file of ['test/helpers/codex-offering-fixture.ts', 'test/codex-offering-fixture.test.ts',
-    'test/fixtures/codex-offering-cdd-public.json', 'test/fixtures/codex-offering-timeout-public.json']) {
-    expect(selectTests([file], LLM_JUDGE_TOUCHFILES).selected).toEqual([]);
-  }
-});
-
 test('shared attempt regressions select periodic callers and the gate report case', () => {
-  const periodic = ['plan-design-review-plan-mode', 'office-hours-forcing-energy', 'office-hours-builder-wildness', 'office-hours-brain-writeback', 'plan-ceo-review-format-mode', 'plan-ceo-review-format-approach', 'plan-eng-review-format-coverage', 'plan-eng-review-format-kind', 'plan-ceo-review-prosons-cadence', 'plan-review-prosons-format', 'plan-review-prosons-hardstop-neg', 'plan-review-prosons-neutral-neg', 'setup-gbrain-bad-token', 'setup-gbrain-path4-local-pglite', 'setup-gbrain-remote', 'review-army-red-team'];
+  const periodic = ['plan-design-review-plan-mode', 'office-hours-forcing-energy', 'office-hours-builder-wildness', 'plan-ceo-review-format-mode', 'plan-ceo-review-format-approach', 'plan-eng-review-format-coverage', 'plan-eng-review-format-kind', 'plan-ceo-review-prosons-cadence', 'plan-review-prosons-format', 'plan-review-prosons-hardstop-neg', 'plan-review-prosons-neutral-neg', 'review-army-red-team'];
   const result = selectTests(['test/office-hours-attempt.test.ts'], E2E_TOUCHFILES);
   expect(result.reason).toBe('diff');
   expect(result.selected.sort()).toEqual([...periodic, 'plan-review-report'].sort());
@@ -326,8 +295,8 @@ test('review report resolver selects every periodic completion consumer', () => 
 });
 
 
-test('shared plan question source selects every generated review consumer', () => {
-  const source = 'scripts/resolvers/preamble/generate-ask-user-format.ts';
+test('shared installed preamble selects every generated review consumer', () => {
+  const source = 'scripts/resolvers/preamble.ts';
   const renders = ['plan-ceo-review', 'plan-eng-review', 'plan-design-review', 'plan-devex-review']
     .map(skill => `${skill}/SKILL.md`);
   for (const map of [E2E_TOUCHFILES, LLM_JUDGE_TOUCHFILES]) {
@@ -358,11 +327,9 @@ test('Eng approval-rule source and free contract controls select every declared 
       'plan-eng-review-format-kind',
       'plan-ceo-review-prosons-cadence',
       'plan-review-prosons-format',
-      'codex-offered-eng-review',
       'codex-plan-eng-format-coverage',
       'codex-plan-eng-format-kind',
       'plan-eng-coverage-audit',
-      'autoplan-dual-voice'
   ];
   for (const file of ['plan-eng-review/sections/review-sections.md.tmpl', 'scripts/resolvers/review.ts', 'test/plan-review-cases.test.ts']) {
     const result = selectTests([file], E2E_TOUCHFILES);
@@ -452,8 +419,7 @@ test('CEO carved sections select the judge that consumes their complete content'
 
 test('file supervision regression selects all affected callers with their existing tiers', () => {
   const gate = [
-    'codex-offered-ceo-review', 'codex-offered-design-review', 'codex-offered-eng-review',
-    'codex-offered-office-hours', 'office-hours-spec-review', 'plan-ceo-finding-floor',
+    'office-hours-spec-review', 'plan-ceo-finding-floor',
     'plan-ceo-review-benefits', 'plan-devex-finding-floor', 'plan-mode-no-op', 'plan-review-report',
   ];
   const periodic = [
@@ -806,35 +772,31 @@ test('the declared engineering actor selects its existing count case', () => {
 
 test('stderr lifecycle regression selects runtime consumers without a quality-map edge', () => {
   const expected = [
-    'browse-basic', 'browse-snapshot', 'aside-browse-basic', 'aside-browse-flow', 'aside-qa-quick',
-    'aside-scrape-json', 'aside-canary-quick', 'hermetic-canary', 'hermetic-sentinel', 'first-task-scaffold',
-    'skillmd-setup-discovery', 'skillmd-no-local-binary', 'skillmd-outside-git', 'session-awareness', 'operational-learning',
-    'qa-quick', 'qa-b6-static', 'qa-b7-spa', 'qa-b8-checkout', 'qa-only-no-fix',
-    'qa-fix-loop', 'qa-bootstrap', 'review-sql-injection', 'review-enum-completeness', 'review-base-branch',
+    'hermetic-canary', 'hermetic-sentinel', 'first-task-scaffold',
+    'review-sql-injection', 'review-enum-completeness', 'review-base-branch',
     'review-design-lite', 'review-army-migration-safety', 'review-army-perf-n-plus-one', 'review-army-delivery-audit', 'review-army-quality-score',
     'review-army-json-findings', 'review-army-red-team', 'review-army-simplification', 'review-army-simplification-precision', 'review-army-consensus',
     'office-hours-spec-review', 'office-hours-forcing-energy', 'office-hours-builder-wildness', 'plan-ceo-review', 'plan-ceo-review-selective',
     'plan-ceo-review-benefits', 'plan-ceo-review-expansion-energy', 'plan-eng-review', 'plan-eng-review-artifact', 'plan-review-report',
-    'plan-design-review-plan-mode', 'office-hours-phase4-fork', 'auq-format-gate', 'tpa-present', 'tpa-absent-linux',
-    'tpa-broken', 'tpa-absent-darwin', 'tpa-apple-ban', 'ship-section-loading', 'plan-ceo-section-loading',
-    'carve-section-loading', 'setup-gbrain-remote', 'setup-gbrain-bad-token', 'setup-gbrain-path4-local-pglite', 'plan-ceo-review-format-mode',
+    'plan-design-review-plan-mode', 'office-hours-phase4-fork', 'auq-format-gate', 'ship-section-loading', 'plan-ceo-section-loading',
+    'carve-section-loading', 'plan-ceo-review-format-mode',
     'plan-ceo-review-format-approach', 'plan-eng-review-format-coverage', 'plan-eng-review-format-kind', 'plan-ceo-review-prosons-cadence', 'plan-review-prosons-format',
-    'plan-review-prosons-hardstop-neg', 'plan-review-prosons-neutral-neg', 'plan-tune-inspect', 'codex-offered-office-hours', 'codex-offered-ceo-review',
-    'codex-offered-design-review', 'codex-offered-eng-review', 'ship-base-branch', 'ship-local-workflow', 'review-dashboard-via',
-    'retro', 'retro-base-branch', 'cso-full-audit', 'cso-diff-mode', 'cso-infra-scope',
+    'plan-review-prosons-hardstop-neg', 'plan-review-prosons-neutral-neg', 'plan-tune-inspect',
+    'ship-base-branch', 'ship-local-workflow', 'review-dashboard-via',
+    'retro', 'retro-base-branch',
     'learnings-show', 'timeline-event-flow', 'context-recovery-artifacts', 'context-save-writes-file', 'context-restore-loads-latest',
     'context-save-routing', 'context-save-then-restore-roundtrip', 'context-restore-fragment-match', 'context-restore-empty-state', 'context-restore-list-delegates',
-    'context-restore-legacy-compat', 'context-save-list-current-branch', 'context-save-list-all-branches', 'document-release', 'codex-review',
-    'outside-voice-codex-to-claude-code', 'outside-voice-claude-code-to-codex', 'outside-plan-disabled-no-fallback', 'ship-coverage-audit', 'review-coverage-audit',
+    'context-restore-legacy-compat', 'context-save-list-current-branch', 'context-save-list-all-branches', 'document-release',
+    'ship-coverage-audit', 'review-coverage-audit',
     'plan-eng-coverage-audit', 'ship-triage', 'ship-docsync', 'docsync-spawned', 'design-consultation-core',
-    'design-consultation-existing', 'design-consultation-research', 'design-consultation-preview', 'plan-design-review-no-ui-scope', 'design-review-fix',
-    'design-review-detector-shim', 'design-review-detector-shim-dom', 'design-review-plugin-handoff', 'design-html-slop-gate', 'diagram-triplet', 'diagram-authoring-quality',
+    'design-consultation-existing', 'design-consultation-preview', 'plan-design-review-no-ui-scope',
+    'design-review-detector-shim', 'design-review-plugin-handoff', 'design-html-slop-gate',
     'gstack-upgrade-happy-path', 'land-and-deploy-workflow', 'land-and-deploy-first-run', 'land-and-deploy-review-gate', 'canary-workflow',
-    'benchmark-workflow', 'setup-deploy-workflow', 'autoplan-dual-voice', 'scrape-match-path', 'scrape-prototype-path',
-    'skillify-happy-path', 'skillify-provenance-refusal', 'skillify-approval-reject', 'journey-ideation', 'journey-plan-eng',
+    'benchmark-workflow', 'setup-deploy-workflow',
+    'journey-ideation', 'journey-plan-eng',
     'journey-debug', 'journey-qa', 'journey-code-review', 'journey-ship', 'journey-docs',
     'journey-retro', 'journey-design-system', 'journey-visual-qa', 'fanout-arm-overlay-on', 'fanout-arm-overlay-off',
-    'office-hours-brain-writeback', 'arm-benchmark-native-overbuild', 'arm-benchmark-crud-endpoint', 'arm-benchmark-bugfix-decoys', 'office-hours-section-loading',
+    'arm-benchmark-native-overbuild', 'arm-benchmark-crud-endpoint', 'arm-benchmark-bugfix-decoys', 'office-hours-section-loading',
   ];
   const file = 'test/session-runner-stream-lifecycle.test.ts';
   expect(selectTests([file], E2E_TOUCHFILES).selected.sort()).toEqual(expected.sort());

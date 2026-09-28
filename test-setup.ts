@@ -16,13 +16,19 @@
  * stays dead.
  */
 import { afterEach, beforeAll } from 'bun:test';
+import { parse as parseYaml } from 'yaml';
+
+// Bun 1.2 has no Bun.YAML. Skill and workflow tests parse YAML through it.
+if (typeof (Bun as { YAML?: { parse: (text: string) => unknown } }).YAML === 'undefined') {
+  Object.defineProperty(Bun, 'YAML', { value: { parse: parseYaml }, configurable: true });
+}
 
 // Narrowly restore PATH after every test. Defends against the recurring
 // pollution class where one test sets `process.env.PATH = '/test/bin:/usr/bin'`
 // to exercise a scrubbed-env fixture and either forgets to restore or uses
 // the broken `process.env = origEnv` reassignment, then a downstream test
-// (security.test.ts > resolveBashBinary, pair-agent-tunnel-eval, or
-// server-no-import-side-effects) sees the wrong PATH and either has
+// (security.test.ts > resolveBashBinary or server-no-import-side-effects)
+// sees the wrong PATH and either has
 // `Bun.which('bash')` return null or `Bun.spawn(['bun', ...])` ENOENT.
 //
 // Deliberately narrow: snapshotting + restoring all of process.env breaks

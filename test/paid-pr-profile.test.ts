@@ -62,19 +62,20 @@ describe('PR profile paid-runner integration', () => {
   test('unknown dependencies restore full gate while missing prompt coverage fails before execution', () => {
     const fallback = computePaidCaseSelection({ profile: 'pr', env: {}, changedFiles: ['lib/unknown-pr-runtime.ts'] });
     expect(fallback.coverage?.mode).toBe('full-fallback');
-    expect(fallback.selection.e2e).toContain('qa-only-no-fix');
+    expect(fallback.selection.e2e).toContain('review-army-delivery-audit');
     expect(fallback.selection.e2e).not.toContain('autoplan-chain-pty');
     expect(fallback.coverage?.deferred.some(item => item.id === 'autoplan-chain-pty')).toBe(true);
     expect(() => computePaidCaseSelection({ profile: 'pr', env: {}, changedFiles: ['unregistered/nested/SKILL.md'] })).toThrow('requires full validation');
   });
 
-  test('source aliasing requires an actual template and preserves broad-only generated coverage', () => {
-    const aliases = existingPromptSourceAliases(['benchmark-models/SKILL.md', 'no-such-skill/SKILL.md']);
-    expect(aliases['benchmark-models/SKILL.md']).toBe('benchmark-models/SKILL.md.tmpl');
+  test('source aliasing requires an actual template and retains its judge and broad gate', () => {
+    const aliases = existingPromptSourceAliases(['benchmark/SKILL.md', 'no-such-skill/SKILL.md']);
+    expect(aliases['benchmark/SKILL.md']).toBe('benchmark/SKILL.md.tmpl');
     expect(aliases['no-such-skill/SKILL.md']).toBeUndefined();
-    const result = computePaidCaseSelection({ profile: 'pr', env: {}, changedFiles: ['benchmark-models/SKILL.md'] });
+    const result = computePaidCaseSelection({ profile: 'pr', env: {}, changedFiles: ['benchmark/SKILL.md'] });
     expect(result.coverage?.mode).toBe('pr');
-    expect(result.coverage?.deferredPromptFiles).toContain('benchmark-models/SKILL.md');
+    expect(result.selection.judges).toContain('benchmark/SKILL.md perf collection');
+    expect(result.coverage?.deferred.some(item => item.id === 'benchmark-workflow')).toBe(true);
     expect(result.coverage?.needsFullValidation).toBe(false);
   });
 
@@ -107,7 +108,7 @@ describe('PR profile paid-runner integration', () => {
     expect(() => parseRunManifest(JSON.stringify({ ...manifest, selection: undefined }))).toThrow('coverage/selection');
     expect(() => parseRunManifest(JSON.stringify({ ...manifest, prCoverage: { ...manifest.prCoverage, missingCoverage: ['missing/SKILL.md'] } }))).toThrow('full validation');
     const broad = structuredClone(manifest);
-    broad.selection!.e2e!.push('qa-only-no-fix'); broad.prCoverage!.e2e.push('qa-only-no-fix');
+    broad.selection!.e2e!.push('review-army-delivery-audit'); broad.prCoverage!.e2e.push('review-army-delivery-audit');
     expect(() => parseRunManifest(JSON.stringify(broad))).toThrow('broad-only');
     const injected = structuredClone(manifest);
     injected.entries.find(entry => entry.file.includes('opus-47'))!.status = 'planned';

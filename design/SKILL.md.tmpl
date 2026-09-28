@@ -1,0 +1,27 @@
+---
+name: design
+version: 1.0.0
+description: |
+  Create a design system, compare visual variants, or produce Pretext-native
+  HTML and CSS. Choose one requested mode. (gstack)
+preamble-tier: 2
+triggers:
+  - design a system
+  - design variants
+  - design html
+---
+
+{{PREAMBLE}}
+
+# /design
+
+Input: brief or approved design, optional mode `system | variants | html`, and output path. Select the requested mode; if unspecified, use the deliverable the user named. A plan critique belongs to `/plan review-design`; a live visual defect belongs to `/verify visual-fix`. Keep the user's existing design decisions and constraints.
+
+`system` writes a reviewable token and component specification. `variants` produces distinct options and a comparison board. `html` produces working, responsive Pretext-native HTML/CSS using the installed renderer contract. Read only the chosen mode's section and any explicitly triggered detector setup. Do not force a new system for a local page. Record output files and rendered checks; ask only when a choice changes the requested result. Do not install tools or use external design providers without their actual authorization.
+
+{{SECTION_INDEX:design}}
+
+{{SECTION:system}}
+{{SECTION:variants}}
+{{SECTION:html}}
+{{SECTION:detector-install-offer}}

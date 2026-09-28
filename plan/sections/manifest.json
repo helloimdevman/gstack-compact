@@ -1,0 +1,11 @@
+{
+  "skill": "plan",
+  "sections": [
+    { "id": "frame", "file": "frame.md", "title": "Frame the opportunity", "trigger": "framing an unclear idea or running frame mode" },
+    { "id": "product-review", "file": "product-review.md", "title": "Review product scope", "trigger": "reviewing product scope or the product phase of review-all" },
+    { "id": "design-review", "file": "design-review.md", "title": "Review a UI plan", "trigger": "reviewing a UI plan or the applicable design phase of review-all" },
+    { "id": "dx-review", "file": "dx-review.md", "title": "Review developer experience", "trigger": "reviewing a developer-facing plan or the applicable DX phase of review-all" },
+    { "id": "engineering-review", "file": "engineering-review.md", "title": "Review implementation risk", "trigger": "reviewing engineering details or the final phase of review-all" },
+    { "id": "spec", "file": "spec.md", "title": "Write an executable spec", "trigger": "writing a spec or a requested issue" }
+  ]
+}

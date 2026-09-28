@@ -1,13 +1,10 @@
 /**
  * Alias name uniqueness (#2511 / #2201).
  *
- * setup installs two back-compat alias dirs — `_gstack-command` (root router)
- * and `connect-chrome` (→ open-gstack-browser). Both used to symlink the
- * canonical SKILL.md verbatim, so the alias carried the canonical frontmatter
- * `name:`. Claude Code keys skills on that name and requires global
- * uniqueness: the `connect-chrome` duplicate silently shadowed
- * /open-gstack-browser (readdir-order roulette), and the `_gstack-command`
- * duplicate could drop the ENTIRE personal-skills set.
+ * setup installs the `_gstack-command` back-compat alias for the root router.
+ * It used to symlink the canonical SKILL.md verbatim, so the alias carried
+ * the canonical frontmatter `name:`. Claude Code keys skills on that name
+ * and requires global uniqueness; the duplicate could drop personal skills.
  *
  * The fix is copy-then-rewrite: sed reads the SOURCE and writes a fresh copy
  * with `name:` set to the alias dir's own name. Eng review E2 pinned the
@@ -40,11 +37,6 @@ const skillSources = fs.readdirSync(ROOT)
   .map((name) => ({ name, content: fs.readFileSync(path.join(ROOT, name, 'SKILL.md'), 'utf-8') }));
 
 const sourceRootSkill = fs.readFileSync(path.join(ROOT, 'SKILL.md'), 'utf-8');
-const sourceOgbSkill = fs.readFileSync(
-  path.join(ROOT, 'open-gstack-browser', 'SKILL.md'),
-  'utf-8',
-);
-
 beforeAll(() => {
   fs.mkdirSync(sourceDir);
   fs.mkdirSync(installDir);
@@ -56,8 +48,6 @@ beforeAll(() => {
   const installOnce = [
     `link_claude_skill_dirs "${sourceDir}" "${installDir}"`,
     `link_claude_root_skill_alias "${sourceDir}" "${installDir}"`,
-    // The connect-chrome back-compat alias, exactly as the install section does it.
-    `_install_alias_skill_md "${sourceDir}/open-gstack-browser/SKILL.md" "${installDir}/connect-chrome" "connect-chrome"`,
   ].join('\n');
   const script = [
     'set -e',
@@ -112,14 +102,6 @@ describe('alias installs are rewritten copies (#2511, #2201)', () => {
     expect(frontmatterName(aliasSkill)).toBe('_gstack-command');
   });
 
-  test('connect-chrome alias is NOT a symlink and carries its own name', () => {
-    const aliasDir = path.join(installDir, 'connect-chrome');
-    const aliasSkill = path.join(aliasDir, 'SKILL.md');
-    expect(fs.lstatSync(aliasDir).isSymbolicLink()).toBe(false);
-    expect(fs.lstatSync(aliasSkill).isSymbolicLink()).toBe(false);
-    expect(frontmatterName(aliasSkill)).toBe('connect-chrome');
-  });
-
   test('alias body is the canonical content — only the name: line differs', () => {
     const alias = fs.readFileSync(
       path.join(installDir, '_gstack-command', 'SKILL.md'),
@@ -127,24 +109,12 @@ describe('alias installs are rewritten copies (#2511, #2201)', () => {
     );
     expect(alias.replace(/^name:.*$/m, 'name: gstack')).toBe(sourceRootSkill);
 
-    const ogbAlias = fs.readFileSync(
-      path.join(installDir, 'connect-chrome', 'SKILL.md'),
-      'utf-8',
-    );
-    expect(ogbAlias.replace(/^name:.*$/m, 'name: open-gstack-browser')).toBe(sourceOgbSkill);
   });
 
   test('the SOURCE files are byte-intact (E2: sed never wrote through a symlink)', () => {
     expect(fs.readFileSync(path.join(sourceDir, 'SKILL.md'), 'utf-8')).toBe(sourceRootSkill);
-    expect(fs.readFileSync(path.join(sourceDir, 'open-gstack-browser', 'SKILL.md'), 'utf-8')).toBe(sourceOgbSkill);
     expect(fs.readFileSync(path.join(ROOT, 'SKILL.md'), 'utf-8')).toBe(sourceRootSkill);
-    expect(
-      fs.readFileSync(path.join(ROOT, 'open-gstack-browser', 'SKILL.md'), 'utf-8'),
-    ).toBe(sourceOgbSkill);
     expect(frontmatterName(path.join(ROOT, 'SKILL.md'))).toBe('gstack');
-    expect(frontmatterName(path.join(ROOT, 'open-gstack-browser', 'SKILL.md'))).toBe(
-      'open-gstack-browser',
-    );
   });
 
   test('the isolated source retains every canonical skill without runtime-asset copies', () => {
@@ -168,7 +138,7 @@ describe('alias installs are rewritten copies (#2511, #2201)', () => {
     const dupes = names.filter((n, i) => names.indexOf(n) !== i);
     expect(dupes).toEqual([]);
     const canonicalNames = skillSources.map(({ name, content }) => content.match(/^name:\s*(\S+)/m)?.[1] ?? name);
-    expect(names.sort()).toEqual([...new Set([...canonicalNames, '_gstack-command', 'connect-chrome'])].sort());
+    expect(names.sort()).toEqual([...new Set([...canonicalNames, '_gstack-command'])].sort());
   });
 
   test('a legacy symlinked alias is replaced, not written through', () => {

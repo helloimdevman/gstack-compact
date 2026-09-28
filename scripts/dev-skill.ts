@@ -3,7 +3,7 @@
  * dev:skill — Watch mode for SKILL.md template development.
  *
  * Watches .tmpl files, regenerates SKILL.md files on change,
- * validates all $B commands immediately.
+ * rejects removed bundled-browser commands immediately.
  */
 
 import { validateSkill } from '../test/helpers/skill-parser';
@@ -51,23 +51,7 @@ function regenerateAndValidate() {
     }
   }
 
-  // Dev workspace render isolation: the default in-place regen above keeps the
-  // worktree canonical. If bin/dev-setup set up an untracked brain-aware render
-  // (.claude/gstack-rendered), refresh it too so live template edits reflect at
-  // this workspace's runtime. Only runs when the render dir already exists — we
-  // never create it during plain template dev.
-  const RENDER_DIR = path.join(ROOT, '.claude', 'gstack-rendered');
-  if (fs.existsSync(RENDER_DIR)) {
-    try {
-      execSync(
-        `bun run scripts/gen-skill-docs.ts --respect-detection --host claude --out-dir ${JSON.stringify(RENDER_DIR)}`,
-        { cwd: ROOT, stdio: 'pipe' },
-      );
-      console.log('  [render] refreshed .claude/gstack-rendered (brain-aware workspace copy)');
-    } catch (err: any) {
-      console.log(`  [render] ERROR: ${err.stderr?.toString().trim() || err.message}`);
-    }
-  }
+
 }
 
 // Initial run
@@ -83,19 +67,4 @@ for (const { tmpl } of TEMPLATES) {
   });
 }
 
-// Also watch commands.ts and snapshot.ts (source of truth changes)
-const SOURCE_FILES = [
-  path.join(ROOT, 'browse', 'src', 'commands.ts'),
-  path.join(ROOT, 'browse', 'src', 'snapshot.ts'),
-];
-
-for (const src of SOURCE_FILES) {
-  if (!fs.existsSync(src)) continue;
-  fs.watch(src, () => {
-    console.log(`\n  [watch] ${path.relative(ROOT, src)} changed`);
-    regenerateAndValidate();
-  });
-}
-
 // Keep alive
-console.log('  [watch] Press Ctrl+C to stop\n');

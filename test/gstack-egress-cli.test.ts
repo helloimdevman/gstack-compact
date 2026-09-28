@@ -3,8 +3,7 @@
  *
  * Spawns the real bin against a temp GSTACK_HOME: list filters, verify
  * exit-3-on-tamper (naming the first broken line), sizeWarning surfacing,
- * and grants against the upstream config keys (telemetry,
- * artifacts_sync_mode, redact_repo_visibility, redact_prepush_hook).
+ * and grants against the redaction config keys.
  */
 
 import { describe, test, expect, beforeEach, afterEach } from 'bun:test';
@@ -50,12 +49,12 @@ describe('gstack-egress list', () => {
   });
 
   test('--json returns receipts and honors --sink/--host/--since filters', () => {
-    writeReceipt({ home, sink: 'telemetry-sync', host: '10.0.0.1:8399', payloadClass: 'telemetry-events', bytes: 2, sha256: sha256Hex('[]'), consent: 'telemetry=community' });
+    writeReceipt({ home, sink: 'design-mirror', host: '10.0.0.1:8399', payloadClass: 'image-request', bytes: 2, sha256: sha256Hex('[]'), consent: 'user ran design command' });
     writeReceipt({ home, sink: 'design-openai', host: 'api.openai.com', payloadClass: 'generate-image-request', consent: 'user ran design command' });
     const all = run(['list', '--json']);
     expect(all.code).toBe(0);
     expect(JSON.parse(all.stdout).length).toBe(2);
-    const filtered = run(['list', '--json', '--sink', 'telemetry-sync']);
+    const filtered = run(['list', '--json', '--sink', 'design-mirror']);
     const rows = JSON.parse(filtered.stdout);
     expect(rows.length).toBe(1);
     expect(rows[0].host).toBe('10.0.0.1:8399');
@@ -108,10 +107,10 @@ describe('gstack-egress verify', () => {
 });
 
 describe('gstack-egress grants', () => {
-  test('fresh home shows the five standing grants off, each naming file and revoke command', () => {
+  test('fresh home shows the two standing grants off, each naming file and revoke command', () => {
     const r = run(['grants']);
     expect(r.code).toBe(0);
-    for (const grant of ['telemetry', 'brain-sync', 'redact_repo_visibility', 'redact_prepush_hook', 'memorable-recall']) {
+    for (const grant of ['redact_repo_visibility', 'redact_prepush_hook']) {
       expect(r.stdout).toContain(grant);
     }
     expect(r.stdout).not.toContain('[GRANTED]');
@@ -119,40 +118,21 @@ describe('gstack-egress grants', () => {
     expect(r.stdout).toContain('revoke:');
   });
 
-  test('--json flips granted=true when telemetry and sync mode are enabled', () => {
-    const config = spawnSync(path.join(ROOT, 'bin', 'gstack-config'), ['set', 'telemetry', 'community'], {
+  test('--json reports the redaction visibility grant', () => {
+    const config = spawnSync(path.join(ROOT, 'bin', 'gstack-config'), ['set', 'redact_repo_visibility', 'public'], {
       encoding: 'utf-8',
       env: { ...process.env, GSTACK_HOME: home },
       timeout: 30_000,
     });
     expect(config.status).toBe(0);
-    spawnSync(path.join(ROOT, 'bin', 'gstack-config'), ['set', 'artifacts_sync_mode', 'full'], {
-      encoding: 'utf-8',
-      env: { ...process.env, GSTACK_HOME: home },
-      timeout: 30_000,
-    });
     const r = run(['grants', '--json']);
     expect(r.code).toBe(0);
     const grants = JSON.parse(r.stdout);
-    const telemetry = grants.find((g: any) => g.grant === 'telemetry');
-    expect(telemetry.granted).toBe(true);
-    expect(telemetry.revoke).toContain('telemetry off');
-    const sync = grants.find((g: any) => g.grant === 'brain-sync');
-    expect(sync.granted).toBe(true);
-    expect(sync.value).toBe('full');
+    const visibility = grants.find((g: any) => g.grant === 'redact_repo_visibility');
+    expect(visibility.granted).toBe(true);
+    expect(visibility.value).toBe('public');
     const hook = grants.find((g: any) => g.grant === 'redact_prepush_hook');
     expect(hook.granted).toBe(false);
-    // the Memorable bridge consent is a standing grant too: off by default, on only via gstack-memorable enable
-    const memo = grants.find((g: any) => g.grant === 'memorable-recall');
-    expect(memo.granted).toBe(false);
-    expect(memo.key).toBe('memorable_recall');
-    expect(memo.revoke).toContain('gstack-memorable disable');
-    spawnSync(path.join(ROOT, 'bin', 'gstack-config'), ['set', 'memorable_recall', 'on'], {
-      encoding: 'utf-8', env: { ...process.env, GSTACK_HOME: home }, timeout: 30_000,
-    });
-    const after = JSON.parse(run(['grants', '--json']).stdout).find((g: any) => g.grant === 'memorable-recall');
-    expect(after.granted).toBe(true);
-    expect(run(['grants']).stdout).toContain('[GRANTED] memorable-recall: on');
   });
 });
 

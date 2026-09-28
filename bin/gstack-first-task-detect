@@ -17,7 +17,7 @@
 # eval boundary. Usage: TOKEN=$(gstack-first-task-detect)
 set -uo pipefail
 
-# --- Portable timeout wrapper (gtimeout → timeout → unwrapped), per gstack-codex-probe ---
+# --- Portable timeout wrapper (gtimeout → timeout → unwrapped) ---
 _ftd_to=$(command -v gtimeout 2>/dev/null || command -v timeout 2>/dev/null || echo "")
 _git() {
   if [ -n "$_ftd_to" ]; then

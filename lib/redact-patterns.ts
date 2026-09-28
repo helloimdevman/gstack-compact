@@ -3,7 +3,7 @@
  *
  * Single source of truth shared by `lib/redact-engine.ts`, `bin/gstack-redact`,
  * `bin/gstack-redact-prepush`, and (via `scripts/resolvers/redact-doc.ts`) the
- * generated SKILL.md docs for /spec, /ship, /cso, /document-release, and
+ * generated SKILL.md docs for /spec, /ship, /document-release, and
  * /document-generate.
  *
  * Design notes (locked in /plan-eng-review + two Codex passes):

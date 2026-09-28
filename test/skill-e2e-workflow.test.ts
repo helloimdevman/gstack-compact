@@ -208,11 +208,6 @@ describeIfSelected('Ship workflow E2E', ['ship-local-workflow'], () => {
   }, CAPTURE_MS);
 });
 
-// setup-cookies-detect REMOVED: The cookie-import-browser module has 30+ thorough
-// unit tests in browse/test/cookie-import-browser.test.ts (decryption, profile
-// detection, error handling, path traversal). The E2E just tested LLM instruction-
-// following ("write a file saying no browsers") on a CI box with no browsers.
-
 // --- gstack-upgrade E2E ---
 
 describeIfSelected('gstack-upgrade E2E', ['gstack-upgrade-happy-path'], () => {
@@ -389,101 +384,6 @@ Do not generate tests or modify the supplied source or tests.`,
       if (coverageDir) try { fs.rmSync(coverageDir, { recursive: true, force: true }); } catch {}
     }
   }, CAPTURE_MS);
-});
-
-// --- Codex skill E2E ---
-
-describeIfSelected('Codex skill E2E', ['codex-review'], () => {
-  let codexDir: string;
-
-  beforeAll(() => {
-    codexDir = fs.mkdtempSync(path.join(os.tmpdir(), 'skill-e2e-codex-'));
-
-    const run = (cmd: string, args: string[]) =>
-      spawnSync(cmd, args, { cwd: codexDir, stdio: 'pipe', timeout: 5000 });
-
-    run('git', ['init', '-b', 'main']);
-    run('git', ['config', 'user.email', 'test@test.com']);
-    run('git', ['config', 'user.name', 'Test']);
-
-    // Commit a clean base on main
-    fs.writeFileSync(path.join(codexDir, 'app.rb'), '# clean base\nclass App\nend\n');
-    run('git', ['add', 'app.rb']);
-    run('git', ['commit', '-m', 'initial commit']);
-
-    // Create feature branch with vulnerable code (reuse review fixture)
-    run('git', ['checkout', '-b', 'feature/add-vuln']);
-    const vulnContent = fs.readFileSync(path.join(ROOT, 'test', 'fixtures', 'review-eval-vuln.rb'), 'utf-8');
-    fs.writeFileSync(path.join(codexDir, 'user_controller.rb'), vulnContent);
-    run('git', ['add', 'user_controller.rb']);
-    run('git', ['commit', '-m', 'add vulnerable controller']);
-
-    // Extract only the review-relevant content (CLAUDE.md: "extract, don't copy").
-    // The codex skill is carved (T9): the skeleton carries setup + dispatch and
-    // STOP-points to codex/sections/*-mode.md. Build the fixture from the
-    // skeleton's setup slices plus the review-mode section body, SKIPPING the
-    // Section index and STOP pointers — their install paths don't exist in this
-    // temp fixture dir and would burn agent turns on failed Reads.
-    const full = fs.readFileSync(path.join(ROOT, 'codex', 'SKILL.md'), 'utf-8');
-    const introStart = full.indexOf('# /codex — Multi-AI Second Opinion');
-    const introEnd = full.indexOf('## Section index', introStart);
-    const stepsStart = full.indexOf('## Step 0.4', introStart);
-    const stepsEnd = full.indexOf('> **STOP.**', stepsStart);
-    expect(introStart).toBeGreaterThan(-1);
-    expect(introEnd).toBeGreaterThan(introStart);
-    expect(stepsStart).toBeGreaterThan(introEnd);
-    expect(stepsEnd).toBeGreaterThan(stepsStart);
-    const reviewMode = fs.readFileSync(
-      path.join(ROOT, 'codex', 'sections', 'review-mode.md'),
-      'utf-8',
-    );
-    expect(reviewMode).toContain('## Step 2A: Review Mode'); // non-empty, right section
-    const reviewSection = [
-      full.slice(introStart, introEnd),
-      full.slice(stepsStart, stepsEnd),
-      reviewMode,
-    ].join('\n');
-    fs.writeFileSync(path.join(codexDir, 'codex-SKILL.md'), reviewSection);
-  });
-
-  afterAll(() => {
-    try { fs.rmSync(codexDir, { recursive: true, force: true }); } catch {}
-  });
-
-  testConcurrentIfSelected('codex-review', async () => {
-    // Check codex is available — skip if not installed
-    const codexCheck = spawnSync('which', ['codex'], { stdio: 'pipe', timeout: 3000 });
-    if (codexCheck.status !== 0) {
-      console.warn('codex CLI not installed — skipping E2E test');
-      return;
-    }
-
-    const result = await runSkillTest({
-      prompt: `You are in a git repo on branch feature/add-vuln with changes against main.
-Read codex-SKILL.md for the /codex review instructions (it's short — ~120 lines).
-Follow those instructions to run codex review against the diff on this branch.
-Write the full output (including the GATE verdict) to ${codexDir}/codex-output.md`,
-      workingDirectory: codexDir,
-      maxTurns: 25,
-      timeout: CAPTURE_MS,
-      testName: 'codex-review',
-      runId,
-      model: 'claude-opus-4-7',
-    });
-
-    logCost('/codex review', result);
-    recordE2E(evalCollector, '/codex review', 'Codex skill E2E', result);
-    expect(result.exitReason).toBe('success');
-
-    // Check that output file was created with review content
-    const outputPath = path.join(codexDir, 'codex-output.md');
-    if (fs.existsSync(outputPath)) {
-      const output = fs.readFileSync(outputPath, 'utf-8');
-      // Should contain the CODEX SAYS header or GATE verdict
-      const hasCodexOutput = output.includes('CODEX') || output.includes('GATE') || output.includes('codex');
-      expect(hasCodexOutput).toBe(true);
-    }
-  }, CAPTURE_LONG_MS);
 });
 
 // Module-level afterAll — finalize eval collector after all tests complete

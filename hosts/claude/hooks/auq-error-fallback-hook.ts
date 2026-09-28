@@ -16,7 +16,7 @@
  * could not force that Conductor-internal failure in a harness — see
  * docs/spikes/claude-code-hook-mutation.md §"PostToolUse on tool error"). If the
  * platform does NOT fire the hook on that path, this is simply never invoked — no
- * harm; the prompt-level fallback in generate-ask-user-format.ts still covers it.
+ * additional reminder. The host's capability and permission rules still apply.
  * On a SUCCESSFUL AskUserQuestion (a real answer), the hook defers (no output).
  *
  * Triggered by ~/.claude/settings.json (registered by `setup` next to

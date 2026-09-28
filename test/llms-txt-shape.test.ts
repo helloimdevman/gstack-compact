@@ -16,10 +16,8 @@ describe('gen-llms-txt — shape', () => {
   test('emits required top-level sections', () => {
     expect(generated.content).toContain('# gstack');
     expect(generated.content).toContain('## Skills');
-    expect(generated.content).toContain('## Browse Commands');
     // Convention block
     expect(generated.content).toContain('Skills are invoked by name');
-    expect(generated.content).toContain('Browse commands run as');
     // Footer
     expect(generated.content).toContain('## More');
     expect(generated.content).toContain('auto-generated');
@@ -33,14 +31,6 @@ describe('gen-llms-txt — shape', () => {
 
     for (const skill of generated.skills) {
       expect(generated.content).toMatch(new RegExp(`/${skill.name}\\b`));
-    }
-  });
-
-  test('every browse command in COMMAND_DESCRIPTIONS appears in the index', () => {
-    expect(generated.browseCommands.length).toBeGreaterThan(0);
-    for (const cmd of generated.browseCommands) {
-      // Use word boundaries; backtick-wrapped command name OR usage.
-      expect(generated.content).toContain(cmd);
     }
   });
 

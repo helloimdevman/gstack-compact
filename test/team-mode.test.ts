@@ -356,14 +356,16 @@ describe('setup --team / --no-team / -q', () => {
         fs.mkdirSync(path.dirname(dest), { recursive: true });
         fs.copyFileSync(path.join(ROOT, rel), dest);
       }
-      for (const dir of ['browse/src', 'make-pdf/src', 'design/src', 'lib']) fs.mkdirSync(path.join(cwd, dir), { recursive: true });
+      for (const dir of ['design/src', 'lib']) fs.mkdirSync(path.join(cwd, dir), { recursive: true });
       // Same executable-presence contract as setup-needs-build.test.ts. These
       // tests cover installer messages, not compiler output or dependency install.
-      for (const binary of ['browse/dist/browse', 'design/dist/design', 'make-pdf/dist/pdf']) {
+      for (const binary of ['design/dist/design', 'bin/gstack-global-discover']) {
         write(binary, '#!/bin/sh\nexit 0\n');
         if (process.platform === 'win32') write(`${binary}.exe`, '#!/bin/sh\nexit 0\n');
       }
-      write('browse/dist/.build-complete', 'complete\n');
+      write('lib/gstack-markdown-html.js', '// fixture bundle\n');
+      write('design/dist/daemon.ts', '// fixture daemon\n');
+      write('design/dist/.build-complete', 'bun-source-v1\n');
       fs.mkdirSync(commands);
       fs.mkdirSync(home);
       // Only installation/generation prerequisites are stubbed. The model
@@ -371,7 +373,7 @@ describe('setup --team / --no-team / -q', () => {
       // unchanged. Unexpected commands (including a build) fail the test.
       fs.writeFileSync(path.join(commands, 'bun'), `#!/usr/bin/env bash
 case "$*" in
-  'install --frozen-lockfile') exit 0 ;;
+  'install --frozen-lockfile'|'install --production --frozen-lockfile') exit 0 ;;
   'build --help') echo 'Fixture Bun has no CSO compile flags'; exit 0 ;;
   *'/bin/gstack-migrate-claude-code --install-dir '*)
     [[ "$#" -eq 5 && "$2" = --install-dir && "$4" = --skills-dir ]] || exit 90
@@ -395,7 +397,7 @@ exec ${quote(realRm)} "$@"
         HOME: home, USERPROFILE: home, TMPDIR: tmp, TMP: tmp, TEMP: tmp,
         CODEX_HOME: path.join(home, '.codex'), CLAUDE_CONFIG_DIR: path.join(home, '.claude'),
         GSTACK_HOME: state, GSTACK_STATE_ROOT: state,
-        GSTACK_SKIP_PLAYWRIGHT: '1', GSTACK_SKIP_FONTS: '1', GSTACK_SKIP_COREUTILS: '1', GSTACK_SKIP_ASIDE: '1',
+        GSTACK_SKIP_FONTS: '1', GSTACK_SKIP_COREUTILS: '1',
         ...(process.env.SystemRoot ? { SystemRoot: process.env.SystemRoot } : {}),
       };
       check({ setup: quote(path.join(cwd, 'setup')), cwd, env, home });

@@ -71,13 +71,14 @@ export function captureReviewStart(skill: string, env = process.env): string {
   const token = crypto.randomUUID();
   writeFileSync(join(dir, `${token}.json`), JSON.stringify({
     skill, repo: env.GSTACK_REVIEW_REPO, branch: env.GSTACK_REVIEW_BRANCH,
+    base_commit: /^[0-9a-f]{40}$/.test(env.GSTACK_REVIEW_BASE_COMMIT ?? '') ? env.GSTACK_REVIEW_BASE_COMMIT : undefined,
     wtree: env.GSTACK_STAMP_WTREE, started_at: new Date().toISOString(),
   }), { mode: 0o600, flag: 'wx' });
   return token;
 }
 
 export function bindReview(rec: Record<string, any>, token: string, env = process.env): Record<string, any> {
-  for (const key of ['commit_full', 'tree', 'wtree', 'dirty', 'review_binding', 'review_freshness']) delete rec[key];
+  for (const key of ['commit_full', 'tree', 'wtree', 'dirty', 'review_binding', 'review_freshness', 'base_commit']) delete rec[key];
   if (env.GSTACK_STAMP_COMMIT_FULL) rec.commit_full = env.GSTACK_STAMP_COMMIT_FULL;
   if (env.GSTACK_STAMP_TREE) rec.tree = env.GSTACK_STAMP_TREE;
   if (env.GSTACK_STAMP_DIRTY) rec.dirty = env.GSTACK_STAMP_DIRTY === 'true';
@@ -106,12 +107,14 @@ export function bindReview(rec: Record<string, any>, token: string, env = proces
   rec.review_binding = {
     state, start_wtree: start?.wtree, end_wtree: end, started_at: start?.started_at,
     ...(typeof start?.branch === 'string' && start.branch.length > 0 ? { branch_id: sha256(start.branch) } : {}),
+    ...(typeof start?.repo === 'string' && start.repo.length > 0 ? { repo_id: sha256(start.repo) } : {}),
   };
+  if (start?.base_commit) rec.base_commit = start.base_commit;
   if (state === 'verified') rec.wtree = end;
   return rec;
 }
 
-export function reviewFreshness(rec: Record<string, any>, currentWtree: string): { status: string; reason: string } | undefined {
+export function reviewFreshness(rec: Record<string, any>, currentWtree: string, candidate?: { baseCommit: string; repo: string; branch: string }): { status: string; reason: string } | undefined {
   if (!DIFF_REVIEWS.has(rec.skill)) return;
   if (rec.skill === 'ship') return { status: 'UNVERIFIED', reason: 'ship telemetry is not a review pass' };
   const binding = rec.review_binding;
@@ -122,6 +125,12 @@ export function reviewFreshness(rec: Record<string, any>, currentWtree: string):
   }
   if (!currentWtree || currentWtree === 'unknown' || rec.wtree !== currentWtree) {
     return { status: 'STALE', reason: 'working-tree content differs from reviewed content' };
+  }
+  if (candidate && (!rec.base_commit || !binding.repo_id || !binding.branch_id)) {
+    return { status: 'UNVERIFIED', reason: 'review did not bind base, repository and branch' };
+  }
+  if (candidate && (rec.base_commit !== candidate.baseCommit || binding.repo_id !== sha256(candidate.repo) || binding.branch_id !== sha256(candidate.branch))) {
+    return { status: 'STALE', reason: 'base, repository or branch differs from reviewed candidate' };
   }
   if (rec.status !== 'clean' || rec.issues_found > 0 || rec.critical > 0 ||
       (rec.skill === 'codex-review' && rec.findings > (rec.findings_fixed ?? 0))) {

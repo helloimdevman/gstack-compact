@@ -2,6 +2,13 @@
 import * as fs from 'node:fs';
 import * as path from 'node:path';
 
+/** macOS /var and /tmp are the same directories as /private/var and /private/tmp. */
+function sameCallerCwd(left: unknown, right: unknown): boolean {
+  if (typeof left !== 'string' || typeof right !== 'string') return false;
+  const fold = (value: string) => value.replace(/^\/private\/(var|tmp)\//, '/$1/');
+  return fold(left) === fold(right);
+}
+
 export interface NativePlanQuestion {
   header: string;
   question: string;
@@ -179,7 +186,7 @@ function ownedCausalLines(lines: string[], cwd: string, filename: string): strin
     if (!next) return [];
     root = next;
   }
-  if (root.record.parentUuid !== null || root.record.cwd !== cwd ||
+  if (root.record.parentUuid !== null || !sameCallerCwd(root.record.cwd, cwd) ||
       !object(root.record.message) || root.record.message.role !== 'user') return [];
   if (nodes.some(x => x !== root && x.record.parentUuid === null &&
       object(x.record.message) && x.record.message.role === 'user')) throw Error('competing owned native roots');
@@ -290,11 +297,11 @@ export function readPlanCountTranscript(configDir: string, cwd: string,
               // A delayed metadata parent must not cut an already-rooted native
               // session at its first cwd change. Recover membership lazily; do
               // not discover a later root or reorder public uses and results.
-              (!ownedSnapshot && record.cwd !== cwd && ancestry.size > 0 &&
+              (!ownedSnapshot && !sameCallerCwd(record.cwd, cwd) && ancestry.size > 0 &&
                 recoveredMember(record.uuid)));
           if (!originSeen && object(record.message) && ['user', 'assistant'].includes(record.message.role)) {
             originSeen = true;
-            if (parentMetadata && record.cwd === cwd && record.message.role === 'user' &&
+            if (parentMetadata && sameCallerCwd(record.cwd, cwd) && record.message.role === 'user' &&
                 record.parentUuid === null) ancestry.add(record.uuid);
           }
           if (continuation) ancestry.add(record.uuid);
@@ -307,7 +314,7 @@ export function readPlanCountTranscript(configDir: string, cwd: string,
             ancestry.has(record.logicalParentUuid) && !ancestry.has(record.uuid);
           if (compactContinuation) ancestry.add(record.uuid);
           if (ownedSnapshot && !ancestry.has(record.uuid)) continue;
-          if ((record.cwd !== cwd && !continuation) || record.isSidechain !== false || !object(record.message)) continue;
+          if ((!sameCallerCwd(record.cwd, cwd) && !continuation) || record.isSidechain !== false || !object(record.message)) continue;
           if (ownedSnapshot && record.message.role === 'user' && record.origin?.kind === 'human' &&
               record.isMeta !== true && nativeUuid(record.promptId) && typeof record.message.content === 'string') {
             const autoplan = /^<command-message>autoplan<\/command-message>\n<command-name>\/autoplan<\/command-name>(?:\n<command-args>[\s\S]*<\/command-args>)?$/.test(record.message.content);
@@ -417,8 +424,14 @@ export function readOwnedClaudePublicTranscript(file: string, cwd: string, sessi
         !path.isAbsolute(file) || path.normalize(file) !== file ||
         path.basename(file) !== `${sessionId}.jsonl`) throw Error('invalid native parent identity');
     const project = path.dirname(file), projects = path.dirname(project), config = path.dirname(projects);
+    const stableDir = (dir: string) => {
+      const stat = fs.lstatSync(dir);
+      if (!stat.isDirectory() || stat.isSymbolicLink()) return false;
+      const fold = (p: string) => path.resolve(p).replace(/^\/private\/(var|tmp)\//, '/$1/');
+      return fold(fs.realpathSync(dir)) === fold(dir);
+    };
     if (path.basename(projects) !== 'projects' ||
-        [config, projects, project].some(dir => !fs.lstatSync(dir).isDirectory() || fs.realpathSync(dir) !== dir))
+        [config, projects, project].some(dir => !stableDir(dir)))
       throw Error('invalid native parent directory');
     fd = fs.openSync(file, fs.constants.O_RDONLY | fs.constants.O_NOFOLLOW);
     const before = fs.fstatSync(fd, { bigint: true });

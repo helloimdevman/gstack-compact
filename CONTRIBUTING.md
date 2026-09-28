@@ -77,20 +77,17 @@ gstack/                          <- your working tree
 │   └── SKILL.md                 <- edit this, test with /review
 ├── ship/
 │   └── SKILL.md
-├── browse/                      <- /browse skill + gstack's own browser engine (the fallback)
-│   ├── src/                     <- TypeScript source
-│   └── dist/                    <- compiled binary (gitignored)
+├── browse/                      <- /browse host-browser skill
 ├── lib/
-│   ├── aside-render.ts          <- local-HTML rendering: Aside first, browse engine fallback
 │   └── design-catalog.ts        <- typed design anti-pattern catalog; review/design-checklist.md is generated from it
 ├── bin/
-│   └── gstack-render.ts         <- the CLI skills call to render a local HTML file
+│   └── gstack-global-discover  <- local discovery binary
 └── ...
 ```
 
 Setup creates real directories (not symlinks) at the top level with a SKILL.md
 symlink inside, plus links to each skill's runtime assets (sections/, templates,
-checklists). Alias skills (`_gstack-command`, `connect-chrome`) install as
+checklists). Alias skill (`_gstack-command`) installs as
 rewritten copies, never symlinks — editing a symlinked alias would corrupt the
 generated source. This ensures Claude discovers them as top-level skills, not nested
 under `gstack/`. Names depend on your prefix setting (`~/.gstack/config.yaml`).
@@ -110,39 +107,19 @@ bun run gen:skill-docs   # or: bun run dev:skill (watch mode, auto-regen on chan
 # 3. Test it in Claude Code — changes are live
 #    > /review
 
-# 4. Editing browse source? Rebuild the binary
+# 4. Editing renderer or design source? Rebuild the binaries
 bun run build
 
 # 5. Done for the day? Tear down
 bin/dev-teardown
 ```
 
-### Brain-aware blocks in a dev workspace (gbrain installed)
-
-If gbrain is installed and usable (`bin/gstack-gbrain-detect --is-ok` exits 0),
-`bin/dev-setup` keeps your tracked `SKILL.md` files canonical and renders the
-brain-aware variant (the `GBRAIN_CONTEXT_LOAD` / `GBRAIN_SAVE_RESULTS` blocks)
-into `.claude/gstack-rendered/` (gitignored, per-workspace). It then repoints the
-workspace's `SKILL.md` symlinks at that render, so your Claude sessions get the
-full gbrain experience while `git status` stays clean. Under the hood, dev-setup
-passes `GSTACK_SKIP_GBRAIN_REGEN=1` inline to the nested `./setup` (so it never
-dirties tracked source) and runs `gen:skill-docs:user --out-dir .claude/gstack-rendered`,
-which rewrites only the section-base paths to point at the render. `bin/dev-teardown`
-removes the render. To make the blocks live across your *other* projects' Claude
-sessions, run `gstack-config gbrain-refresh`, which renders them to a user render
-dir (`${GSTACK_USER_RENDER_DIR:-~/.gstack/render/claude}`, swapped in only on a
-successful render) and repoints the installed skills at it via `gstack-relink` —
-the global install checkout stays git-clean, and the refresh is guarded so it
-never touches a symlinked or non-gstack directory.
-
 ## Testing & evals
 
-Codex evals and the GPT benchmark adapter default to `gpt-6-astra`:
-explicit model > `GSTACK_CODEX_MODEL` > default. Claude capture and judge
-defaults are `claude-fable-5-1`, resolved through `lib/eval-model.ts`:
+Claude capture and judge defaults are `claude-fable-5-1`, resolved through `lib/eval-model.ts`:
 
-- Claude session, PTY, and Agent SDK eval runners and the Claude benchmark adapter: explicit model > `EVALS_MODEL` > `GSTACK_EVAL_MODEL_CAPTURE` > `GSTACK_EVAL_MODEL` > default.
-- Shared judge calls (including benchmark quality scoring): explicit model > `GSTACK_EVAL_MODEL_JUDGE` > `GSTACK_EVAL_MODEL` > default. `EVALS_MODEL` applies to capture runners, not judges.
+- Claude session, PTY, and Agent SDK eval runners: explicit model > `EVALS_MODEL` > `GSTACK_EVAL_MODEL_CAPTURE` > `GSTACK_EVAL_MODEL` > default.
+- Shared judge calls: explicit model > `GSTACK_EVAL_MODEL_JUDGE` > `GSTACK_EVAL_MODEL` > default. `EVALS_MODEL` applies to capture runners, not judges.
 
 Warmup stays on `claude-haiku-4-5`; distill stays on
 `claude-haiku-4-5-20251001`. Explicit test and historical benchmark model
@@ -173,7 +150,7 @@ Bun auto-loads `.env` — no extra config. Conductor workspaces inherit `.env` f
 
 | Tier | Command | Cost | What it tests |
 |------|---------|------|---------------|
-| 1 — Static | `bun run test` | Free | Command validation, snapshot flags, Aside contract pins, render-wrapper option mapping, SKILL.md correctness, TODOS-format.md refs, observability unit tests |
+| 1 — Static | `bun run test` | Free | Command validation, browser contract pins, print-HTML helper, SKILL.md correctness, TODOS-format.md refs, observability unit tests |
 | 2 — E2E | `bun run test:e2e` | ~$4.20 | Full skill execution via `claude -p` subprocess |
 | 3 — LLM eval | `EVALS=1 bun test test/skill-llm-eval.test.ts` | ~$0.15 standalone | LLM-as-judge scoring of generated SKILL.md docs |
 | 2+3 | `bun run test:evals` | ~$4 combined | E2E + LLM-as-judge (runs both) |
@@ -258,13 +235,12 @@ make the suite run green (details in
 Don't type bare `bun test` for the suite: it walks the whole repo, loads paid
 eval files, and misses the strict classifier. No API keys needed.
 
-- **Skill parser tests** (`test/skill-parser.test.ts`) — Extracts every `$B` command from SKILL.md bash code blocks and validates against the command registry in `browse/src/commands.ts`. Catches typos, removed commands, and invalid snapshot flags.
-- **Skill validation tests** (`test/skill-validation.test.ts`) — Validates that SKILL.md files reference only real commands and flags, and that command descriptions meet quality thresholds. Also cross-checks the skill inventory in AGENTS.md and docs/skills.md.
-- **Aside driver contract** (`test/aside-driver.test.ts`) — Browser behaviour in skills is written against `scripts/resolvers/aside.ts` (`{{ASIDE_SETUP}}`) and verified live against the Aside CLI on a Mac. CI cannot run Aside, so the Aside E2E tests self-skip where `aside` is not installed; the static pins (detection, fallback hand-off, consent, credential, one-flow-per-script, sentinel) are what CI proves.
-- **Aside render wrapper** (`test/aside-render.test.ts`) — Pins the option mapping and generated script of `lib/aside-render.ts` everywhere, and drives both engines hermetically with fake `aside` / `browse` executables (probe classification, the stdout contract, loopback-server policy, failure paths, the timeout kill, engine choice and the mid-run fallback); the live render (PDF + screenshot through a real Aside) runs only where Aside is open and self-skips elsewhere. make-pdf's render gates (`make-pdf/test/e2e/*-gate.test.ts`) and `test/skill-e2e-diagram.test.ts` are engine-agnostic: they run through whichever engine resolves (`browserAvailable()` — Aside, or the browse binary `bun run build:gates` compiles, which is what Linux CI does) and skip only when neither exists.
-- **Render CLI** (`test/gstack-render-cli.test.ts`) — Pins `bin/gstack-render.ts` against a fake daemon (`GSTACK_SKIP_ASIDE=1` + `GSTACK_BROWSE_BIN`): argv guards exit 1 with the usage line, `--help` exits 0, `ENGINE=` first then `OK <path>` then fenced `EVAL` / `PAGE_ERRORS`, `--serve-root` containment, the no-browser first line, and prompt exit after a successful render. `make-pdf/test/cli-exit-codes.test.ts` and `make-pdf/test/setup-smoke.test.ts` pin the `pdf` binary's error-to-exit-code map and `$P setup`'s engine report.
-- **Generator tests** (`test/gen-skill-docs.test.ts`) — Tests the template system: verifies placeholders resolve correctly, output includes value hints for flags (e.g. `-d <N>` not just `-d`), enriched descriptions for key commands (e.g. `is` lists valid states, `press` lists key examples).
-- **Design detector, catalog, and DESIGN.md** (`test/gstack-design-detect.test.ts`, `test/design-detect-contract.test.ts`, `test/design-catalog.test.ts`, `test/design-checklist-sync.test.ts`, `test/design-md.test.ts`, `test/frontend-scope.test.ts`, `test/impeccable-fixtures.test.ts`) — Drive `bin/gstack-design-detect.ts` through the fake engine in `test/fixtures/fake-impeccable.ts` (probe order, the never-execute-a-repository-file rule, the `--changed` target allow-list, `design_detector: off`, analytics lines, output sanitizing), pin the catalog invariants and the generated `review/design-checklist.md`, round-trip the open DESIGN.md reader/writer, and check the real engine captures (`test/fixtures/impeccable-*.json`, engine 0.1.3) against the contract. `test/dom-dump-hygiene.test.ts` runs `lib/dom-dump.js` in a real Chromium page through the built browse binary; it self-skips without the binary and is opt-in outside CI (`GSTACK_DOM_DUMP_HYGIENE=1`).
+- **Skill parser tests** (`test/skill-parser.test.ts`) — Reject removed bundled-browser commands in skill docs.
+- **Skill validation tests** (`test/skill-validation.test.ts`) — Check the generated skill inventory and removed-command references.
+- **Browser driver contract** (`test/browser-driver.test.ts`) — Checks that browser skills use the user's host-provided browser.
+- **Print-HTML helper** (`make-pdf/test/html.test.ts`) — Checks offline HTML output and overwrite protection.
+- **Generator tests** (`test/gen-skill-docs.test.ts`) — Check that removed commands do not reappear in generated skills.
+- **Design detector, catalog, and DESIGN.md** (`test/gstack-design-detect.test.ts`, `test/design-detect-contract.test.ts`, `test/design-catalog.test.ts`, `test/design-checklist-sync.test.ts`, `test/design-md.test.ts`, `test/frontend-scope.test.ts`, `test/impeccable-fixtures.test.ts`) — Check design detection, catalog invariants, generated checklist, and DESIGN.md handling.
 - **Tier-alignment invariant** (`test/e2e-tier-alignment.test.ts`) — For every self-gated `test/skill-e2e-*.test.ts` named in a touchfiles dep list, the file's `EVALS_TIER` self-gate must match its declared tier in `E2E_TIERS`. Kills the "inert demotion" class where a test is re-tiered in `touchfiles.ts` but the file still gates on the old tier and keeps running in the wrong lane. Unmapped or mixed-tier files are reported, never silently skipped.
 - **Catalog budget** (`test/catalog-budget.test.ts`) — Caps the aggregate discovery surface: the sum of every skill's frontmatter `name` + `description` (what every host loads at discovery, every session) must stay under 1,171 token-equivalents, with a 260-byte per-skill cap. Counting goes through the shared census in `test/helpers/skill-census.ts` (physical files vs authored skills vs registry entries — three deliberately different counts). Adding a skill? The failure message carries the re-measure + ratchet protocol.
 - **Context-budget ratchet** (`test/context-budget-ratchet.test.ts`) — CI ceilings on the two token ledgers the catalog budget doesn't cover: the always-on full-frontmatter aggregate and each skill's per-invocation eager tokens (SKILL.md + forced-read references), graded against `test/fixtures/context-budget.json` via `lib/context-bill.ts`. New skills fail until they have a ceiling; ceilings for removed skills must be pruned. Legitimate growth or a landed reduction: re-run `bun test/helpers/capture-context-budget.ts` and commit the refreshed fixture in the same commit, so the change is a visible decision in the diff.
@@ -290,7 +266,7 @@ EVALS=1 bun test test/skill-e2e-*.test.ts
 runner, the Agent SDK runner, plus the codex and gemini runners) spawns its child
 through `test/helpers/hermetic-env.ts`: an allowlist-scrubbed environment, a fresh
 seeded `CLAUDE_CONFIG_DIR`, a temp `GSTACK_HOME`, and `--strict-mcp-config`. Your
-operator `~/.claude` config, MCP servers (gbrain, Conductor), skills, `~/.gstack`
+operator `~/.claude` config, MCP servers (Conductor), skills, `~/.gstack`
 decision logs, and `CONDUCTOR_*` env never leak into the child. The `GITHUB_`
 and `EVALS_` prefix rules preserve CI metadata but reject credential-shaped
 names such as `GITHUB_TOKEN`, `GITHUB_PERSONAL_ACCESS_TOKEN`, and
@@ -400,7 +376,7 @@ Supply-chain gates run alongside it:
 
 The supply-chain workflows pin their third-party actions to commit SHAs. The PR template (`.github/PULL_REQUEST_TEMPLATE.md`) asks for evidence — tests run, eval output — not promises.
 
-Tests run against the browse binary directly — they don't require dev mode. Anything that needs Aside itself (`test/skill-e2e-aside.test.ts`, the Aside qa/design cases, the live render in `test/aside-render.test.ts`) runs only on a Mac with the Aside app open and self-skips elsewhere; make-pdf's render gates and the `/diagram` E2E run on whichever engine resolves, so CI runs them on the browse binary it builds with `bun run build:gates`.
+Browser-dependent steps use the agent host's user-browser capability. The free suite checks their generated contract and pure rendering helpers; it does not launch a browser engine.
 
 ## Editing SKILL.md files
 
@@ -429,51 +405,7 @@ produce a successful check of partial output.
 
 For template authoring best practices (natural language over bash-isms, dynamic branch detection, `{{BASE_BRANCH_DETECT}}` usage), see CLAUDE.md's "Writing SKILL templates" section.
 
-Browser steps in skills are `aside repl` scripts that follow the cookbook in `scripts/resolvers/aside.ts`, each paired with its `$B` equivalent for the fallback engine; run the Aside shape against the Aside CLI before committing. To add a browse command, add it to `browse/src/commands.ts`. To add a snapshot flag, add it to `SNAPSHOT_FLAGS` in `browse/src/snapshot.ts`. Then rebuild.
-
-**Render through `lib/aside-render.ts`; don't bundle puppeteer/Chromium in a
-skill.** A skill that needs to rasterize or print its own HTML/JSON (diagrams,
-cards, og-images, PDFs) calls `bin/gstack-render.ts` from its template
-(`--screenshot`, `--pdf`, `--eval JS --out FILE`) or imports `render` from
-`lib/aside-render.ts` in TypeScript (`renderWithAside` / `renderWithBrowse` are
-the engine-specific halves; `render` picks between them and retries once on the
-browse engine if Aside's CLI cannot start or loses its CDP bridge mid-run). The
-wrapper prints through Aside when it is open and through the `browse` daemon
-when it is not (`newtab --json`, `goto` the loopback URL, `js` readiness
-polling, `pdf --from-file`, `viewport` + `screenshot`, `js --out`, `closetab`)
-— the one shared Chromium per box, same flags and `OK <path>` lines,
-`ENGINE=aside|browse` saying which one actually rendered, `EVAL` /
-`PAGE_ERRORS` lines fenced as untrusted web content. The loopback server
-serves one per-render secret URL and never follows a symlink out of its
-directory. Sized screenshots are 1x on the fallback (2x on Aside); JPEG
-quality and `pageRanges`/`scale` are Aside-only; `--landscape` swaps paper
-dimensions. Never `npm i puppeteer`, never download a second Chromium that
-drifts out of version sync, never point the renderer at a website. If the
-wrapper lacks an option you need, add it to `lib/aside-render.ts` (pin it in
-`test/aside-render.test.ts`, and in `test/gstack-render-cli.test.ts` when it
-is a CLI flag) so every caller gets it on both paths. Exported test seams:
-`pickEngine(fresh, deps)` (inject the probe and the binary resolver),
-`serveDir(root, nonce)`, `SAFE_TMP_DIR`, and `PAGE_NUMBER_FOOTER` (the one
-page-number footer make-pdf, `gstack-render`, and the browse `pdf` command share).
-
-## Jargon list (V1 writing style)
-
-gstack's Writing Style section (injected into every tier-≥2 skill's preamble)
-glosses technical terms on first use per skill invocation. The list of terms
-that qualify for glossing lives at `scripts/jargon-list.json` — ~50 curated
-high-frequency terms (idempotent, race condition, N+1, backpressure, etc.).
-Terms not on the list are assumed plain-English enough.
-
-**Adding or removing a term:** open a PR editing `scripts/jargon-list.json`.
-Run `bun run gen:skill-docs` after the edit — terms are baked into every
-generated SKILL.md at gen time, so changes take effect only after regeneration.
-No runtime loading; no user-side override. The repo list is the source of truth.
-
-Good candidates for addition: high-frequency terms that non-technical users
-encounter in review output without context (common database/concurrency
-terminology, security jargon, frontend framework concepts). Don't add terms
-that only appear in one or two niche skills — the cost-to-value trade isn't
-worth the review overhead.
+Browser steps in skills follow `scripts/resolvers/browser.ts` and the host browser tool's current instructions.
 
 ## Multi-host development
 
@@ -481,7 +413,7 @@ gstack generates SKILL.md files for 10 hosts from one set of `.tmpl` templates.
 Each host is a typed config in `hosts/*.ts`. The generator reads these configs
 to produce host-appropriate output (different frontmatter, paths, tool names).
 
-**Supported hosts:** Claude (primary), Codex, Factory, Kiro, OpenCode, Slate, Cursor, OpenClaw, Hermes, GBrain.
+**Supported hosts:** Claude (primary), Codex, Factory, Kiro, OpenCode, Slate, Cursor, OpenClaw, Hermes.
 
 ### Generating for all hosts
 
@@ -490,7 +422,7 @@ to produce host-appropriate output (different frontmatter, paths, tool names).
 bun run gen:skill-docs                    # Claude (default)
 bun run gen:skill-docs --host codex       # Codex
 bun run gen:skill-docs --host opencode    # OpenCode
-bun run gen:skill-docs --host all         # All 10 hosts
+bun run gen:skill-docs --host all         # All supported hosts
 
 # Or use build, which does all hosts + compiles binaries
 bun run build
@@ -507,7 +439,6 @@ Each host config (`hosts/*.ts`) controls:
 | Paths | `~/.claude/skills/gstack` vs `$GSTACK_ROOT` |
 | Tool names | "use the Bash tool" vs same (Factory rewrites to "run this command") |
 | Hook skills | `hooks:` frontmatter vs inline safety advisory prose |
-| Suppressed sections | GBrain blocks vs GBrain blocks and Review Army; Codex retains outside-review sections routed to Claude Code |
 | Model overlay | `claude` vs `gpt` (per-host `defaultModel`; `--model` or, at setup time, the Codex `config.toml` model overrides) |
 
 See `scripts/host-config.ts` for the full `HostConfig` interface.
@@ -552,8 +483,8 @@ If you're using [Conductor](https://conductor.build) to run multiple Claude Code
 
 | Hook | Script | What it does |
 |------|--------|-------------|
-| `setup` | `bin/dev-setup` | Copies `.env` from main worktree, installs deps, symlinks skills, runs `./setup` non-interactively, and (if gbrain is installed) renders brain-aware blocks into `.claude/gstack-rendered/` without dirtying tracked source |
-| `archive` | `bin/dev-teardown` | Removes skill symlinks, the `.claude/gstack-rendered/` render, and cleans up `.claude/` directory |
+| `setup` | `bin/dev-setup` | Copies `.env` from main worktree, installs deps, symlinks skills, runs `./setup` non-interactively, without changing tracked source |
+| `archive` | `bin/dev-teardown` | Removes skill symlinks and cleans up `.claude/` directory |
 
 When Conductor creates a new workspace, `bin/dev-setup` runs automatically. It detects the main worktree (via `git worktree list`), copies your `.env` so API keys carry over, and sets up dev mode — no manual steps needed.
 
@@ -561,13 +492,13 @@ When Conductor creates a new workspace, `bin/dev-setup` runs automatically. It d
 
 **First-time setup:** Put your `ANTHROPIC_API_KEY` in `.env` in the main repo (see `.env.example`). Every Conductor workspace inherits it automatically.
 
-**`GSTACK_*` env prefix (Conductor-injected keys).** Conductor explicitly strips `ANTHROPIC_API_KEY` and `OPENAI_API_KEY` from every workspace's process env. The `.env` copy path doesn't restore them either — the strip happens after env inheritance. Users who want paid evals, `/sync-gbrain` embeddings, or `claude-agent-sdk` calls to work in a Conductor workspace must set `GSTACK_ANTHROPIC_API_KEY` and `GSTACK_OPENAI_API_KEY` in Conductor's workspace env config; Conductor passes those through untouched. On the gstack side, TS entry points import `lib/conductor-env-shim.ts` as a side effect, which promotes `GSTACK_FOO_API_KEY` to `FOO_API_KEY` when the canonical name is empty. If you add a new TS entry point that hits a paid API, add `import "../lib/conductor-env-shim";` to the top of the file. Today the shim is imported from `bin/gstack-gbrain-sync.ts`, `bin/gstack-model-benchmark`, `scripts/preflight-agent-sdk.ts`, and `test/helpers/e2e-helpers.ts`.
+**`GSTACK_*` env prefix (Conductor-injected keys).** Conductor explicitly strips `ANTHROPIC_API_KEY` and `OPENAI_API_KEY` from every workspace's process env. The `.env` copy path doesn't restore them either — the strip happens after env inheritance. Users who want paid evals or `claude-agent-sdk` calls to work in a Conductor workspace must set `GSTACK_ANTHROPIC_API_KEY` and `GSTACK_OPENAI_API_KEY` in Conductor's workspace env config; Conductor passes those through untouched. On the gstack side, TS entry points import `lib/conductor-env-shim.ts` as a side effect, which promotes `GSTACK_FOO_API_KEY` to `FOO_API_KEY` when the canonical name is empty. If you add a new TS entry point that hits a paid API, add `import "../lib/conductor-env-shim";` to the top of the file. Today the shim is imported from `scripts/preflight-agent-sdk.ts` and `test/helpers/e2e-helpers.ts`.
 
 ## Things to know
 
 - **SKILL.md files are generated.** Edit the `.tmpl` template, not the `.md`. Run `bun run gen:skill-docs` to regenerate. The same run generates `review/design-checklist.md` from `lib/design-catalog.ts` and `lib/dom-dump.js` from `lib/dom-dump-script.ts`: edit those sources, never the generated files (`test/design-checklist-sync.test.ts` fails on drift).
 - **TODOS.md is the unified backlog.** Organized by skill/component with P0-P4 priorities. `/ship` auto-detects completed items. All planning/review/retro skills read it for context.
-- **Browse, make-pdf, design, and `lib/` source changes need a rebuild.** If you touch `browse/src/*.ts`, `make-pdf/src/*.ts`, `design/src/*.ts`, or anything under `lib/` (the canonical `claude-bin.ts`, `error-handling.ts`, and `aside-render.ts` the binaries embed, plus `design-catalog.ts`, whose `MOCKUP_NEVER_NAMES` the design binary's mockup prompt embeds; `browse/src` re-exports the first three), run `bun run build`. `./setup` makes the same call on its own: it rebuilds when any of the three binaries is missing or when those sources, `package.json`, or `bun.lock` are newer than the browse binary (`test/setup-needs-build.test.ts` pins the decision).
+- **Design binary and generated skill changes need a rebuild.** Run `bun run build` after editing their sources; `./setup` rebuilds missing or stale binaries.
 - **Dev mode shadows your global install.** Project-local skills take priority over `~/.claude/skills/gstack`. `bin/dev-teardown` restores the global one.
 - **Conductor workspaces are independent.** Each workspace is its own git worktree. `bin/dev-setup` runs automatically via `conductor.json`.
 - **`.env` propagates across worktrees.** Set it once in the main repo, all Conductor workspaces get it.
@@ -575,7 +506,6 @@ When Conductor creates a new workspace, `bin/dev-setup` runs automatically. It d
 - **Never write raw `ln -snf` in `setup`.** Every link site in `setup` MUST route through the `_link_or_copy SRC DST` helper near the `IS_WINDOWS` detection. The helper preserves `ln -snf` on Unix and switches to `cp -R` / `cp -f` on Windows without Developer Mode, where plain `ln -snf` produces frozen file copies that don't refresh on `git pull`. `test/setup-windows-fallback.test.ts` enforces this with a static invariant — a single raw `ln` call outside the helper body fails CI.
 - **Synchronous subagent dispatches must state the flag.** Claude Code runs Agent-tool subagents in the background by default (since v2.1.198), so any template step that dispatches a subagent and consumes its output must carry `run_in_background: false`. Use the `{{FOREGROUND_DISPATCH_NOTE}}` placeholder (`scripts/resolvers/constants.ts`) instead of hand-writing the guidance, and add the generated carrier file to `GENERATED_WITH_GUIDANCE` in `test/run-in-background-guidance.test.ts` in the same commit — its structural scanner fails CI on any generated dispatch imperative that lacks the flag.
 - **Never delete or link over a skill entry `setup` cannot prove is gstack's.** Every destructive site in `setup` (the linker, the alias installer, both prefix-flip cleanups) and in `bin/gstack-relink` goes through the ownership helpers (`_claude_entry_is_ours` / `_claude_entry_owned_strongly` in `setup`, `_entry_is_ours` / `_entry_owned_strongly` in relink). The retired-skill prune (`_prune_stale_generated`) applies the same strong/weak split through its own gate: a real host directory is a candidate only when its SKILL.md carries the generated banner (`_owned_for_windows_refresh`), a host symlink is removed only when it resolves into gstack (`_gstack_target_is_ours`), a bannered real directory is cleaned through `_cleanup_weak_dir`, and a symlink inside the render tree is never followed. A symlink into gstack or the `.gstack-owned` marker proves the whole directory; a byte-identical or generated-banner SKILL.md proves only that file, and a differing one is moved to `~/.gstack/backups/skills/<ts>/` first. `test/setup-link-ownership.test.ts`, `test/setup-cleanup-orphans.test.ts`, `test/setup-prune-stale-generated.test.ts`, and `test/relink.test.ts` pin it. The rule is duplicated in the two scripts until the shared helper filed in TODOS.md lands: change both.
-- **`./setup` never fails on Chromium.** The Playwright bootstrap (section `# 2` of `setup`) is best-effort and bounded: every failure becomes a reason code (`skipped`, `chromium-install`, `chromium-install-timeout`, `chromium-install-locked`, `windows-no-node`, `windows-node-modules`, `post-install-launch`) printed in the final summary alongside the browser-dependent skills, and skill registration always runs. `GSTACK_PLAYWRIGHT_INSTALL_TIMEOUT=<seconds>` (default 600) bounds the download; `GSTACK_SKIP_PLAYWRIGHT=1` skips it, the right knob for a no-browser box or a setup-only test loop. `GSTACK_SKIP_ASIDE=1` makes the browser summary (like the skills' probe and the renderer) treat Aside as absent, so the summary never promises a fallback the bootstrap did not deliver (`test/setup-browser-hint.test.ts`). Anything you add after the bootstrap must stay independent of the browser. `test/setup-playwright-best-effort.test.ts` pins the block.
 
 ## Testing your changes in a real project
 

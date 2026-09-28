@@ -346,6 +346,8 @@ describe("rendering", () => {
       "eagerTokensBySkill",
       "perInvocationBytesBySkill",
       "perInvocationTokensBySkill",
+      "runtimeBytes",
+      "runtimeTokens",
       "skillCount",
       "totalMdBytes",
       "totalMdTokens",

@@ -23,7 +23,7 @@ import * as os from 'os';
 import * as path from 'path';
 import { HOST_PATHS } from '../scripts/resolvers/types';
 import type { TemplateContext } from '../scripts/resolvers/types';
-import { generatePreambleBash } from '../scripts/resolvers/preamble/generate-preamble-bash';
+import { generateInstalledPreamble } from '../scripts/resolvers/preamble';
 import { ALL_HOST_CONFIGS } from '../hosts/index';
 
 const ROOT = path.join(import.meta.dir, '..');
@@ -59,7 +59,7 @@ describe('routing probe checks AGENTS.md too (#2500)', () => {
   for (const host of ['claude', 'codex'] as const) {
     test(`preamble reaches the CLAUDE.md AND AGENTS.md probe (${host})`, () => {
       // The render must invoke the script that owns the probe...
-      const rendered = generatePreambleBash(makeCtx(host));
+      const rendered = generateInstalledPreamble(makeCtx(host));
       expect(rendered).toContain('gstack-skill-start');
       // ...and the probe must cover both convention files.
       const probe = extractRoutingProbe(SKILL_START_SCRIPT);

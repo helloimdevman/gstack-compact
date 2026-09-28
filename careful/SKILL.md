@@ -16,6 +16,7 @@ hooks:
         - type: command
           command: "bash $HOME/.claude/skills/gstack/careful/bin/check-careful.sh"
           statusMessage: "Checking for destructive commands..."
+preamble-tier: 2
 ---
 <!-- AUTO-GENERATED from SKILL.md.tmpl — do not edit directly -->
 <!-- Regenerate: bun run gen:skill-docs -->
@@ -29,59 +30,48 @@ User can override each warning. Use when touching prod, debugging live systems,
 or working in a shared environment. Use when asked to "be careful", "safety mode",
 "prod mode", or "careful mode".
 
-# /careful — Destructive Command Guardrails
-
-Safety mode is now **active**. Every bash command will be checked for destructive
-patterns before running. If a destructive command is detected, you'll be warned
-and can choose to proceed or cancel.
+## Start /careful
 
 ```bash
-mkdir -p ~/.gstack/analytics
-echo '{"skill":"careful","ts":"'$(date -u +%Y-%m-%dT%H:%M:%SZ)'","repo":"'$(basename "$(git rev-parse --show-toplevel 2>/dev/null)" 2>/dev/null || echo "unknown")'"}'  >> ~/.gstack/analytics/skill-usage.jsonl 2>/dev/null || true
+_G="$HOME/.claude/skills/gstack"
+_R=$(git rev-parse --show-toplevel 2>/dev/null)
+[ -n "$_R" ] && [ -x "$_R/.claude/skills/gstack/bin/gstack-skill-start" ] && _G="$_R/.claude/skills/gstack"
+"$_G/bin/gstack-skill-start" --skill "careful" --model "claude" --parent-pid "$PPID" || echo 'SKILL_START: unavailable'
 ```
 
-## What's protected
+Reuse printed `GSTACK_BIN`; shell variables reset. Missing `GSTACK_CONTRACT` or `SKILL_START_PROTO: 1` blocks protected /careful steps. If `SESSION_KIND` is absent, treat `SESSION_KIND` as `interactive`; do NOT assume Conductor. Onboarding/telemetry: DEFERRED to the next healthy run. Keep `SESSION_ID` and `TEL_START`.
 
-| Pattern | Example | Risk |
-|---------|---------|------|
-| `rm -rf` / `rm -r` / `rm --recursive` | `rm -rf /var/data` | Recursive delete |
-| `DROP TABLE` / `DROP DATABASE` | `DROP TABLE users;` | Data loss |
-| `TRUNCATE` | `TRUNCATE orders;` | Data loss |
-| `git push --force` / `-f` | `git push -f origin main` | History rewrite |
-| `git reset --hard` | `git reset --hard HEAD~3` | Uncommitted work loss |
-| `git checkout .` / `git restore .` | `git checkout .` | Uncommitted work loss |
-| `kubectl delete` | `kubectl delete pod` | Production impact |
-| `docker rm -f` / `docker system prune` | `docker system prune -a` | Container/image loss |
+## Shared contract
 
-## Safe exceptions
+Read the printed `GSTACK_CONTRACT` file before acting. It owns common permissions and safety.
 
-These patterns are allowed without warning:
-- `rm -rf node_modules` / `.next` / `dist` / `__pycache__` / `.cache` / `build` / `.turbo` / `coverage`
+## Model-Specific Behavioral Patch (claude)
 
-## How it works
+The following nudges are tuned for the claude model family. They are
+**subordinate** to skill workflow, STOP points, AskUserQuestion gates, plan-mode
+safety, and /ship review gates. If a nudge below conflicts with skill instructions,
+the skill wins. Treat these as preferences, not rules.
 
-The hook reads the command from the tool input JSON, checks it against the
-patterns above, and returns a `hookSpecificOutput` payload with
-`permissionDecision: "ask"` and a warning reason if a match is found (the
-decision must be nested under `hookSpecificOutput` — Claude Code ignores a
-top-level `permissionDecision`). You can always override a MEDIUM warning and
-proceed.
+**Todo-list discipline.** When working through a multi-step plan, mark each task
+complete individually as you finish it. Do not batch-complete at the end. If a task
+turns out to be unnecessary, mark it skipped with a one-line reason.
 
-## HIGH tier (hard deny)
+**Think before heavy actions.** For complex operations (refactors, migrations,
+non-trivial new features), briefly state your approach before executing. This lets
+the user course-correct cheaply instead of mid-flight.
 
-Two catastrophic shapes are **denied**, not asked: `rm -r`/`-R` of exactly
-`/`, `~`, or `$HOME`, and force-push to the repo's **default branch**. SIMPLE
-commands only (no `;`, `&&`, `||`, `|`, newline) — compound shapes fall
-through to the MEDIUM ask; `--force-with-lease` is never HIGH. A best-effort
-advisory hard-stop, not a policy boundary: the escape hatch is ending the
-opt-in, session-scoped /careful session.
+**Dedicated tools over Bash.** Prefer Read, Edit, Write, Glob, Grep over shell
+equivalents (cat, sed, find, grep). The dedicated tools are cheaper and clearer.
 
-## Project patterns (additive only)
+# /careful
 
-Add warn rules — one POSIX ERE per line, `#` comments OK — in
-`~/.gstack/careful-patterns.txt` (global) or
-`~/.gstack/projects/<slug>/careful-patterns.txt` (per-project). Consulted
-after the built-in families, so config can only ADD rules, never suppress a
-baseline warning. Invalid regex lines are skipped.
+## Outcome
+Activate the destructive-command guard and verify it is active.
 
-To deactivate, end the conversation or start a new one. Hooks are session-scoped.
+## Stop
+Stop when the guard is active. Ask only if a required decision blocks activation.
+
+## Tool contract
+Ordinary destructive commands ask before running: recursive delete of a project path, DROP TABLE, TRUNCATE, git reset --hard, discarding the worktree, kubectl delete, docker rm -f, docker system prune.
+Hard-deny `rm -rf /`, `rm -rf $HOME` (including `~` and `${HOME}`), and force-push of the default branch.
+The program that enforces this is `careful/bin/check-careful.sh`. Do not weaken it.

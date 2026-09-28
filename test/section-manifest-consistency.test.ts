@@ -4,7 +4,7 @@
  * Implements the 3-tier orphan classification from v2_PLAN.md:
  *  - generated orphan  (sections/X.md with no sections/X.md.tmpl)  → FAIL
  *  - hand-edited generated file (X.md missing the AUTO-GENERATED header) → FAIL
- *  - manifest orphan   (sections/X.md.tmpl not listed in manifest)  → WARN (v2.0)
+ *  - manifest orphan   (sections/X.md.tmpl not listed in manifest)  → FAIL
  *
  * Also pins the PASSIVE-manifest contract (CM2 / v2_PLAN.md:663): manifest entries
  * carry only id/file/title/trigger — no machine predicate (applies_when/required_for).
@@ -21,6 +21,7 @@
 import { describe, test, expect } from 'bun:test';
 import * as fs from 'fs';
 import * as path from 'path';
+import * as sectionResolver from '../scripts/resolvers/sections';
 
 const ROOT = path.resolve(import.meta.dir, '..');
 
@@ -37,10 +38,29 @@ function discoverCarvedSkills(): string[] {
 const CARVED_SKILLS = discoverCarvedSkills();
 
 describe('section manifest ↔ filesystem consistency', () => {
+  test('rejects duplicate, missing, escaping, and unreachable sections', () => {
+    const validate = (sectionResolver as any).validateSectionManifest;
+    expect(typeof validate).toBe('function');
+    const bad = {
+      skill: 'sample',
+      sections: [
+        { id: 'one', file: 'one.md', title: 'One', trigger: 'when one' },
+        { id: 'one', file: '../escape.md', title: 'Escape', trigger: 'when two' },
+        { id: 'orphan', file: 'missing.md', title: 'Missing', trigger: 'when three' },
+        { id: 'bad-title', file: 'one.md', title: 42, trigger: 'when four' },
+      ],
+    };
+    const errors: string[] = validate(bad, 'sample', '{{SECTION:one}}', new Set(['one.md']));
+    expect(errors.join(' ')).toContain('duplicate id');
+    expect(errors.join(' ')).toContain('invalid file');
+    expect(errors.join(' ')).toContain('missing file');
+    expect(errors.join(' ')).toContain('unreachable');
+    expect(errors.join(' ')).toContain('missing title or trigger');
+  });
   test('the known carved skills are discovered', () => {
     // Tripwire: if a carve regresses (manifest deleted) this catches it.
     expect(CARVED_SKILLS).toContain('ship');
-    expect(CARVED_SKILLS).toContain('plan-ceo-review');
+    expect(CARVED_SKILLS).toContain('plan');
   });
 
   for (const skill of CARVED_SKILLS) {
@@ -88,15 +108,10 @@ describe('section manifest ↔ filesystem consistency', () => {
         }
       });
 
-      test('manifest orphan check (WARN in v2.0): every .md.tmpl is listed', () => {
+      test('every .md.tmpl is listed in the manifest', () => {
         const listed = new Set(manifest.sections.map((s: { file: string }) => `${s.file}.tmpl`));
         const unlisted = sectionTmpls.filter(t => !listed.has(t));
-        if (unlisted.length > 0) {
-          // v2_PLAN.md: WARN now, FAIL in v2.1. Surface, don't fail the build yet.
-          // eslint-disable-next-line no-console
-          console.warn(`[section-manifest] ${skill} manifest orphan(s) (not in manifest.json): ${unlisted.join(', ')}`);
-        }
-        expect(unlisted.length).toBeLessThanOrEqual(unlisted.length); // always passes; WARN only
+        expect(unlisted).toEqual([]);
       });
 
       test('section ids are unique', () => {

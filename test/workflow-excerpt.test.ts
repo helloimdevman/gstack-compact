@@ -223,7 +223,9 @@ mock.module(${JSON.stringify(runner)}, () => ({resolveClaudeBinary:()=>'/fixture
   throw Error('capture failed to stop before answering');
 }}));
 const {captureModeSelectionAuq, verboseSkill} = await import(${JSON.stringify(helper)});
-const current = fs.readFileSync(${JSON.stringify(join(import.meta.dir, '..', 'plan-ceo-review', 'SKILL.md'))}, 'utf8');
+const skillDir = ${JSON.stringify(join(import.meta.dir, '..', 'plan-ceo-review'))};
+const current = [fs.readFileSync(path.join(skillDir, 'SKILL.md'), 'utf8'),
+  ...fs.readdirSync(path.join(skillDir, 'sections')).filter(name => name.endsWith('.md')).map(name => fs.readFileSync(path.join(skillDir, 'sections', name), 'utf8'))].join('\\n');
 const results = [];
 for (const [variant, skill] of [['current', current], ['frozen', verboseSkill()]]) {
   const planDir = path.join(${JSON.stringify(dir)}, variant);

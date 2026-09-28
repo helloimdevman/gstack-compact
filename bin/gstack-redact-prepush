@@ -6,7 +6,7 @@
  * THIS IS A GUARDRAIL, NOT ENFORCEMENT. `git push --no-verify` bypasses it, as
  * does `GSTACK_REDACT_PREPUSH=skip`. It catches accidental credential pushes,
  * the most common real-world leak. It does NOT scan history, binary/LFS/submodule
- * files, or non-added lines. History scanning is /cso's job.
+ * files, or non-added lines. History scanning requires a separate audit.
  *
  * Git pre-push interface: refs are read from STDIN, one per line:
  *   <local ref> <local sha> <remote ref> <remote sha>

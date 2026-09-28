@@ -220,40 +220,21 @@ function readPackageVersion(): string {
 }
 
 function defaultDaemonScript(): string {
-  // design/src/daemon-client.ts → daemon.ts is a sibling. Only used in dev
-  // when this process is `bun run cli.ts`; the compiled-binary path
-  // self-execs instead (see resolveSpawnCommand).
+  // daemon.ts is a sibling in both the source tree and the installed bundle.
   return path.join(import.meta.dir, "daemon.ts");
 }
 
 /**
- * Compute the argv to spawn the daemon. Two modes:
- *
- *   Compiled binary (`design/dist/design`): re-exec ourselves with
- *   --daemon-mode. process.execPath IS the compiled design binary;
- *   spawning it again with the flag runs the daemon (see the
- *   --daemon-mode branch at the bottom of cli.ts).
- *
- *   Dev (`bun run design/src/cli.ts`): process.execPath is bun, so we
- *   invoke `bun run <daemon.ts> --marker ...` directly.
- *
- * Tests can override the dev script via opts.script.
+ * Use the same Bun runtime for source and installed bundles.
+ * Tests can override the script via opts.script.
  */
 function resolveSpawnCommand(scriptOverride: string | undefined): {
   command: string;
   args: string[];
 } {
-  const execBase = path.basename(process.execPath).toLowerCase();
-  const isCompiledHost = execBase !== "bun" && execBase !== "bun.exe" && execBase !== "node";
-  if (isCompiledHost && !scriptOverride) {
-    return {
-      command: process.execPath,
-      args: ["--daemon-mode", "--marker", CMDLINE_MARKER],
-    };
-  }
   const script = scriptOverride ?? defaultDaemonScript();
   return {
-    command: "bun",
+    command: process.execPath,
     args: ["run", script, "--marker", CMDLINE_MARKER],
   };
 }

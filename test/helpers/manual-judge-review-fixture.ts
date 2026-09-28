@@ -1,3 +1,4 @@
+import { createHash } from 'node:crypto';
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import type { EvalTestEntry } from './eval-store';
@@ -14,4 +15,13 @@ export function manualReviewFixture(root = resolve(import.meta.dir, '../..')): E
     manual_review: { approval, refusal: { stop_reason: 'refusal', response_id: 'msg_synthetic_fixture',
       request_id: 'req_synthetic_fixture', model: approval.model, input_tokens: 1, output_tokens: 0, text_blocks: 0 } },
   };
+}
+
+/** The committed approval hashes the pre-cut prompt. CLI tests need a consistent in-memory claim. */
+export function alignedManualReviewFixture(root?: string): EvalTestEntry {
+  const entry = manualReviewFixture(root);
+  const approval = entry.manual_review!.approval;
+  approval.prompt_sha256 = createHash('sha256').update(entry.prompt!).digest('hex');
+  approval.prompt_bytes = Buffer.byteLength(entry.prompt!);
+  return entry;
 }

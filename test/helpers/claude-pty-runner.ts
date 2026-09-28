@@ -14,14 +14,14 @@
  * invoking the AskUserQuestion tool. The SDK never sees it. Real PTY
  * does — it shows up as text on screen with `❯` cursor markers.
  *
- * Architecture: pure Bun.spawn — no node-pty, no native modules, no chmod
- * fixes. Bun 1.3.10+ has built-in PTY support via the `terminal:` spawn
- * option. Pattern borrowed from cc-pty-import branch's terminal-agent.ts
+ * Architecture: Bun.Terminal when this Bun has it, otherwise scripts/pty-bridge.py.
+ * Pattern borrowed from cc-pty-import branch's terminal-agent.ts
  * (the WS/cookie/Origin scaffolding there is for the browser sidebar;
  * tests don't need it).
  */
 
 import { resolveEvalModel } from '../../lib/eval-model';
+import { bunHasTerminal, spawnPty } from '../../lib/pty-bridge';
 import * as fs from 'fs';
 import * as os from 'os';
 import * as path from 'path';
@@ -4116,20 +4116,20 @@ export async function launchClaudePty(
         hooks[event] = [...(hooks[event] ?? []), ...entries];
       args.push('--settings', JSON.stringify({hooks}));
     } else if (pendingExit) args.push('--settings', pendingExit.settings);
-    proc = (Bun as any).spawn([claudePath, ...args], {
-    terminal: {
-      cols,
-      rows,
-      data(_t: unknown, chunk: Buffer) {
-        const text = chunk.toString('utf-8');
-        buffer += text;
-        if (screen && !screenClosing) screen.write(text);
-        notifyOutput();
-      },
-    },
-    cwd,
-    env: childEnv,
-  }); } catch (error) { pendingFiles.forEach(({ recorder }) => recorder.dispose()); pendingExit?.dispose(); pendingQuestion?.dispose(); pendingArtifact?.dispose(); await disposeScreen(); throw error; }
+    const onData = (chunk: Buffer) => {
+      const text = chunk.toString('utf-8');
+      buffer += text;
+      if (screen && !screenClosing) screen.write(text);
+      notifyOutput();
+    };
+    proc = bunHasTerminal()
+      ? (Bun as any).spawn([claudePath, ...args], {
+          terminal: { cols, rows, data(_t: unknown, chunk: Buffer) { onData(chunk); } },
+          cwd,
+          env: childEnv,
+        })
+      : spawnPty([claudePath, ...args], { cwd, env: childEnv, cols, rows, onData });
+  } catch (error) { pendingFiles.forEach(({ recorder }) => recorder.dispose()); pendingExit?.dispose(); pendingQuestion?.dispose(); pendingArtifact?.dispose(); await disposeScreen(); throw error; }
 
   // Track exit so waitForAny can fail fast if claude crashes.
   let exitedPromise: Promise<void> = Promise.resolve();

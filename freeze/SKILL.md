@@ -22,6 +22,7 @@ hooks:
         - type: command
           command: "bash $HOME/.claude/skills/gstack/freeze/bin/check-freeze.sh"
           statusMessage: "Checking freeze boundary..."
+preamble-tier: 2
 ---
 <!-- AUTO-GENERATED from SKILL.md.tmpl — do not edit directly -->
 <!-- Regenerate: bun run gen:skill-docs -->
@@ -35,67 +36,49 @@ Write outside the allowed path. Use when debugging to prevent accidentally
 Use when asked to "freeze", "restrict edits", "only edit this folder",
 or "lock down edits".
 
-# /freeze — Restrict Edits to a Directory
-
-Lock file edits to a specific directory. Any Edit or Write operation targeting
-a file outside the allowed path will be **blocked** (not just warned).
+## Start /freeze
 
 ```bash
-mkdir -p ~/.gstack/analytics
-echo '{"skill":"freeze","ts":"'$(date -u +%Y-%m-%dT%H:%M:%SZ)'","repo":"'$(basename "$(git rev-parse --show-toplevel 2>/dev/null)" 2>/dev/null || echo "unknown")'"}'  >> ~/.gstack/analytics/skill-usage.jsonl 2>/dev/null || true
+_G="$HOME/.claude/skills/gstack"
+_R=$(git rev-parse --show-toplevel 2>/dev/null)
+[ -n "$_R" ] && [ -x "$_R/.claude/skills/gstack/bin/gstack-skill-start" ] && _G="$_R/.claude/skills/gstack"
+"$_G/bin/gstack-skill-start" --skill "freeze" --model "claude" --parent-pid "$PPID" || echo 'SKILL_START: unavailable'
 ```
 
-## Setup
+Reuse printed `GSTACK_BIN`; shell variables reset. Missing `GSTACK_CONTRACT` or `SKILL_START_PROTO: 1` blocks protected /freeze steps. If `SESSION_KIND` is absent, treat `SESSION_KIND` as `interactive`; do NOT assume Conductor. Onboarding/telemetry: DEFERRED to the next healthy run. Keep `SESSION_ID` and `TEL_START`.
 
-Ask the user which directory to restrict edits to. Use AskUserQuestion:
+## Shared contract
 
-- Question: "Which directory should I restrict edits to? Files outside this path will be blocked from editing."
-- Text input (not multiple choice) — the user types a path.
+Read the printed `GSTACK_CONTRACT` file before acting. It owns common permissions and safety.
 
-Once the user provides a directory path:
+## Model-Specific Behavioral Patch (claude)
 
-1. Resolve it to an absolute path:
-```bash
-FREEZE_DIR=$(cd "<user-provided-path>" 2>/dev/null && pwd)
-echo "$FREEZE_DIR"
-```
+The following nudges are tuned for the claude model family. They are
+**subordinate** to skill workflow, STOP points, AskUserQuestion gates, plan-mode
+safety, and /ship review gates. If a nudge below conflicts with skill instructions,
+the skill wins. Treat these as preferences, not rules.
 
-2. Ensure trailing slash and save to the freeze state file:
-```bash
-FREEZE_DIR="${FREEZE_DIR%/}/"
-eval "$(~/.claude/skills/gstack/bin/gstack-paths)"
-STATE_DIR="$GSTACK_STATE_ROOT"
-mkdir -p "$STATE_DIR"
-echo "$FREEZE_DIR" > "$STATE_DIR/freeze-dir.txt"
-echo "Freeze boundary set: $FREEZE_DIR"
-```
+**Todo-list discipline.** When working through a multi-step plan, mark each task
+complete individually as you finish it. Do not batch-complete at the end. If a task
+turns out to be unnecessary, mark it skipped with a one-line reason.
 
-Tell the user: "Edits are now restricted to `<path>/`. Any Edit or Write
-outside this directory will be blocked. To change the boundary, run `/freeze`
-again. To remove it, run `/unfreeze` or end the session."
+**Think before heavy actions.** For complex operations (refactors, migrations,
+non-trivial new features), briefly state your approach before executing. This lets
+the user course-correct cheaply instead of mid-flight.
 
-## How it works
+**Dedicated tools over Bash.** Prefer Read, Edit, Write, Glob, Grep over shell
+equivalents (cat, sed, find, grep). The dedicated tools are cheaper and clearer.
 
-The hook reads `file_path` from the Edit/Write tool input JSON (shared
-real-JSON extractor with /careful — one copy, sourced by both hooks), then
-checks whether the path starts with the freeze directory. If not, it returns a
-`hookSpecificOutput` payload with `permissionDecision: "deny"` to block the
-operation (nested under `hookSpecificOutput` — Claude Code ignores a top-level
-`permissionDecision`).
+# /freeze
 
-Polarity is fail-closed: a tool payload the hook cannot parse is DENIED, not
-allowed — a boundary that fails open is not a boundary. A payload that parses
-but has no `file_path` (a non-file tool) is allowed. Symlinks are resolved
-through their FINAL component, so an in-boundary symlink pointing outside the
-boundary is checked against its target.
+## Outcome
+`/freeze` is finished only when this is true: Restrict file edits to a specific directory for the session. Blocks Edit and Write outside the allowed path. Use when debugging to prevent accidentally "fixing" unrelated code, or when you want to scope changes to one module. Use when asked to "freeze", "restrict edits", "only edit this folder", or "lock down edits". (gstack) Verify that outcome for `/freeze`, then stop.
 
-The freeze boundary persists for the session via the state file. The hook
-script reads it on every Edit/Write invocation. Boundaries containing spaces
-are supported.
+## Constraints
+Stay on the `/freeze` job. Do not expand `/freeze` into adjacent cleanup or speculative hardening. Do not start another gstack skill unless the tool contract for `/freeze` says to hand off. Do not read `/freeze` sections/ unless the user asks for the legacy checklist.
 
-## Notes
+## Stop
+Stop `/freeze` when the outcome above is verified, or when `/freeze` is blocked on a destructive, irreversible, or product-defining fact. If blocked, ask that decision with a recommendation and wait for the answer. Then finish `/freeze` or stop.
 
-- The trailing `/` on the freeze directory prevents `/src` from matching `/src-old`
-- Freeze applies to Edit and Write tools only — Read, Bash, Glob, Grep are unaffected
-- This prevents accidental edits, not a security boundary — Bash commands like `sed` can still modify files outside the boundary
-- To deactivate, run `/unfreeze` or end the conversation
+## Tool contract
+Limit Edit and Write to the directory the user names for this session. Refuse edits outside it until `/unfreeze`.
