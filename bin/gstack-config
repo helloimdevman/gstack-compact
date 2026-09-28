@@ -228,6 +228,14 @@ case "${1:-}" in
       echo "Warning: timeline_stop_hook '$VALUE' not recognized. Valid values: yes, no. Using yes." >&2
       VALUE="yes"
     fi
+    if [ "$KEY" = "design_detector" ] && [ "$VALUE" != "auto" ] && [ "$VALUE" != "off" ]; then
+      echo "Error: design_detector '$VALUE' not recognized. Valid values: auto, off. Existing value left unchanged." >&2
+      exit 1
+    fi
+    if [ "$KEY" = "design_detector_install_prompted" ] && [ "$VALUE" != "true" ] && [ "$VALUE" != "false" ]; then
+      echo "Error: design_detector_install_prompted '$VALUE' not recognized. Valid values: true, false. Existing value left unchanged." >&2
+      exit 1
+    fi
     # cross_project_learnings: empty get is the first-run prompt sentinel.
     # Skills enable only on the literal "true". A typo must not persist — that
     # keeps the feature off and suppresses the prompt. Reject, like

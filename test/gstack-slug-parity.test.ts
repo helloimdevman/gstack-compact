@@ -1,13 +1,12 @@
 /**
- * bin/gstack-slug ↔ browse/bin/remote-slug parity.
+ * bin/gstack-slug remote identity and walk-up behavior.
  *
  * The bug this pins (2026-08-17, observed live in a Conductor worktree of
  * garrytan/gstack): a stray marker-bearing ancestor above the repo — an empty
  * `~/.git` directory that is not even a valid git repo — captured
  * gstack-slug's "outermost strong marker" walk-up as the project root. That
  * ancestor has no `origin` remote, so the resolver silently degraded to
- * `basename($HOME)` and emitted `SLUG=garrytan`, while remote-slug (which
- * asks git for the containing repo's remote) correctly said
+ * `basename($HOME)` and emitted `SLUG=garrytan` instead of
  * `garrytan-gstack`. Every store keyed on the slug (decisions, timeline,
  * ceo-plans, learnings) filed into ~/.gstack/projects/garrytan/ — one bucket
  * shared by every repo under $HOME.
@@ -15,17 +14,16 @@
  * The fix makes the canonical remote authoritative: gstack-slug now walks the
  * ancestor chain for the OUTERMOST dir with a `.git` entry (dir for normal
  * clones, FILE for git-worktrees) whose `origin` remote resolves, and derives
- * `owner-repo` with the exact same parse remote-slug uses. Marker-only
+ * `owner-repo` from the canonical origin. Marker-only
  * ancestors that are not remote-bearing repos can still anchor the basename
  * FALLBACK, but they can no longer shadow a real remote.
  *
  * Contracts pinned here:
- *  - Parity: for any repo (plain clone or git-worktree) whose slug derivation
- *    reaches a canonical remote, gstack-slug's SLUG equals remote-slug's
- *    output — including under a stray-marker home.
+ *  - Remote identity: for any repo (plain clone or git-worktree) whose slug
+ *    derivation reaches a canonical remote, SLUG is owner-repo — including
+ *    under a stray-marker home.
  *  - Walk-up preserved: a nested inner repo under an outer canonical-remote
- *    repo resolves to the OUTER repo's owner-repo (outermost wins), matching
- *    remote-slug run at the outer root.
+ *    repo resolves to the OUTER repo's owner-repo (outermost wins).
  *  - Fallback preserved: a no-remote repo still resolves to its basename.
  *  - Cache self-heal: a pre-fix degraded cache entry (== the bogus marker
  *    root's basename) is rewritten to the canonical slug; legit #2212 sticky
@@ -42,7 +40,6 @@ import * as os from 'os';
 
 const ROOT = path.resolve(import.meta.dir, '..');
 const SLUG_SCRIPT = path.join(ROOT, 'bin', 'gstack-slug');
-const REMOTE_SLUG_SCRIPT = path.join(ROOT, 'browse', 'bin', 'remote-slug');
 
 function baseEnv(tmpHome: string): Record<string, string | undefined> {
   // Drop any ambient override: a sibling test leaking GSTACK_PROJECT_SLUG in
@@ -53,15 +50,6 @@ function baseEnv(tmpHome: string): Record<string, string | undefined> {
 
 function runSlug(cwd: string, tmpHome: string): SpawnSyncReturns<string> {
   return spawnSync('bash', [SLUG_SCRIPT], {
-    cwd,
-    env: baseEnv(tmpHome),
-    encoding: 'utf8',
-    timeout: 10_000,
-  });
-}
-
-function runRemoteSlug(cwd: string, tmpHome: string): SpawnSyncReturns<string> {
-  return spawnSync('bash', [REMOTE_SLUG_SCRIPT], {
     cwd,
     env: baseEnv(tmpHome),
     encoding: 'utf8',
@@ -93,19 +81,14 @@ function encodedCacheKey(absPath: string): string {
   return absPath.replace(/\//g, '_');
 }
 
-/** Assert both scripts succeed in `cwd` and emit the same slug. */
-function expectParity(cwd: string, tmpHome: string, expected: string): void {
+/** Assert the live slug resolver emits the expected identity. */
+function expectSlug(cwd: string, tmpHome: string, expected: string): void {
   const gstack = runSlug(cwd, tmpHome);
-  const remote = runRemoteSlug(cwd, tmpHome);
   expect(gstack.status).toBe(0);
-  expect(remote.status).toBe(0);
-  const remoteOut = remote.stdout.trim();
   expect(slugOf(gstack)).toBe(expected);
-  expect(remoteOut).toBe(expected);
-  expect(slugOf(gstack)).toBe(remoteOut);
 }
 
-describe('gstack-slug ↔ remote-slug parity', () => {
+describe('gstack-slug remote identity', () => {
   let tmpHome: string;
   let fixtures: string;
 
@@ -121,29 +104,29 @@ describe('gstack-slug ↔ remote-slug parity', () => {
     try { fs.rmSync(fixtures, { recursive: true, force: true }); } catch {}
   });
 
-  test('plain clone, https remote WITH .git suffix — identical owner-repo slug', () => {
+  test('plain clone, https remote WITH .git suffix — owner-repo slug', () => {
     const repo = makeRepo(path.join(fixtures, 'proj'), 'https://github.com/acme/widgets.git');
-    expectParity(repo, tmpHome, 'acme-widgets');
+    expectSlug(repo, tmpHome, 'acme-widgets');
   });
 
-  test('plain clone, https remote WITHOUT .git suffix (live-bug URL shape) — identical slug', () => {
+  test('plain clone, https remote WITHOUT .git suffix (live-bug URL shape) — owner-repo slug', () => {
     const repo = makeRepo(path.join(fixtures, 'proj'), 'https://github.com/garrytan/gstack');
-    expectParity(repo, tmpHome, 'garrytan-gstack');
+    expectSlug(repo, tmpHome, 'garrytan-gstack');
   });
 
-  test('plain clone, scp-like ssh remote — identical owner-repo slug', () => {
+  test('plain clone, scp-like ssh remote — owner-repo slug', () => {
     const repo = makeRepo(path.join(fixtures, 'proj'), 'git@github.com:acme/widgets.git');
-    expectParity(repo, tmpHome, 'acme-widgets');
+    expectSlug(repo, tmpHome, 'acme-widgets');
   });
 
-  test('git-worktree of a clone (.git FILE, the Conductor shape) — identical slug', () => {
+  test('git-worktree of a clone (.git FILE, the Conductor shape) — owner-repo slug', () => {
     const main = makeRepo(path.join(fixtures, 'main-clone'), 'https://github.com/garrytan/gstack');
     git(['-C', main, '-c', 'user.email=t@t', '-c', 'user.name=t', 'commit', '-q', '--allow-empty', '-m', 'init']);
     const wt = path.join(fixtures, 'wt');
     git(['-C', main, 'worktree', 'add', '-q', wt, '-b', 'feature-branch']);
     // Sanity: worktree roots carry a .git FILE, not a directory.
     expect(fs.statSync(path.join(wt, '.git')).isFile()).toBe(true);
-    expectParity(wt, tmpHome, 'garrytan-gstack');
+    expectSlug(wt, tmpHome, 'garrytan-gstack');
   });
 
   test('LIVE BUG SHAPE: stray empty .git on an ancestor "home" no longer degrades the slug', () => {
@@ -161,8 +144,8 @@ describe('gstack-slug ↔ remote-slug parity', () => {
 
     // Both the plain clone and the worktree must resolve to owner-repo — the
     // pre-fix resolver emitted `strayhome` (the marker root's basename) here.
-    expectParity(main, tmpHome, 'garrytan-gstack');
-    expectParity(wt, tmpHome, 'garrytan-gstack');
+    expectSlug(main, tmpHome, 'garrytan-gstack');
+    expectSlug(wt, tmpHome, 'garrytan-gstack');
     expect(slugOf(runSlug(wt, tmpHome))).not.toBe('strayhome');
   });
 
@@ -172,12 +155,8 @@ describe('gstack-slug ↔ remote-slug parity', () => {
 
     const gstack = runSlug(inner, tmpHome);
     expect(gstack.status).toBe(0);
-    // Outermost remote-bearing repo wins — same answer as remote-slug asked
-    // at the outer root. (remote-slug asked from INSIDE the inner repo can't
-    // see past the inner .git — its remote derivation does not succeed there,
-    // so the parity clause doesn't apply; the walk-up contract does.)
+    // Outermost remote-bearing repo wins, even from inside the nested repo.
     expect(slugOf(gstack)).toBe('acme-outer');
-    expect(runRemoteSlug(outer, tmpHome).stdout.trim()).toBe('acme-outer');
   });
 
   test('walk-up preserved: nested inner repo WITH its own remote still resolves to the OUTER repo slug', () => {
@@ -190,14 +169,11 @@ describe('gstack-slug ↔ remote-slug parity', () => {
     expect(slugOf(gstack)).toBe('acme-outer');
   });
 
-  test('fallback unchanged: no-remote repo resolves to its basename (and remote-slug agrees)', () => {
+  test('fallback unchanged: no-remote repo resolves to its basename', () => {
     const repo = makeRepo(path.join(fixtures, 'lonely'));
     const gstack = runSlug(repo, tmpHome);
     expect(gstack.status).toBe(0);
     expect(slugOf(gstack)).toBe('lonely');
-    // remote-slug's own no-remote fallback is basename(toplevel) — parity
-    // holds incidentally on this shape too.
-    expect(runRemoteSlug(repo, tmpHome).stdout.trim()).toBe('lonely');
   });
 
   test('cache self-heal: a pre-fix degraded cache entry is rewritten to the canonical slug', () => {

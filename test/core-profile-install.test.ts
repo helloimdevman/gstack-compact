@@ -7,7 +7,7 @@ import { installCoreProfile } from '../scripts/install-core-profile';
 const sourceRoot = path.resolve(import.meta.dir, '..');
 
 for (const host of ['claude', 'codex'] as const) {
-  test(`${host} core install registers 10 and preserves a foreign collision`, async () => {
+  test(`${host} core install registers 11 and preserves a foreign collision`, async () => {
     const temp = fs.mkdtempSync(path.join(os.tmpdir(), 'gstack-core-install-'));
     const skillsDir = path.join(temp, 'host skills');
     const stateRoot = path.join(temp, 'state', `${host}-core`);
@@ -15,8 +15,8 @@ for (const host of ['claude', 'codex'] as const) {
     try {
       const opts = { host, sourceRoot, skillsDir, stateRoot, model: host === 'claude' ? 'claude' as const : 'gpt' as const };
       const installed = await installCoreProfile(opts);
-      expect(installed).toHaveLength(10);
-      expect(fs.readdirSync(skillsDir).filter(name => fs.existsSync(path.join(skillsDir, name, 'SKILL.md')))).toHaveLength(10);
+      expect(installed).toHaveLength(11);
+      expect(fs.readdirSync(skillsDir).filter(name => fs.existsSync(path.join(skillsDir, name, 'SKILL.md')))).toHaveLength(11);
       expect(fs.existsSync(path.join(skillsDir, plan, 'sections'))).toBe(true);
       expect(fs.existsSync(path.join(skillsDir, 'gstack', 'CONTRACT.md'))).toBe(true);
       expect(fs.existsSync(path.join(skillsDir, 'gstack', 'plan', 'SKILL.md'))).toBe(false);
@@ -41,15 +41,15 @@ test('explicit compat to core to compat keeps the selected catalog isolated', as
   const common = { host: 'claude' as const, sourceRoot, skillsDir, model: 'claude' as const };
   try {
     const compat = await installCoreProfile({ ...common, profile: 'compat', stateRoot: path.join(temp, 'state', 'compat') });
-    expect(compat.length).toBeGreaterThan(10);
-    expect(fs.existsSync(path.join(skillsDir, 'cso', 'SKILL.md'))).toBe(true);
+    expect(compat.length).toBeGreaterThan(11);
+    expect(fs.existsSync(path.join(skillsDir, 'qa-only', 'SKILL.md'))).toBe(true);
     const core = await installCoreProfile({ ...common, profile: 'core', stateRoot: path.join(temp, 'state', 'core') });
-    expect(core).toHaveLength(10);
-    expect(fs.existsSync(path.join(skillsDir, 'cso'))).toBe(false);
+    expect(core).toHaveLength(11);
+    expect(fs.existsSync(path.join(skillsDir, 'qa-only'))).toBe(false);
     expect(fs.existsSync(path.join(skillsDir, 'plan', 'SKILL.md'))).toBe(true);
     const restored = await installCoreProfile({ ...common, profile: 'compat', stateRoot: path.join(temp, 'state', 'compat') });
-    expect(restored.length).toBeGreaterThan(10);
-    expect(fs.existsSync(path.join(skillsDir, 'cso', 'SKILL.md'))).toBe(true);
+    expect(restored.length).toBeGreaterThan(11);
+    expect(fs.existsSync(path.join(skillsDir, 'qa-only', 'SKILL.md'))).toBe(true);
     expect(JSON.parse(fs.readFileSync(path.join(skillsDir, 'gstack', '.gstack-install.json'), 'utf8')).skillProfile).toBe('compat');
   } finally {
     fs.rmSync(temp, { recursive: true, force: true });
@@ -92,7 +92,7 @@ test('Claude core prefix changes both the sibling directory and frontmatter name
     const entry = fs.readFileSync(path.join(skillsDir, 'gstack-plan', 'SKILL.md'), 'utf8');
     expect(entry).toMatch(/^name: gstack-plan$/m);
     expect(fs.existsSync(path.join(skillsDir, 'plan'))).toBe(false);
-    expect(fs.readdirSync(skillsDir).filter(name => fs.existsSync(path.join(skillsDir, name, 'SKILL.md')))).toHaveLength(10);
+    expect(fs.readdirSync(skillsDir).filter(name => fs.existsSync(path.join(skillsDir, name, 'SKILL.md')))).toHaveLength(11);
   } finally {
     fs.rmSync(temp, { recursive: true, force: true });
   }
@@ -108,7 +108,7 @@ test('a pre-manifest core install can refresh, but a mixed legacy directory cann
       const manifest = path.join(skillsDir, name, '.gstack-manifest.json');
       if (fs.existsSync(manifest)) fs.unlinkSync(manifest);
     }
-    expect(await installCoreProfile(opts)).toHaveLength(10);
+    expect(await installCoreProfile(opts)).toHaveLength(11);
     const note = path.join(skillsDir, 'gstack', 'my-notes.md');
     fs.unlinkSync(path.join(skillsDir, 'gstack', '.gstack-manifest.json'));
     fs.writeFileSync(note, 'user content\n');

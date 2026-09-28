@@ -15,29 +15,26 @@ const ROOT = path.resolve(import.meta.path, '..', '..');
 const census = skillCensus(ROOT);
 
 describe('skillCensus', () => {
-  it('physicalSkillFiles includes the root router and the symlinked dir', () => {
+  it('physicalSkillFiles includes the root router and current browser skill', () => {
     expect(census.physicalSkillFiles).toContain('SKILL.md');
-    expect(census.physicalSkillFiles).toContain('connect-chrome/SKILL.md');
-    expect(census.physicalSkillFiles).toContain('open-gstack-browser/SKILL.md');
+    expect(census.physicalSkillFiles).toContain('browse/SKILL.md');
   });
 
-  it('authoredSkills dedupes the connect-chrome symlink and excludes the root router', () => {
-    expect(census.authoredSkills).toContain('open-gstack-browser');
+  it('authoredSkills includes browse and excludes the retired browser alias', () => {
+    expect(census.authoredSkills).toContain('browse');
     expect(census.authoredSkills).not.toContain('connect-chrome');
     // Root router is not an authored skill; its dir entry would be '' anyway.
     for (const name of census.authoredSkills) expect(name.length).toBeGreaterThan(0);
   });
 
-  it('registryEntries carries the root alias and collapses shared frontmatter names', () => {
+  it('registryEntries carries the root alias and current browser entry', () => {
     expect(census.registryEntries).toContain('_gstack-command');
-    expect(
-      census.registryEntries.filter((n) => n === 'open-gstack-browser'),
-    ).toHaveLength(1);
+    expect(census.registryEntries.filter((n) => n === 'browse')).toHaveLength(1);
   });
 
-  it('count relationships hold: physical = authored + root + symlink dups', () => {
+  it('count relationships hold: physical = authored + root', () => {
     const symlinkDups = census.physicalSkillFiles.length - 1 - census.authoredSkills.length;
-    expect(symlinkDups).toBeGreaterThanOrEqual(1); // connect-chrome today
+    expect(symlinkDups).toBe(0);
     // Registry = unique frontmatter names + root alias. It can only collapse
     // entries relative to physical, never invent them.
     expect(census.registryEntries.length).toBeLessThanOrEqual(census.physicalSkillFiles.length);
@@ -47,8 +44,7 @@ describe('skillCensus', () => {
   it('frontmatterName mirrors setup: first ^name: line, whitespace stripped', () => {
     const qa = frontmatterName(path.join(ROOT, 'qa', 'SKILL.md'));
     expect(qa).toBe('qa');
-    const alias = frontmatterName(path.join(ROOT, 'connect-chrome', 'SKILL.md'));
-    expect(alias).toBe('open-gstack-browser');
+    expect(frontmatterName(path.join(ROOT, 'browse', 'SKILL.md'))).toBe('browse');
     expect(frontmatterName(path.join(ROOT, 'no-such-dir', 'SKILL.md'))).toBe('');
   });
 

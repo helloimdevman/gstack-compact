@@ -368,6 +368,13 @@ describe('setup --team / --no-team / -q', () => {
       write('design/dist/.build-complete', 'bun-source-v1\n');
       fs.mkdirSync(commands);
       fs.mkdirSync(home);
+      // These flags are independent of profile migration. Seed an existing
+      // compat registration so setup exercises the legacy link path here;
+      // core registration is covered by core-profile-install.test.ts.
+      for (const skills of [path.join(home, '.claude/skills'), path.join(cwd, '.claude/skills')]) {
+        fs.mkdirSync(skills, { recursive: true });
+        fs.symlinkSync(cwd, path.join(skills, 'gstack'), 'dir');
+      }
       // Only installation/generation prerequisites are stubbed. The model
       // resolver, flag parser, logging, skill registration and completion run
       // unchanged. Unexpected commands (including a build) fail the test.
@@ -379,6 +386,7 @@ case "$*" in
     [[ "$#" -eq 5 && "$2" = --install-dir && "$4" = --skills-dir ]] || exit 90
     exit 0 ;;
   'run gen:skill-docs --host codex --model gpt-6-astra') mkdir -p .agents/skills; exit 0 ;;
+  'run gen:skill-docs --host claude --model claude') exit 0 ;;
   'run scripts/resolve-codex-generation-model.ts') exec ${quote(process.execPath)} "$@" ;;
   *) echo "Unexpected setup prerequisite: $*" >&2; exit 90 ;;
 esac

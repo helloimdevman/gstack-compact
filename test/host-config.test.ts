@@ -33,8 +33,8 @@ const RESOLVER_NAMES = new Set(Object.keys(RESOLVERS));
 // ─── hosts/index.ts ─────────────────────────────────────────
 
 describe('hosts/index.ts', () => {
-  test('ALL_HOST_CONFIGS has 10 hosts', () => {
-    expect(ALL_HOST_CONFIGS.length).toBe(10);
+  test('ALL_HOST_CONFIGS has 9 hosts', () => {
+    expect(ALL_HOST_CONFIGS.length).toBe(9);
   });
 
   test('ALL_HOST_NAMES matches config names', () => {
@@ -218,13 +218,13 @@ describe('validateHostConfig', () => {
 
   test('valid suppressedResolvers pass when resolver names provided', () => {
     const c = makeValid();
-    c.suppressedResolvers = ['DESIGN_OUTSIDE_VOICES', 'REVIEW_ARMY'];
+    c.suppressedResolvers = ['DESIGN_DETECTOR', 'MODEL_OVERLAY'];
     expect(validateHostConfig(c, RESOLVER_NAMES)).toEqual([]);
   });
 
   test('unknown suppressedResolvers entry is caught', () => {
     const c = makeValid();
-    c.suppressedResolvers = ['DESIGN_OUTSIDE_VOICES', 'NONEXISTENT_RESOLVER'];
+    c.suppressedResolvers = ['DESIGN_DETECTOR', 'NONEXISTENT_RESOLVER'];
     const errors = validateHostConfig(c, RESOLVER_NAMES);
     expect(errors.some(e => e.includes('NONEXISTENT_RESOLVER'))).toBe(true);
   });
@@ -281,14 +281,14 @@ describe('HOST_PATHS derivation from configs', () => {
   test('Claude uses literal home paths (no env vars)', () => {
     expect(HOST_PATHS.claude.skillRoot).toBe('~/.claude/skills/gstack');
     expect(HOST_PATHS.claude.binDir).toBe('~/.claude/skills/gstack/bin');
-    expect(HOST_PATHS.claude.browseDir).toBe('~/.claude/skills/gstack/browse/dist');
+    expect(HOST_PATHS.claude.browseDir).toBeUndefined();
     expect(HOST_PATHS.claude.designDir).toBe('~/.claude/skills/gstack/design/dist');
   });
 
   test('Codex uses $GSTACK_ROOT env vars', () => {
     expect(HOST_PATHS.codex.skillRoot).toBe('$GSTACK_ROOT');
     expect(HOST_PATHS.codex.binDir).toBe('$GSTACK_BIN');
-    expect(HOST_PATHS.codex.browseDir).toBe('$GSTACK_BROWSE');
+    expect(HOST_PATHS.codex.browseDir).toBeUndefined();
     expect(HOST_PATHS.codex.designDir).toBe('$GSTACK_DESIGN');
   });
 
@@ -394,8 +394,8 @@ describe('host-config-export.ts CLI', () => {
     expect(exitCode).toBe(0);
     const lines = stdout.split('\n');
     expect(lines).toContain('bin');
-    expect(lines).toContain('browse/dist');
-    expect(lines).toContain('browse/bin');
+    expect(lines).toContain('design/dist');
+    expect(lines).not.toContain('browse/dist');
     expect(lines).toContain('review/design-checklist.md');
     expect(lines).toContain('review/greptile-triage.md');
     expect(lines).toContain('review/specialists');
@@ -460,17 +460,9 @@ describe('golden-file regression', () => {
     fs.rmSync(GOLDEN_OUT, { recursive: true, force: true });
   });
 
-  test('every Claude outside-voice mode uses the restricted runner and exposes an explicit model override', () => {
-    const rendered = fs.readFileSync(path.join(GOLDEN_OUT, '.agents/skills/gstack-claude-code/SKILL.md'), 'utf8');
-    const calls = rendered.split('\n').filter(line => line.includes('"$CLAUDE_RUNNER" --cwd'));
-    expect(calls).toHaveLength(3);
-    expect(rendered.match(/CLAUDE_RUNNER="\$RUNTIME_ROOT\/bin\/gstack-claude-code"/g)).toHaveLength(3);
-    for (const call of calls) {
-      expect(call).toContain('--timeout-ms 600000');
-    }
-    expect(rendered).toContain('GSTACK_CLAUDE_MODEL=<model>');
-    expect(rendered).toContain('Without an override, retain Claude');
-    expect(fs.existsSync(path.join(GOLDEN_OUT, '.agents/skills/gstack-claude/SKILL.md'))).toBe(false);
+  test('Codex render contains the plan skill without the retired outside-review wrapper', () => {
+    expect(fs.existsSync(path.join(GOLDEN_OUT, '.agents/skills/gstack-plan/SKILL.md'))).toBe(true);
+    expect(fs.existsSync(path.join(GOLDEN_OUT, '.agents/skills/gstack-claude-code/SKILL.md'))).toBe(false);
   });
 
   test('Claude ship skill keeps the review and test gates', () => {
@@ -551,11 +543,8 @@ describe('host config correctness', () => {
     expect(factory.frontmatter.conditionalFields![0].add).toEqual({ 'disable-model-invocation': true });
   });
 
-  test('codex restores outside-review resolvers while retaining the Review Army restriction', () => {
-    expect(codex.suppressedResolvers).toContain('REVIEW_ARMY');
-    for (const resolver of ['CODEX_SECOND_OPINION', 'ADVERSARIAL_STEP', 'CODEX_PLAN_REVIEW', 'CODEX_DOC_REVIEW', 'DESIGN_OUTSIDE_VOICES']) {
-      expect(codex.suppressedResolvers).not.toContain(resolver);
-    }
+  test('codex has no obsolete resolver suppressions', () => {
+    expect(codex.suppressedResolvers).toEqual([]);
   });
 
   test('codex has boundary instruction', () => {
@@ -590,11 +579,11 @@ describe('host config correctness', () => {
     expect(openclaw.coAuthorTrailer).toContain('OpenClaw');
   });
 
-  test('outside reviewer skills are omitted only from their own harness', () => {
+  test('Codex wrapper is omitted only from Codex', () => {
     for (const config of ALL_HOST_CONFIGS) {
       const skipped = config.generation.skipSkills ?? [];
       expect(skipped.includes('codex')).toBe(config.name === 'codex');
-      expect(skipped.includes('claude-code')).toBe(config.name === 'claude');
+      expect(skipped).not.toContain('claude-code');
       expect(skipped).not.toContain('claude');
     }
   });

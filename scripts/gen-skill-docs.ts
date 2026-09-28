@@ -1061,8 +1061,6 @@ export async function runGeneration(settings: GenerationOptions = {}): Promise<G
         }
         for (const entry of entries) {
           if (entry.isSymbolicLink() || !entry.isDirectory() || !entry.name.startsWith('gstack-') || renderedNames.has(entry.name)) continue;
-          // Keep the old render usable until setup has migrated installed copies/links.
-          if (entry.name === 'gstack-claude' && process.env.GSTACK_DEFER_CLAUDE_RENAME_PRUNE === '1') continue;
           let generated = false;
           try {
             generated = fs.readFileSync(path.join(skillsRoot, entry.name, 'SKILL.md'), 'utf-8').includes('<!-- AUTO-GENERATED from');
@@ -1075,9 +1073,6 @@ export async function runGeneration(settings: GenerationOptions = {}): Promise<G
           }
           fs.rmSync(path.join(skillsRoot, entry.name), { recursive: true, force: true });
           log(`  pruned stale ${host} render: ${entry.name}`);
-          if (entry.name === 'gstack-claude') {
-            log('  /claude is now /claude-code. Run ./setup to migrate installed skill links; generation only updates render files.');
-          }
         }
       }
 

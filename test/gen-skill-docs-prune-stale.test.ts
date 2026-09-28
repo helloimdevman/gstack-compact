@@ -149,7 +149,7 @@ describe('gen-skill-docs stale-render prune', () => {
     }
   }, 200_000);
 
-  test('setup can defer the renamed render only; standalone generation retires it without changing installed links', () => {
+  test('generation retires a removed wrapper without changing installed links', () => {
     const out = fs.mkdtempSync(path.join(os.tmpdir(), 'gstack-rename-prune-'));
     const skills = path.join(out, '.agents', 'skills');
     const old = path.join(skills, 'gstack-claude');
@@ -163,19 +163,13 @@ describe('gen-skill-docs stale-render prune', () => {
     fs.mkdirSync(path.dirname(installed), { recursive: true });
     fs.symlinkSync(old, installed);
     try {
-      const deferred = spawnSync('bun', ['run', 'scripts/gen-skill-docs.ts', '--host', 'codex', '--out-dir', out], {
+      const rendered = spawnSync('bun', ['run', 'scripts/gen-skill-docs.ts', '--host', 'codex', '--out-dir', out], {
         cwd: ROOT, encoding: 'utf8', timeout: 180_000,
-        env: { ...process.env, HOME: home, GSTACK_DEFER_CLAUDE_RENAME_PRUNE: '1' },
+        env: { ...process.env, HOME: home },
       });
-      expect(deferred.status).toBe(0);
-      expect(fs.existsSync(path.join(old, 'SKILL.md'))).toBe(true);
-      expect(fs.existsSync(stale)).toBe(false);
-      expect(fs.existsSync(path.join(skills, 'gstack-claude-code', 'SKILL.md'))).toBe(true);
-      expect(fs.readlinkSync(installed)).toBe(old);
-      const standalone = gen(out);
-      expect(standalone.status).toBe(0);
+      expect(rendered.status).toBe(0);
       expect(fs.existsSync(old)).toBe(false);
-      expect(standalone.stdout).toContain('Run ./setup to migrate installed skill links');
+      expect(fs.existsSync(stale)).toBe(false);
       // Rendering has no authority to rewrite any user's installed skill tree.
       expect(fs.lstatSync(installed).isSymbolicLink()).toBe(true);
       expect(fs.readlinkSync(installed)).toBe(old);

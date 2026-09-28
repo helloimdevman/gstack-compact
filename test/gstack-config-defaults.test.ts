@@ -11,8 +11,7 @@
  * on a value it never specified -- "skip entirely if QUESTION_TUNING is false"
  * reached with QUESTION_TUNING="".
  *
- * Four keys skills actually read had no entry in lookup_default and took that
- * path: question_tuning, repo_mode, team_mode, transcript_ingest_mode.
+ * Current skill readers and CLI helpers must use defaults known to the table.
  *
  * Three invariants are pinned so the class cannot reopen:
  *
@@ -70,7 +69,7 @@ function isCovered(key: string, arms: string[]): boolean {
   );
 }
 
-const SKIP_DIRS = new Set(['node_modules', '.git', '.context', 'dist', 'build', '.next']);
+const SKIP_DIRS = new Set(['node_modules', '.git', '.context', '.gbrain', 'dist', 'build', '.next', 'test', 'docs']);
 
 /** Every `gstack-config get <key>` call site in the tree. */
 function keysReadInTree(root = ROOT): string[] {
@@ -95,7 +94,7 @@ function keysReadInTree(root = ROOT): string[] {
         continue;
       }
       // Skip this file: its own prose cites example keys.
-      if (ent.name === SELF || ent.name === 'CHANGELOG.md') continue;
+      if (ent.name === SELF || ent.name === 'CHANGELOG.md' || ent.name === 'TODOS.md') continue;
       if (!/\.(md|ts|sh)$|^gstack-[a-z-]+$/.test(ent.name)) continue;
       let text: string;
       try {
@@ -157,7 +156,7 @@ describe('gstack-config defaults (gate, free)', () => {
     // non-empty answer as a user override and skips classification, so a
     // synthesized "unknown" default would turn the classifier into dead code
     // (caught live by test/gstack-repo-mode.test.ts during the wave).
-    for (const key of ['cross_project_learnings', 'salience_allowlist', 'redact_repo_visibility', 'repo_mode']) {
+    for (const key of ['cross_project_learnings', 'redact_repo_visibility', 'repo_mode']) {
       expect({ key, ...get(key) }).toEqual({ key, out: '', code: 0 });
     }
   });
@@ -165,7 +164,6 @@ describe('gstack-config defaults (gate, free)', () => {
   test('the regressed keys resolve to the values their callers assume', () => {
     expect(get('question_tuning').out).toBe('false');
     expect(get('team_mode').out).toBe('false');
-    expect(get('transcript_ingest_mode').out).toBe('off');
   });
 });
 

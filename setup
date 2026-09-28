@@ -436,8 +436,6 @@ _prune_stale_generated() {
   done
   [ -n "$names" ] || return 0
   for n in $(printf '%s\n' $names | sort -u); do
-    # The rename helper owns replacement-before-retirement, including failures.
-    if [ "$n" = "gstack-claude" ] && [ "${GSTACK_DEFER_CLAUDE_RENAME_PRUNE:-0}" = "1" ]; then continue; fi
     _skill_source_exists "$gstack_dir" "$n" && continue
     if [ -d "$gen_dir/$n" ] && [ ! -L "$gen_dir/$n" ]; then rm -rf "$gen_dir/$n"; fi
     for host in "$@"; do
