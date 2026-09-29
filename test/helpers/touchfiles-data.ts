@@ -1107,7 +1107,6 @@ export const E2E_TOUCHFILES: Record<string, string[]> = {
     'test/plan-review-native-default.test.ts',
     'test/fixtures/eng-omitted-select-361c.json',
 'test/skill-e2e-plan-decision-classification.test.ts', 'test/fixtures/plan-decision-classification.ts', 'test/plan-review-calibration.test.ts', 'test/helpers/plan-review-decisions.ts', 'test/plan-review-decisions.test.ts', 'test/helpers/plan-review-cases.ts', 'test/plan-review-cases.test.ts', 'test/helpers/llm-judge.ts', 'lib/eval-model.ts', 'test/helpers/e2e-helpers.ts', 'test/helpers/eval-store.ts', 'test/helpers/eval-budgets.ts', 'docs/askuserquestion-split.md', 'plan-ceo-review/SKILL.md.tmpl', 'plan-ceo-review/sections/review-sections.md.tmpl', 'scripts/resolvers/tasks-section.ts'],
-  'health-reporting': ['health/**', 'test/skill-e2e-health.test.ts', 'test/helpers/health-eval-fixture.ts'],
   'codex-plan-ceo-format-mode': ['test/paid-retry-supervision.test.ts', 'plan-ceo-review/**', 'scripts/gen-skill-docs.ts', 'scripts/resolvers/**', 'model-overlays/gpt.md', 'model-overlays/gpt-5.4.md', 'test/helpers/codex-session-runner.ts', 'test/helpers/codex-eval.ts', 'test/codex-e2e-plan-format.test.ts'],
   'codex-plan-ceo-format-approach': ['test/paid-retry-supervision.test.ts', 'plan-ceo-review/**', 'scripts/gen-skill-docs.ts', 'scripts/resolvers/**', 'model-overlays/gpt.md', 'model-overlays/gpt-5.4.md', 'test/helpers/codex-session-runner.ts', 'test/helpers/codex-eval.ts', 'test/codex-e2e-plan-format.test.ts'],
   'codex-plan-eng-format-coverage': ['test/paid-retry-supervision.test.ts', 'scripts/resolvers/learnings.ts', 'test/review-entry-and-design-clarity-au.test.ts', 'test/fixtures/plan-scope-recovery-av.json', 'test/plan-scope-recovery-av.test.ts', 'test/eng-scope-entry-ap.test.ts', 'plan-eng-review/**', 'scripts/gen-skill-docs.ts', 'scripts/resolvers/**', 'model-overlays/gpt.md', 'model-overlays/gpt-5.4.md', 'test/helpers/codex-session-runner.ts', 'test/helpers/codex-eval.ts', 'test/codex-e2e-plan-format.test.ts', 'test/plan-review-cases.test.ts'],
@@ -1381,7 +1380,6 @@ export const E2E_TIERS: Record<string, 'gate' | 'periodic'> = {
   'office-hours-section-loading': 'periodic', // Full startup design/review/approval workflow
   'plan-decision-classification': 'periodic',
   'plan-devex-peer-comparison-classification': 'periodic',
-  'health-reporting': 'periodic',
   'codex-plan-ceo-format-mode': 'periodic',
   'codex-plan-ceo-format-approach': 'periodic',
   'codex-plan-eng-format-coverage': 'periodic',

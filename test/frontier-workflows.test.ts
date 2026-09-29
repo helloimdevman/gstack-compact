@@ -98,3 +98,9 @@ test('design and context aliases resolve to explicit canonical modes', () => {
     ['learn', 'context', 'learn'],
   ]) expect(source(`${alias}/SKILL.md.tmpl`)).toContain(`{{INVOKE_SKILL:${target}:mode=${mode}}}`);
 });
+
+test('health reports through the current verify mode', () => {
+  expect(source('health/SKILL.md.tmpl')).toContain('{{INVOKE_SKILL:verify:mode=health}}');
+  expect(source('verify/SKILL.md.tmpl')).toContain('{{SECTION:health}}');
+  expect(source('verify/sections/health.md.tmpl')).toContain('pass/fail/skip counts');
+});
