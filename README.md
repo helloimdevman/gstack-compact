@@ -49,7 +49,7 @@ Codex에서는 `$gstack-` 접두사를 사용합니다. 예를 들어 `/plan`은
 
 ## 현재 상태
 
-이 포크는 작업 중인 후보입니다. 2026-09-29 `05ec29a`에서 실행한 전체 무료 테스트는 **18,047 통과 / 879 실패 / 1 건너뜀**이며, 이후의 집중 수정까지 포함한 전체 재검증은 아직 끝나지 않았습니다. 원본 대비 토큰·속도·성공률 개선도 아직 입증되지 않았습니다. 이 수치를 배포 적합성이나 성능 보증으로 읽지 마세요. 자세한 범위와 검증 계획은 [최적화 계획](docs/superpowers/plans/2026-09-27-gstack-frontier-optimization.md)에 있습니다.
+이 포크는 작업 중인 후보입니다. 2026-09-29 `a37118b`에서 실행한 전체 무료 테스트는 **18,085 통과 / 797 실패 / 4 건너뜀**입니다. 원본 대비 토큰·속도·성공률 개선도 아직 입증되지 않았습니다. 이 수치를 배포 적합성이나 성능 보증으로 읽지 마세요. 자세한 범위와 검증 계획은 [최적화 계획](docs/superpowers/plans/2026-09-27-gstack-frontier-optimization.md)에 있습니다.
 
 개발 시 `bun run test:quick`으로 빠르게 확인하고, 최종 인수에는 `bun run test`를 사용합니다. 스킬 문서는 템플릿에서 생성되므로 변경할 때 `SKILL.md.tmpl`과 `sections/*.md.tmpl`을 수정하세요. 개발 구조는 [CONTRIBUTING.md](CONTRIBUTING.md)와 [ARCHITECTURE.md](ARCHITECTURE.md)에 있습니다.
 
