@@ -130,12 +130,13 @@ export function recordAutoplanArtifact(input:string, file:string, cwd:string, co
   try {
     if (Buffer.byteLength(input)>MAX_INPUT) { reason='input_overflow'; throw Error('input'); }
     const e = JSON.parse(input);
-    if (object(e) && (e.agent_id !== undefined || (typeof e.cwd === 'string' && e.cwd !== cwd))) return;
+    const ownedCwd = (value:unknown) => value === cwd || value === fs.realpathSync(cwd);
+    if (object(e) && (e.agent_id !== undefined || (typeof e.cwd === 'string' && !ownedCwd(e.cwd)))) return;
     if (fs.existsSync(file+'.invalid')) return;
     reason='lock_conflict'; lock=fs.openSync(file+'.lock','wx',0o600);
     reason='record_error'; const old=readState(file,cwd,config,stateRoot,engTestPlanRoot);
     reason='invalid_event';
-    if (!object(e) || e.cwd!==cwd || !['PreToolUse','PostToolUse','PostToolUseFailure'].includes(e.hook_event_name) ||
+    if (!object(e) || !ownedCwd(e.cwd) || !['PreToolUse','PostToolUse','PostToolUseFailure'].includes(e.hook_event_name) ||
         !['Write','Edit'].includes(e.tool_name) || !id(e.session_id) || !id(e.tool_use_id) ||
         !scopedTranscript(e.transcript_path,config,e.session_id) || !object(e.tool_input) ||
         typeof e.tool_input.file_path!=='string') throw Error('event');

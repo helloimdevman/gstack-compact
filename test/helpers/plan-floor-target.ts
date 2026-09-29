@@ -36,12 +36,13 @@ export function readPlanFloorTarget(configDir: string | null, cwd: string, opts:
     if (files.length !== 1 || !fs.lstatSync(files[0]!).isFile()) throw Error('Ambiguous or nonregular native session');
     if (fs.statSync(files[0]!).size > 32 * 1024 * 1024) throw Error('Native session exceeds 32 MiB');
     const raw = fs.readFileSync(files[0]!, 'utf8');
+    const canonicalCwd = fs.realpathSync(cwd);
     const expected = `<command-message>${opts.slashCommand.slice(1)}</command-message>\n` +
       `<command-name>${opts.slashCommand}</command-name>\n<command-args>PLAN.md</command-args>`;
     for (const line of raw.slice(0, raw.lastIndexOf('\n') + 1).split('\n')) {
       if (!line.trim()) continue;
       const record = JSON.parse(line), at = Date.parse(record.timestamp ?? '');
-      if (record.type !== 'user' || record.isSidechain !== false || record.cwd !== cwd ||
+      if (record.type !== 'user' || record.isSidechain !== false || (record.cwd !== cwd && record.cwd !== canonicalCwd) ||
           record.sessionId !== opts.sessionId || record.parent_tool_use_id || record.message?.role !== 'user' ||
           !Number.isFinite(at) || at < opts.startedAt || at > opts.now) continue;
       const content = record.message.content;

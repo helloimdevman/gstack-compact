@@ -105,9 +105,9 @@ describe('manifest executor scope', () => {
     const fixtureRoot = path.join(dir, 'fixture');
     const receipt = path.join(dir, 'captures.jsonl');
     fs.mkdirSync(path.join(fixtureRoot, 'test'), { recursive: true });
-    const discovered = ['review', 'browse'].map(skill => `test/carve-section-loading-${skill}.test.ts`);
+    const discovered = ['review', 'context'].map(skill => `test/carve-section-loading-${skill}.test.ts`);
     try {
-      for (const skill of ['review', 'browse']) {
+      for (const skill of ['review', 'context']) {
         // Exercise the real registration filter and assertions, with only the
         // model-capture boundary replaced in this isolated child process.
         fs.writeFileSync(path.join(fixtureRoot, `test/carve-section-loading-${skill}.test.ts`), `
@@ -143,7 +143,7 @@ describe('manifest executor scope', () => {
         ...(process.env.SystemRoot ? { SystemRoot: process.env.SystemRoot } : {}),
         HOME: dir, TMPDIR: dir, TEMP: dir, TMP: dir,
         EVALS_PREFLIGHT_OK: '1', GSTACK_CLAUDE_CLI_VERSION: 'free-fixture',
-        GSTACK_EVAL_DIR: path.join(dir, 'evals'), GSTACK_CARVE_SKILL: 'browse',
+        GSTACK_EVAL_DIR: path.join(dir, 'evals'), GSTACK_CARVE_SKILL: 'context',
       };
       const run = (args: string[]) => {
         const result = spawnSync(process.execPath, args, { cwd: ROOT, env, encoding: 'utf8', timeout: 20_000 });
@@ -155,7 +155,7 @@ describe('manifest executor scope', () => {
       // No API credentials are inherited, preflight/version probes are skipped,
       // and both files replace the model module before importing the real helper.
       run(['test', ...discovered.map(file => path.join(fixtureRoot, file))]);
-      expect(captures()).toEqual([{ skill: 'browse', scope: 'browse' }]);
+      expect(captures()).toEqual([{ skill: 'context', scope: 'context' }]);
       fs.writeFileSync(receipt, '');
 
       run([path.join(ROOT, 'scripts/test-paid-shards.ts'), '--tier', 'periodic', '--plan', manifestPath, '--slice', '1', '--jobs', '1', '--timeout', '10']);
@@ -165,7 +165,7 @@ describe('manifest executor scope', () => {
       expect(slice.outcomes[0]).toMatchObject({
         files: [path.join(fixtureRoot, discovered[0])], status: 'passed', exitCode: 0, executedTests: 1,
       });
-      expect(env.GSTACK_CARVE_SKILL).toBe('browse');
+      expect(env.GSTACK_CARVE_SKILL).toBe('context');
     } finally {
       fs.rmSync(dir, { recursive: true, force: true });
     }

@@ -188,7 +188,7 @@ test('both distinct nonempty expected files are mandatory', () => {
   }
 });
 
-test('all three paid callers record their actual assertions once and preserve budgets, routes and fresh read evidence', async () => {
+test('both current paid callers record their actual assertions once and preserve budgets, routes and fresh read evidence', async () => {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'coverage-recording-free-'));
   try {
     const script = path.join(dir, 'caller.test.ts');
@@ -204,7 +204,6 @@ const bodies = new Map(), records = [], observations = [], collectorTiers = [], 
 const suites = {
   'review-coverage-audit': 'Review Coverage Audit E2E',
   'plan-eng-coverage-audit': 'Plan Eng Review Coverage Audit E2E',
-  'ship-coverage-audit': 'Test Coverage Audit E2E',
 };
 let mode = 'pass', calls = 0, latest, latestCwd, lateResolve;
 const collector = { addTest(entry) { records.push(entry); } };
@@ -229,10 +228,10 @@ mock.module(path.join(root, 'test/helpers/session-runner.ts'), () => ({ runSkill
   expect(opts.allowedTools).toEqual(['Bash','Read','Write','Edit','Glob','Grep']);
   expect(opts.signal).toBeInstanceOf(AbortSignal);
   expect(opts.prompt).not.toContain('Step 4.75'); expect(opts.prompt).not.toContain('Step 3.4'); expect(opts.prompt).not.toContain('coverage-read-evidence:');
-  if (opts.testName === 'review-coverage-audit') expect(opts.prompt).toContain('review/specialists/testing.md');
+  if (opts.testName === 'review-coverage-audit') expect(opts.prompt).toContain('Read review/SKILL.md');
   else if (opts.testName === 'plan-eng-coverage-audit') { expect(opts.prompt).toContain('plan-eng-review/sections/review-sections.md'); expect(opts.prompt).toContain('3. Test review'); }
-  else { expect(opts.testName).toBe('ship-coverage-audit'); expect(opts.prompt).toContain('Step 7'); expect(opts.prompt).toContain('ship/sections/test-coverage.md'); }
-  const skill = opts.testName === 'review-coverage-audit' ? 'review' : opts.testName === 'plan-eng-coverage-audit' ? 'plan-eng-review' : 'ship';
+  else expect(opts.testName).toBe('plan-eng-coverage-audit');
+  const skill = opts.testName === 'review-coverage-audit' ? 'review' : 'plan-eng-review';
   expect(fs.readFileSync(path.join(opts.workingDirectory, skill, 'SKILL.md'), 'utf8')).toBe(extractSkillBody(path.join(root, skill)));
   if (mode === 'runner') throw new Error('runner failure');
   const paths = ['src/billing.ts', 'test/billing.test.ts'].map(file => path.join(opts.workingDirectory, file));
@@ -257,11 +256,10 @@ await import(path.join(root, 'test/skill-e2e-coverage-audit.test.ts'));
 await import(path.join(root, 'test/skill-e2e-workflow.test.ts'));
 test('canonical collectors and original case registrations', () => {
   expect(collectorTiers).toEqual(['e2e', 'e2e']);
-  expect([...bodies.keys()]).toEqual(['review-coverage-audit','plan-eng-coverage-audit','ship-coverage-audit']);
+  expect([...bodies.keys()]).toEqual(['review-coverage-audit','plan-eng-coverage-audit']);
   expect(registrations).toEqual([
     { id: 'review-coverage-audit', cap: 300000, concurrent: false },
     { id: 'plan-eng-coverage-audit', cap: 300000, concurrent: false },
-    { id: 'ship-coverage-audit', cap: 300000, concurrent: true },
   ]);
 });
 const nonces = new Set();
@@ -297,7 +295,7 @@ for (const [id, body] of bodies) for (const kind of ['pass','diagram','missing',
   });
 }
 test('all caller scenarios completed', () => {
-  expect(observations).toHaveLength(21);
+  expect(observations).toHaveLength(14);
   fs.writeFileSync(${JSON.stringify(facts)}, JSON.stringify(observations));
 });
 `);
@@ -305,6 +303,6 @@ test('all caller scenarios completed', () => {
       env: { ...process.env, EVALS: '', GSTACK_EVAL_DIR: path.join(dir, 'evals') }, stdout: 'pipe', stderr: 'pipe' });
     const [exit, stdout, stderr] = await Promise.all([proc.exited, new Response(proc.stdout).text(), new Response(proc.stderr).text()]);
     expect({ exit, stdout, stderr }).toMatchObject({ exit: 0 });
-    expect(JSON.parse(fs.readFileSync(facts, 'utf8'))).toHaveLength(21);
+    expect(JSON.parse(fs.readFileSync(facts, 'utf8'))).toHaveLength(14);
   } finally { fs.rmSync(dir, { recursive: true, force: true }); }
 }, 60_000);

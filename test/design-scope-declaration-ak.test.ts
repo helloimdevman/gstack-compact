@@ -84,8 +84,8 @@ test('literal or foreign corrections preserve the actual declaration and a later
   }
 });
 
-test('the new evidence dependencies select exactly the existing five scope observers', () => {
+test('the new evidence dependencies select exactly the existing four scope observers', () => {
   const expected = selectTests(['test/helpers/plan-scope-selection.ts'], E2E_TOUCHFILES, []).selected;
-  expect(expected).toHaveLength(5);
+  expect(expected).toHaveLength(4);
   for (const path of ['test/design-scope-declaration-ak.test.ts','test/fixtures/design-scope-declaration-ak.json']) expect(selectTests([path], E2E_TOUCHFILES, []).selected).toEqual(expected);
 });

@@ -238,43 +238,6 @@ test('distinct retry retains its actual preceding D2 count and rejects D3 withou
   expect(counter.trace).toHaveLength(2);
 });
 
-test('the actual CEO save layout preserves the full native payload and separates prior records', () => {
-  const template = readFileSync(`${import.meta.dir}/../plan-ceo-review/SKILL.md.tmpl`, 'utf8');
-  const layout = template.match(/```text\n(  ## currentDecision \(ROW-ID\)[\s\S]+?)\n  ```/);
-  expect(layout).not.toBeNull();
-  const grid = exactFields.savedPlan.slice(begin, end).match(/```text\n[\s\S]+?\n```/);
-  expect(grid).not.toBeNull();
-  // Fill the actual source example with the existing captured native fields;
-  // do not reconstruct a more permissive format or promote its original FAIL.
-  const record = layout![1]!.replace(/^  /gm, '')
-    .replace('ROW-ID', 'D1').replace('<complete grid>', '\n\n'+grid![0])
-    .replace('<complete currentDecision.question>', q.question)
-    .replace('<exact currentDecision.header>', q.header)
-    .replace('A) <exact first option label>', q.options[0]!.label)
-    .replace('<full first option description>', q.options[0]!.description!)
-    .replace('B) <exact second option label>', q.options[1]!.label)
-    .replace('<full second option description; repeat for all offered options>',
-      q.options[1]!.description!+'\n'+q.options[2]!.label+'\n'+q.options[2]!.description!);
-  const saved = (section: string) => exactFields.savedPlan.slice(0, begin)+section+'\n\n'+exactFields.savedPlan.slice(end);
-  expect(exactCount(saved(record))).toBe(true);
-  const prior = '## Answered decision D0\nExact approval: prior answer A, scope unchanged.\n'+fields.replaceAll('D1', 'D0');
-  expect(exactCount(saved(prior+'\n\n'+record))).toBe(true);
-  for (const changed of [
-    record.replace(q.question, q.question.split('\n')[0]!),
-    record.replace(q.question.split('\n')[0]!, q.question.split('\n')[0]!+' (changed title)'),
-    record.replace('Header: '+q.header, 'Header: Another decision'),
-    record.replace(q.options[0]!.label, 'A) Delete every test'),
-    record+'\n\n'+fields.replaceAll('D1', 'D0'),
-    record+'\n\n'+record,
-    '```text\n'+record+'\n```',
-    record.replace('Question: ', 'Question:\n'),
-    record.replace('Header: '+q.header, 'Header: '+q.header+'\nOptions:'),
-  ]) {
-    expect(changed).not.toBe(record);
-    expect(() => exactCount(saved(changed))).toThrow(/Unsupported/);
-  }
-});
-
 test('a reopened row has one current comparison alongside its answered decision history', () => {
   const oldFields = fields.replace(q.question, q.question.replace(/^D1 — /, 'D0 — D1: '));
   const currentRecord = '### currentDecision (D1)\n'+fields;
@@ -290,51 +253,6 @@ test('a reopened row has one current comparison alongside its answered decision 
   for (const heading of ['### Unanswered decision (D1)', '### Not answered decision (D1)', '### currentDecision (D1)']) {
     expect(() => exactCount(replaceRecord(prior(heading)+'\n\n'+currentRecord))).toThrow(/Unsupported/);
   }
-});
-
-test('prepared native identity distinguishes the question number from its ledger row before saving', () => {
-  const template = readFileSync(`${import.meta.dir}/../plan-ceo-review/SKILL.md.tmpl`, 'utf8');
-  const titleLayout = template.match(/`(D<N> — <ROW-ID>: <one-line question>)`/)?.[1];
-  expect(titleLayout).toBeDefined();
-  const withoutId = q.question.replace(/^D1 — /, 'D7 — ');
-  const title = titleLayout!.replace('<N>', '7').replace('<ROW-ID>', 'D1')
-    .replace('<one-line question>', q.question.split('\n')[0]!.replace(/^D1 — /, ''));
-  const prepared = withoutId.replace(withoutId.split('\n')[0]!, title);
-  const callWithQuestion = (question: string) => {
-    const call = clone(exactFields.call);
-    call.questions[0]!.question = question;
-    // Counterfactual native questions need their matching answer key too.
-    // This does not alter or approve an original captured question.
-    call.answers = { [question]: Object.values(call.answers)[0]! } as typeof call.answers;
-    return call;
-  };
-  const payload = (call: typeof exactFields.call) => {
-    const current = call.questions[0]!;
-    return ['Question: '+current.question, 'Header: '+current.header,
-      ...current.options.map(option => option.label+'\n'+option.description)].join('\n');
-  };
-  const saved = (call: typeof exactFields.call) => exactPlan('### currentDecision (D1)', payload(call));
-  const missing = callWithQuestion(withoutId), ready = callWithQuestion(prepared);
-  // 749df paired retry copied every field and read them all, but omitted its
-  // row ID. The distinct attempt added the ID only after the saved Read.
-  expect(() => exactCount(saved(missing), missing)).toThrow(/Unsupported/);
-  expect(() => exactCount(saved(missing), ready)).toThrow(/Unsupported/);
-  expect(() => exactCount(saved(ready), missing)).toThrow(/Unsupported/);
-  expect(exactCount(saved(ready), ready)).toBe(true);
-  const foreign = callWithQuestion(prepared.replace('D7 — D1:', 'D7 — R999:'));
-  expect(() => exactCount(saved(foreign), foreign)).toThrow(/Unsupported/);
-  expect(() => exactCount(saved(ready)+'\n\n### currentDecision (D1)\n'+payload(ready), ready)).toThrow(/Unsupported/);
-
-  // A late recommended suffix or a brief-only tradeoff list cannot stand in
-  // for the final saved native labels and complete option descriptions.
-  expect(() => exactCount(saved(ready).replace(q.options[0]!.label,
-    q.options[0]!.label.replace(' (recommended)', '')), ready)).toThrow(/Unsupported/);
-  const briefOnly = callWithQuestion(prepared+'\nPros / cons:\n'+q.options.map(option =>
-    option.label+'\n'+option.description!.split('\n').slice(1).join('\n')).join('\n'));
-  for (const option of briefOnly.questions[0]!.options)
-    option.description = option.description!.replaceAll('✅', 'Pros:').replaceAll('❌', 'Cons:');
-  expect(() => exactCount(saved(briefOnly), briefOnly)).toThrow(/Unsupported/);
-  expect(exactCount(saved(ready), ready)).toBe(true);
 });
 
 // The 749df R2 evidence used "punctuation/Unicode" as ordinary prose. This

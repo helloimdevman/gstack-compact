@@ -11,6 +11,9 @@ const MAX_WRITE_INPUT_BYTES = 4 * 1024 * 1024;
 export interface FilePermissionEpoch { pendingId: string; completedId: string | null; completedIds?: string[] }
 const identifier = (v: unknown): v is string => typeof v === 'string' && /^[A-Za-z0-9_-]{1,160}$/.test(v);
 const quote = (v: string) => `'${(process.platform === 'win32' ? v.replaceAll('\\', '/') : v).replaceAll("'", "'\\''")}'`;
+const sameTemp = (left: unknown, right: unknown) =>
+  typeof left === 'string' && typeof right === 'string' &&
+  left.replace(/^\/private\/(var|tmp)\//, '/$1/') === right.replace(/^\/private\/(var|tmp)\//, '/$1/');
 const scoped = (file: unknown, config: string, session: string) => {
   if (typeof file !== 'string' || !path.isAbsolute(file)) return false;
   const rel = path.relative(path.join(config, 'projects'), file).split(path.sep);
@@ -86,13 +89,10 @@ export function recordFilePermission(input: string, file: string, cwd: string, c
   try {
     if (Buffer.byteLength(input) > MAX_WRITE_INPUT_BYTES) throw Error('oversized hook');
     const e = JSON.parse(input);
-    const sameTemp = (left: unknown, right: unknown) =>
-      typeof left === 'string' && typeof right === 'string' &&
-      left.replace(/^\/private\/(var|tmp)\//, '/$1/') === right.replace(/^\/private\/(var|tmp)\//, '/$1/');
     if (e?.agent_id !== undefined || !sameTemp(e?.cwd, cwd)) return;
     if (!['PreToolUse','PostToolUse','PostToolUseFailure'].includes(e.hook_event_name) ||
         !['Write','Edit'].includes(e.tool_name) || !identifier(e.session_id) || !identifier(e.tool_use_id) ||
-        !scoped(e.transcript_path,config,e.session_id) || e.tool_input?.file_path !== expected) return;
+        !scoped(e.transcript_path,config,e.session_id) || !sameTemp(e.tool_input?.file_path, expected)) return;
     let old: any = {};
     if (fs.existsSync(file)) {
       const stat = fs.lstatSync(file);
@@ -342,7 +342,7 @@ function currentEditPreview(preview: string, r: any, config: string, cwd: string
     if (conflict || transcript.status !== 'ready' || pending.size !== 1 || event?.name !== 'Edit' ||
         `${event.sessionId}:${event.toolUseId}` !== r.pendingId || !Number.isFinite(Date.parse(event.timestamp)) ||
         Date.parse(event.timestamp) < startedAt || Date.parse(event.timestamp) > Date.now() ||
-        input?.file_path !== r.expected || typeof input.old_string !== 'string' || !input.old_string ||
+        !sameTemp(input?.file_path, r.expected) || typeof input.old_string !== 'string' || !input.old_string ||
         typeof input.new_string !== 'string' || (input.replace_all !== undefined && input.replace_all !== false)) return false;
     const bytes = boundedRegular(r.expected, MAX_WRITE_INPUT_BYTES), before = bytes.toString('utf8');
     if (!Buffer.from(before).equals(bytes)) return false;
@@ -398,7 +398,7 @@ export function currentFilePermissionEpoch(file: string | undefined, expected: s
   const edit = panel ? undefined : croppedEditPane(screen);
   const target = panel ? path.resolve(cwd,panel[1]!.trim()) : croppedEditTarget(screen, cwd, expected) ??
     (create?.basename===path.basename(expected) ? expected : undefined);
-  if (target !== expected) {
+  if (!sameTemp(target, expected)) {
     // A foreign path with this report's basename cannot fall back to a stale
     // owned grant. An incomplete owned menu also waits for full path identity.
     const prompt = [...screen.matchAll(/^ {0,3}Do you want to (?:make this edit to|create) ([^\n?\/\\]+)\?[ \t]*$/gm)].at(-1);

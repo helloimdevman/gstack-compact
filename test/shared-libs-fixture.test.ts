@@ -786,10 +786,10 @@ describe('shared-code Contents API revision fidelity', () => {
 });
 
 const interactive = [
-  'shared-libs-plan-callers', 'shared-libs-review-index-flags', 'shared-libs-review-lifecycle',
+  'shared-libs-review-index-flags', 'shared-libs-review-lifecycle',
   'shared-libs-review-path-eligibility', 'shared-libs-review-prior-coverage', 'shared-libs-review-revalidation',
 ];
-const judged = ['shared-libs-opportunity-judgment', 'shared-libs-plan-callers', 'shared-libs-pr-coverage'];
+const judged = ['shared-libs-opportunity-judgment', 'shared-libs-pr-coverage'];
 const allShared = Object.keys(E2E_TOUCHFILES).filter(name => name.startsWith('shared-libs-')).sort();
 const selected = (dependency: string) => selectTests([dependency], E2E_TOUCHFILES, GLOBAL_TOUCHFILES)
   .selected.filter(name => name.startsWith('shared-libs-')).sort();

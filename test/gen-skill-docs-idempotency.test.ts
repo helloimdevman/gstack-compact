@@ -43,7 +43,7 @@ const STABLE_OUTPUTS = [
 /**
  * Presence sanity for the --host all render: one canonical file per
  * representative non-Claude host. The full host-all run touches .agents/,
- * .cursor/, .factory/, .gbrain/, .hermes/, .kiro/, .openclaw/, .opencode/,
+ * .cursor/, .factory/, .hermes/, .kiro/, .openclaw/, .opencode/,
  * .slate/ — the recursive diff covers every file; this list only proves the
  * render actually fanned out across hosts.
  */
@@ -53,7 +53,6 @@ const STABLE_HOST_ALL_OUTPUTS = [
   '.agents/skills/gstack-ship/SKILL.md',
   '.cursor/skills/gstack-ship/SKILL.md',
   '.factory/skills/gstack-ship/SKILL.md',
-  '.gbrain/skills/gstack-ship/SKILL.md',
 ];
 
 function runGen(extraArgs: string[] = []): { exitCode: number; stderr: string } {

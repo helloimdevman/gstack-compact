@@ -59,7 +59,7 @@ test('quoted, hypothetical, conditional and withdrawn selections do not select t
 
 test('scope selection remains mapped to the existing design and engineering mode workflows', () => {
   for (const file of ['test/design-scope-selection-aj.test.ts', 'test/fixtures/design-scope-selection-aj.json']) {
-    expect(selectTests([file], E2E_TOUCHFILES, []).selected.sort()).toEqual(['plan-design-review-plan-mode', 'plan-eng-review-plan-mode']);
+    expect(selectTests([file], E2E_TOUCHFILES, []).selected.sort()).toEqual(['plan-eng-review-plan-mode']);
   }
 });
 

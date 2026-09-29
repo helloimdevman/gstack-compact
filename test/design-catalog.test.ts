@@ -174,33 +174,6 @@ describe('renderCatalog + partitions', () => {
 
 const MOCKUP_NEVER_IDS = ['kicker-above-heading', 'icon-tile-stack', 'gradient-text', 'ai-color-palette', 'cream-palette', 'nested-cards', 'dark-glow', 'pulsing-dot', 'identical-cards', 'hero-metrics'];
 
-function designHtmlNeverIds(): string[] {
-  const tmpl = fs.readFileSync(path.join(ROOT, 'design-html', 'SKILL.md.tmpl'), 'utf-8');
-  const start = tmpl.indexOf('**Never include by default (AI slop blacklist):**');
-  expect(start).toBeGreaterThan(0);
-  const block = tmpl.slice(start, tmpl.indexOf('\n\n', start + 10));
-  const lines = block.split('\n').filter(l => l.startsWith('- '));
-  expect(lines.length).toBeGreaterThanOrEqual(10);
-  const ids: string[] = [];
-  for (const line of lines) {
-    const found = [...line.matchAll(/<!-- ([a-z0-9-]+) -->/g)].map(m => m[1]);
-    expect(found.length, line).toBeGreaterThan(0);
-    ids.push(...found);
-  }
-  return ids;
-}
-
-describe('design-html blacklist is derived-by-test (decision 31)', () => {
-  test('every <!-- id --> on the Never-include list names a catalog entry', () => {
-    for (const id of designHtmlNeverIds()) expect(catalogEntry(id), id).toBeDefined();
-  });
-
-  test('every mockupNever entry appears on the Never-include list', () => {
-    const ids = new Set(designHtmlNeverIds());
-    for (const id of MOCKUP_NEVER_IDS) expect(ids.has(id), id).toBe(true);
-  });
-});
-
 describe('mockupNever → MOCKUP_NEVER_NAMES (generation-time slop guard)', () => {
   test('exactly the ten agreed ids carry the flag', () => {
     const flagged = DESIGN_SLOP_CATALOG.filter(e => e.mockupNever).map(e => e.id).sort();

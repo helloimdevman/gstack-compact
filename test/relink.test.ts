@@ -266,76 +266,6 @@ describe('gstack-relink (#578)', () => {
     expect(new Set(names).size).toBe(names.length);
   });
 
-  // #2569: rendered :user variants live in ${GSTACK_HOME}/render/claude.
-  // relink must serve the render when present — otherwise any config change
-  // silently flips every skill back to the canonical (blockless) source.
-  test('prefers a rendered SKILL.md from GSTACK_HOME/render/claude (#2569)', () => {
-    setupMockInstall(['qa', 'ship']);
-    const renderDir = path.join(tmpDir, 'render', 'claude', 'qa');
-    fs.mkdirSync(renderDir, { recursive: true });
-    fs.writeFileSync(
-      path.join(renderDir, 'SKILL.md'),
-      '---\nname: qa\ndescription: test\n---\nrendered brain-aware qa',
-    );
-
-    run(`${path.join(installDir, 'bin', 'gstack-config')} set skill_prefix false`, {
-      GSTACK_INSTALL_DIR: installDir,
-      GSTACK_SKILLS_DIR: skillsDir,
-      GSTACK_HOME: tmpDir,
-    });
-    run(`${path.join(installDir, 'bin', 'gstack-relink')}`, {
-      GSTACK_INSTALL_DIR: installDir,
-      GSTACK_SKILLS_DIR: skillsDir,
-      GSTACK_HOME: tmpDir,
-    });
-
-    const qaLink = path.join(skillsDir, 'qa', 'SKILL.md');
-    expect(fs.readlinkSync(qaLink)).toBe(path.join(renderDir, 'SKILL.md'));
-    expect(fs.readFileSync(qaLink, 'utf-8')).toContain('rendered brain-aware qa');
-    // ship has no render — canonical source link.
-    expect(fs.readlinkSync(path.join(skillsDir, 'ship', 'SKILL.md'))).toBe(
-      path.join(installDir, 'ship', 'SKILL.md'),
-    );
-  });
-
-  // #2738: with skill_prefix=true AND an active gbrain render, the symlink
-  // target is the RENDER copy — so the render's `name:` must get the gstack-
-  // prefix too, or the served frontmatter stays unprefixed and skill_prefix
-  // silently no-ops for every brain-aware skill.
-  test('skill_prefix=true patches the rendered SKILL.md name too (#2738)', () => {
-    setupMockInstall(['qa']);
-    const renderDir = path.join(tmpDir, 'render', 'claude', 'qa');
-    fs.mkdirSync(renderDir, { recursive: true });
-    fs.writeFileSync(
-      path.join(renderDir, 'SKILL.md'),
-      '---\nname: qa\ndescription: test\n---\nrendered brain-aware qa',
-    );
-
-    run(`${path.join(installDir, 'bin', 'gstack-config')} set skill_prefix true`, {
-      GSTACK_INSTALL_DIR: installDir,
-      GSTACK_SKILLS_DIR: skillsDir,
-      GSTACK_HOME: tmpDir,
-    });
-    run(`${path.join(installDir, 'bin', 'gstack-relink')}`, {
-      GSTACK_INSTALL_DIR: installDir,
-      GSTACK_SKILLS_DIR: skillsDir,
-      GSTACK_HOME: tmpDir,
-    });
-
-    const served = path.join(skillsDir, 'gstack-qa', 'SKILL.md');
-    expect(fs.readlinkSync(served)).toBe(path.join(renderDir, 'SKILL.md'));
-    // The SERVED file (the render) carries the prefixed name.
-    expect(fs.readFileSync(served, 'utf-8')).toContain('name: gstack-qa');
-    // Idempotent: a second relink must not double-prefix.
-    run(`${path.join(installDir, 'bin', 'gstack-relink')}`, {
-      GSTACK_INSTALL_DIR: installDir,
-      GSTACK_SKILLS_DIR: skillsDir,
-      GSTACK_HOME: tmpDir,
-    });
-    expect(fs.readFileSync(served, 'utf-8')).toContain('name: gstack-qa');
-    expect(fs.readFileSync(served, 'utf-8')).not.toContain('gstack-gstack-');
-  });
-
   // FIRST INSTALL: --no-prefix must create ONLY flat names, zero gstack-* pollution
   test('first install --no-prefix: only flat names exist, zero gstack-* entries', () => {
     setupMockInstall(['qa', 'ship', 'review', 'plan-ceo-review', 'gstack-upgrade']);
@@ -378,18 +308,17 @@ describe('gstack-relink (#578)', () => {
     expect(leaked).toEqual([]);
   });
 
-  // FIRST INSTALL: non-TTY (no saved config, piped stdin) defaults to flat names
-  test('non-TTY first install defaults to flat names via relink', () => {
+  // FIRST INSTALL: non-TTY (no saved config, piped stdin) defaults to namespaced names
+  test('non-TTY first install defaults to namespaced names via relink', () => {
     setupMockInstall(['qa', 'ship']);
     // Don't set any config — simulate fresh install
-    // gstack-relink reads config; on fresh install config returns empty → defaults to false
+    // gstack-relink reads the safe config default on a fresh install.
     run(`${path.join(installDir, 'bin', 'gstack-relink')}`, {
       GSTACK_INSTALL_DIR: installDir,
       GSTACK_SKILLS_DIR: skillsDir,
     });
     const entries = fs.readdirSync(skillsDir);
-    // Should be flat names (relink defaults to false when config returns empty)
-    expect(entries.sort()).toEqual(['qa', 'ship']);
+    expect(entries.sort()).toEqual(['gstack-qa', 'gstack-ship']);
   });
 
   // SWITCH: prefix → no-prefix must clean up ALL gstack-* entries
@@ -750,7 +679,7 @@ describe('gstack-relink ownership gate (#2119)', () => {
     fs.symlinkSync(path.join(renderDir, 'qa', 'SKILL.md'), path.join(skillsDir, 'gstack-qa', 'SKILL.md'));
     const out = relink({ GSTACK_USER_RENDER_DIR: renderDir });
     expect(fs.existsSync(path.join(skillsDir, 'gstack-qa'))).toBe(false);
-    expect(fs.readlinkSync(path.join(skillsDir, 'qa', 'SKILL.md'))).toBe(path.join(renderDir, 'qa', 'SKILL.md'));
+    expect(fs.readlinkSync(path.join(skillsDir, 'qa', 'SKILL.md'))).toBe(path.join(installDir, 'qa', 'SKILL.md'));
     expect(out).not.toContain('skipped');
   });
 

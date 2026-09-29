@@ -87,34 +87,6 @@ test('actual CLI quality check distinguishes failure from skipped coverage despi
   } finally { f.cleanup(); }
 });
 
-test('the extraction recipe prevents the actual CLI automatic DESIGN.md write and refuses a Git-bound scratch directory', () => {
-  const f = fixture();
-  try {
-    const projectDesign = path.join(f.repo, 'DESIGN.md');
-    const original = '# Existing design\n\nKeep this decision.\n';
-    writeFileSync(projectDesign, original);
-    const direct = f.run(['extract', '--image', f.image]);
-    expect(direct.status, direct.stderr).toBe(0);
-    expect(readFileSync(projectDesign, 'utf8')).toContain('## Extracted Design Language');
-    writeFileSync(projectDesign, original);
-    const section = readFileSync(path.join(root, 'design-consultation/sections/proposal-and-preview.md.tmpl'), 'utf8');
-    const recipe = [...section.matchAll(/```bash\n([\s\S]*?)```/g)].find(match => match[1].includes('_EXTRACT_DIR='))?.[1];
-    expect(recipe).toBeDefined();
-    const isolated = spawnSync('bash', ['-c', recipe!], { cwd: f.repo, env: f.env, encoding: 'utf8', timeout: 15_000 });
-    expect(isolated.status, isolated.stderr).toBe(0);
-    expect(JSON.parse(isolated.stdout).colors[0].hex).toBe('#123456');
-    expect(readFileSync(projectDesign, 'utf8')).toBe(original);
-    const calls = readFileSync(f.calls, 'utf8');
-    const refused = spawnSync('bash', ['-c', recipe!], {
-      cwd: f.repo, env: { ...f.env, GIT_CLAIM_ALL: '1' }, encoding: 'utf8', timeout: 15_000,
-    });
-    expect(refused.status).not.toBe(0);
-    expect(refused.stderr).toContain('Extraction refused');
-    expect(readFileSync(f.calls, 'utf8')).toBe(calls);
-    expect(readFileSync(projectDesign, 'utf8')).toBe(original);
-  } finally { f.cleanup(); }
-});
-
 test('the actual comparison board callback emits regenerateAction without requiring remixSpec', () => {
   const f = fixture();
   try {

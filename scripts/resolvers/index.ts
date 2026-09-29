@@ -25,7 +25,6 @@ import { generateDesignMethodology, generateDesignHardRules, generateDesignRevie
 import { generateTestBootstrap, generateTestCoverageAuditPlan, generateTestCoverageAuditShip, generateTestCoverageGateShip } from './testing';
 import { generateSlugEval, generateSlugSetup, generateBaseBranchDetect, generateDeployBootstrap, generateQAMethodology, generateCoAuthorTrailer, generateChangelogWorkflow, generateClaudeModelFlag, generateSetupCommand } from './utility';
 import { generateLearningsSearch, generateLearningsLog } from './learnings';
-import { generateConfidenceCalibration } from './confidence';
 import { generateInvokeSkill, generateAutoplanReviewFile, generateAutoplanSnapshotTool, generateAutoplanPublicationHook } from './composition';
 import { generateDxFramework } from './dx';
 import { generateModelOverlay } from './model-overlay';
@@ -75,7 +74,6 @@ export const RESOLVERS: Record<string, ResolverFn> = {
   SETUP_COMMAND: generateSetupCommand,
   LEARNINGS_SEARCH: generateLearningsSearch,
   LEARNINGS_LOG: generateLearningsLog,
-  CONFIDENCE_CALIBRATION: generateConfidenceCalibration,
   INVOKE_SKILL: generateInvokeSkill,
   AUTOPLAN_REVIEW_FILE: generateAutoplanReviewFile,
   AUTOPLAN_SNAPSHOT_TOOL: generateAutoplanSnapshotTool,

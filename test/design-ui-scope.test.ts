@@ -3,7 +3,6 @@ import { nativePlanCallFingerprint } from './helpers/claude-pty-runner';
 import { isDesignUIScopeReview } from './helpers/design-ui-scope';
 import type { NativePlanQuestionCall } from './helpers/plan-count-transcript';
 import captured from './fixtures/plan-design-ui-scope.json';
-import { E2E_TOUCHFILES } from './helpers/touchfiles-data';
 
 const calls = captured.calls as NativePlanQuestionCall[];
 const fingerprint = (call: NativePlanQuestionCall) => nativePlanCallFingerprint(call, 0, true);
@@ -113,12 +112,5 @@ test('issue-like framing cannot promote setup, examples, another plan, or mismat
     mutate(q);
     call.answers = { [q.question]: q.options[0]!.label };
     expect(isDesignUIScopeReview(fingerprint(call))).toBe(false);
-  }
-});
-
-test('the UI gate owns its classifier, captured evidence, and regression tests', () => {
-  for (const file of ['test/helpers/design-ui-scope.ts', 'test/design-ui-scope.test.ts', 'test/fixtures/plan-design-ui-scope.json']) {
-    expect(Object.entries(E2E_TOUCHFILES).filter(([, files]) => files.includes(file)).map(([owner]) => owner))
-      .toEqual(['plan-design-with-ui-scope']);
   }
 });

@@ -44,7 +44,7 @@ CONFIG_HEADER='# gstack configuration — edit freely, changes take effect on ne
 # update_check: true        # false = suppress version check notifications
 #
 # ─── Skill naming ────────────────────────────────────────────────────
-# skill_prefix: false       # true = namespace skills as /gstack-qa, /gstack-ship
+# skill_prefix: true        # true = namespace skills as /gstack-qa, /gstack-ship
 #                           # false = short names /qa, /ship
 #
 # ─── Writing style (V1) ──────────────────────────────────────────────
@@ -113,7 +113,7 @@ lookup_default() {
     telemetry) echo "off" ;;
     auto_upgrade) echo "false" ;;
     update_check) echo "true" ;;
-    skill_prefix) echo "false" ;;
+    skill_prefix) echo "true" ;;
     explain_level) echo "default" ;;
     design_detector) echo "auto" ;; # auto | off — impeccable engine pre-pass in the design skills
     design_detector_install_prompted) echo "false" ;; # true once the user answered the one-time engine install offer with "never ask again"

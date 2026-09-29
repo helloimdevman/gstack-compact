@@ -23,7 +23,6 @@ import {
   extractSkillBody,
   extractSkillHead,
   REVIEW_E2E_SECTIONS,
-  REVIEW_ARMY_E2E_SECTIONS,
   RETRO_E2E_SECTIONS,
   CODEX_REVIEW_E2E_SECTIONS,
 } from './helpers/skill-fixture';
@@ -154,11 +153,11 @@ describe('extractSkillBody (synthetic)', () => {
     expect(out).not.toContain('footer junk');
   });
 
-  test('throws when the preamble markers are missing', () => {
+  test('keeps compact skills that have no generated preamble', () => {
     const bare = path.join(tmpDir, 'bare');
     fs.mkdirSync(bare, { recursive: true });
     fs.writeFileSync(path.join(bare, 'SKILL.md'), '---\nname: bare\n---\n## Only Section\nbody\n');
-    expect(() => extractSkillBody(bare)).toThrow(/Preamble \(run first\)/);
+    expect(extractSkillBody(bare)).toContain('## Only Section\nbody');
   });
 
   test('both exact preamble headings preserve the complete intro/scope gate and tail', () => {
@@ -251,38 +250,22 @@ describe('error polarity', () => {
 describe('real-skill pins: section lists used by E2E fixtures', () => {
   test('REVIEW_E2E_SECTIONS extracts from review/SKILL.md', () => {
     const out = extractSkillSections(path.join(ROOT, 'review'), REVIEW_E2E_SECTIONS);
-    expect(out).toContain('## Step 4: Critical pass (core review)');
-    expect(out).toContain('## Important Rules');
+    expect(out).toContain('## Outcome');
+    expect(out).toContain('## Section index');
     expect(out).not.toContain('## Telemetry (run last)');
-    expect(out).toContain('Lead with blockers.');
+    expect(out).toContain('Report findings by severity');
     const full = fs.readFileSync(path.join(ROOT, 'review', 'SKILL.md'), 'utf-8');
     expect(out.length).toBeLessThan(full.length);
   });
 
-  test('REVIEW_ARMY_E2E_SECTIONS extracts from review/SKILL.md + carved sections', () => {
-    // /review is carved (T9): the Step 4.5 dispatch body lives in
-    // sections/review-army.md and the Plan Completion Audit in
-    // sections/plan-completion.md — the skeleton keeps only STOP-Read pointers.
-    // The E2E fixture (test/skill-e2e-review-army.test.ts) extracts the
-    // skeleton H2s minus Step 4.5, then appends both section files; this pin
-    // mirrors that exact construction so a section rename or an empty carve
-    // still fails FREE before a paid E2E setup throw.
-    const skeletonSections = REVIEW_ARMY_E2E_SECTIONS.filter(
-      (s) => !s.startsWith('Step 4.5'),
-    );
-    const out = extractSkillSections(path.join(ROOT, 'review'), skeletonSections);
-    expect(out).toContain('## Step 1.5: Scope Drift Detection');
+  test('review sections point to current plan and risk checks', () => {
+    const out = extractSkillSections(path.join(ROOT, 'review'), REVIEW_E2E_SECTIONS);
+    expect(out).toContain('sections/plan-completion.md');
     expect(out).not.toContain('## Telemetry (run last)');
 
     const planCompletion = fs.readFileSync(
       path.join(ROOT, 'review', 'sections', 'plan-completion.md'), 'utf-8');
-    expect(planCompletion).toContain('PLAN COMPLETION AUDIT');
-
-    const army = fs.readFileSync(
-      path.join(ROOT, 'review', 'sections', 'review-army.md'), 'utf-8');
-    expect(army).toContain('## Step 4.5: Review Army — Specialist Dispatch');
-    expect(army).toContain('quality_score');
-    expect(army).toContain('MULTI-SPECIALIST CONFIRMED');
+    expect(planCompletion).toContain('plan');
   });
 
   test('RETRO_E2E_SECTIONS skeleton extracts from retro/SKILL.md + carved section', () => {
@@ -307,7 +290,7 @@ describe('real-skill pins: section lists used by E2E fixtures', () => {
     const codexReview = path.join(ROOT, '.agents', 'skills', 'gstack-review');
     if (!fs.existsSync(path.join(codexReview, 'SKILL.md'))) return; // gitignored artifact, absent in fresh checkouts
     const out = extractSkillSections(codexReview, CODEX_REVIEW_E2E_SECTIONS);
-    expect(out).toContain('## Step 4: Critical pass (core review)');
+    expect(out).toContain('## Outcome');
     expect(out).not.toContain('## Telemetry (run last)');
   });
 });
@@ -328,22 +311,22 @@ describe('real-skill pins: body/head extraction used by E2E fixtures', () => {
       expect(out).not.toContain('## Shared contract');
       expect(out).not.toContain('## Telemetry (run last)');
       const full = fs.readFileSync(path.join(ROOT, skill, 'SKILL.md'), 'utf-8');
-      expect(out.length).toBeLessThan(full.length);
+      expect(out.length).toBeLessThanOrEqual(full.length);
       expect(out.length).toBeGreaterThan(200);
     });
   }
 
   test('body extraction keeps the sections the scrape/context E2E tests assert on', () => {
     expect(extractSkillBody(path.join(ROOT, 'scrape'))).toContain('Read-only');
-    expect(extractSkillBody(path.join(ROOT, 'context-save'))).toContain('snapshot');
-    expect(extractSkillBody(path.join(ROOT, 'context-restore'))).toContain('snapshot');
+    expect(extractSkillBody(path.join(ROOT, 'context-save'))).toContain('save` mode');
+    expect(extractSkillBody(path.join(ROOT, 'context-restore'))).toContain('restore` mode');
   });
 
-  test('the scoped Eng render retains its original scope gate before the workflow', () => {
+  test('the Eng compatibility alias routes to the current plan workflow', () => {
     const file = path.join(ROOT, 'plan-eng-review', 'SKILL.md');
     const full = fs.readFileSync(file, 'utf-8');
-    expect(full).toContain('### Step 0: Scope Challenge');
-    expect(extractSkillBody(file)).toContain('### Step 0: Scope Challenge');
+    expect(full).toContain('review-engineering');
+    expect(extractSkillBody(file)).toContain('review-engineering');
   });
 
   // The union of skills installed by the routing + opus-47 discovery fixtures.

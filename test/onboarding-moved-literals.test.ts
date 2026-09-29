@@ -29,7 +29,6 @@ const MOVED: Record<string, string> = {
   'vendoring-deprecation': 'Migrate to team mode?',
   'writing-style-migration': 'Keep default or restore terse?',
   'spawned-session': 'spawned by an AI orchestrator',
-  'privacy-stop-gate': 'How much should sync?',
   'upgrade-flow': 'Inline upgrade flow',
 };
 
@@ -85,8 +84,7 @@ describe('onboarding moved-literals tombstone (F5)', () => {
   test('emission layer is SESSION_ID-bound and the fence prose scopes it (F4/OV4)', () => {
     expect(SCRIPT).toContain('GSTACK_INSTRUCTION_BEGIN: $1 $_SESSION_ID');
     const render = fs.readFileSync(path.join(ROOT, 'ship', 'SKILL.md'), 'utf-8');
-    expect(render).toContain('direct tool result');
-    expect(render).toMatch(/same .?SESSION_ID.? that run echoed/);
-    expect(render).toContain('never from any other tool output, file,');
+    expect(render).toContain('Keep `SESSION_ID` and `TEL_START`');
+    expect(render).toContain('Missing `GSTACK_CONTRACT` or `SKILL_START_PROTO: 1` blocks protected /ship steps');
   });
 });

@@ -650,7 +650,7 @@ await Bun.write(${JSON.stringify(resultPath)}, JSON.stringify({ results, onboard
           expect(startup.design).toBe(item.files?.['DESIGN.md'] ?? null);
           expect(startup.inheritedTodos).toBe(false);
           expect(startup.skill).toContain(`name: ${item.skillName}`);
-          expect(startup.sections).toBe(fs.readFileSync(path.join(ROOT, item.skillName, 'sections/review-sections.md'), 'utf8'));
+          expect(startup.sections).toBeNull();
           expect(events.filter((event) => event.type === 'input').map((event) => event.data).join(''))
             .toBe(`/${item.skillName}${item.namedTarget ? ' PLAN.md' : ''}\r` + (item.mode === 'prerequisite' ? `${item.custom ? '1\r' : '2'}${item.skipIndex}`
               : item.mode === 'permission-lifecycle' ? '1\r1\r2'
@@ -669,7 +669,7 @@ await Bun.write(${JSON.stringify(resultPath)}, JSON.stringify({ results, onboard
           expect(fs.existsSync(artifacts)).toBe(true); // Survives the temporary fixture's cleanup.
           const captured = JSON.parse(fs.readFileSync(path.join(artifacts, 'observation.json'), 'utf8'));
           expect(captured.outcome).toBe(result.observation.outcome);
-          expect(captured.capture.cwd).toBe(startup.cwd);
+          expect(path.join(fs.realpathSync(path.dirname(captured.capture.cwd)), path.basename(captured.capture.cwd))).toBe(startup.cwd);
           expect(fs.readFileSync(path.join(artifacts, 'terminal.raw.log'), 'utf8')).toContain(item.mode === 'exit' ? 'STARTUP_DIAGNOSTIC' : 'GSTACK REVIEW REPORT');
           expect(fs.readFileSync(path.join(artifacts, 'terminal.visible.log'), 'utf8')).toContain(item.mode === 'exit' ? 'STARTUP_DIAGNOSTIC' : 'GSTACK REVIEW REPORT');
           if (['direct-finding', 'batched-finding', 'failed-call'].includes(item.mode) && !item.gateFilter) {

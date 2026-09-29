@@ -251,8 +251,10 @@ try {
       expect(binding.designCwd.startsWith(binding.cwd + path.sep)).toBe(false);
       const expectedState = mode === 'unbound' ? path.join(root, 'foreign', 'design.json')
         : path.join(binding.cwd, '.gstack', 'design.json');
-      expect(binding.envState).toBe(expectedState);
-      expect(binding.resolvedState).toBe(expectedState);
+      const canonicalTmp = (value: string) => value.startsWith(os.tmpdir() + path.sep)
+        ? path.join(fs.realpathSync(os.tmpdir()), value.slice(os.tmpdir().length + 1)) : value;
+      expect(canonicalTmp(binding.envState)).toBe(canonicalTmp(expectedState));
+      expect(canonicalTmp(binding.resolvedState)).toBe(canonicalTmp(expectedState));
       const run = path.join(evalDir, 'pty-count', `board-ordering-${mode}`);
       const snapshots = fs.readdirSync(run);
       expect(snapshots).toHaveLength(1);

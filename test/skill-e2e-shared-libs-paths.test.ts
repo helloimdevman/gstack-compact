@@ -37,7 +37,7 @@ function sourceReadTrace(result: any, fixture: SharedLibsFixture, sources: strin
       if (!call) continue;
       const text = typeof block.content === 'string' ? block.content
         : Array.isArray(block.content) ? block.content.filter((part: any) => part.type === 'text').map((part: any) => part.text).join('\n') : '';
-      returned.push({ ...call, text: text.replace(/^\s*\d+→/gm, '') });
+      returned.push({ ...call, text: text.replace(/^[ \t]*\d+→/gm, '') });
     }
   }
   if (!returned.length) return reads.join('\n');
@@ -53,7 +53,9 @@ function sourceReadTrace(result: any, fixture: SharedLibsFixture, sources: strin
     if (!contents) continue;
     const spellings = [relative, resolved].map(value => value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'));
     const namedPath = new RegExp(`(?:^|[\\s"'=;])(?:\\./)?(?:${spellings.join('|')})(?=$|[\\s"';|)])`);
-    if (returned.some(({ tool, read, text }) => (tool === 'Read' ? path.resolve(repo, read) === resolved : namedPath.test(read))
+    if (returned.some(({ tool, read, text }) => (tool === 'Read' ? (() => {
+      try { return fs.realpathSync(path.resolve(repo, read)) === resolved; } catch { return false; }
+    })() : namedPath.test(read))
       && text.includes(contents))) reads.push(source);
   }
   return reads.join('\n');

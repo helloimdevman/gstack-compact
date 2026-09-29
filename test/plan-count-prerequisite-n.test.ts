@@ -50,7 +50,7 @@ describe('native prerequisite review-now offer', () => {
     // Floor checks also seed a plan, but never pick a prerequisite answer.
     const expected = [
       'autoplan-chain-pty', 'plan-ceo-finding-count', 'plan-ceo-mode-routing',
-      'plan-ceo-split-overflow', 'plan-design-finding-count', 'plan-design-with-ui-scope', 'plan-devex-finding-count',
+      'plan-ceo-split-overflow', 'plan-design-finding-count', 'plan-devex-finding-count',
       'plan-eng-finding-count', 'plan-eng-multi-finding-batching',
     ].sort();
     for (const dependency of ['test/plan-count-prerequisite-n.test.ts', 'test/fixtures/ceo-prerequisite-n-call.json', 'test/fixtures/eng-prerequisite-77.json']) {

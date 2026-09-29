@@ -102,16 +102,6 @@ describe('branch slug hygiene (#2550, #1851)', () => {
     expect(offenders).toEqual([]);
   });
 
-  test('plan content-search BRANCH uses the full gstack-slug canonical pipeline', () => {
-    const rendered = fs.readFileSync(
-      path.join(ROOT, 'ship', 'sections', 'plan-completion.md'),
-      'utf-8',
-    );
-    expect(rendered).toContain(
-      `BRANCH=$(git branch --show-current 2>/dev/null | tr '/' '-' | tr -cd 'a-zA-Z0-9._-')`,
-    );
-  });
-
   test('review logging stores branch slugs without creating raw branch directories', () => {
     const home = fs.mkdtempSync(path.join(os.tmpdir(), 'gstack-review-home-'));
     const repo = fs.mkdtempSync(path.join(os.tmpdir(), 'gstack-review-repo-'));

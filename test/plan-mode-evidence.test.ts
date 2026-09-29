@@ -9,7 +9,7 @@ const SECRET = 'fixture-private-diagnostic-value';
 
 // Import the actual paid registration in an isolated Bun process. Only model
 // execution is replaced; Bun assertions and the report-file validator are real.
-for (const skill of ['design', 'eng'] as const) {
+for (const skill of ['eng'] as const) {
  const PAID_FILE = `test/skill-e2e-plan-${skill}-plan-mode.test.ts`;
  const skillName = `plan-${skill}-review`;
  for (const scenario of ['success', 'missing-auto-select', 'scope-question', 'bad-report', 'bad-outcome', 'retry', 'unwritable', ...(skill === 'eng' ? ['missing-decisions'] : [])]) {

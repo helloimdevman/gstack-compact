@@ -92,13 +92,12 @@ describe('#2091/#2370 bug 1: every mktemp template is BSD-safe (X placeholder at
 
   test('scan sweep finds the known mktemp call sites (not vacuous)', () => {
     // Guards against the walker silently matching nothing after a refactor.
-    // codex's mktemp calls live in the carved mode sections (T9), not the
-    // skeleton — the walker scans their .tmpl sources.
+    // Pin live call sites as well as checking the scanner's overall reach.
     const withMktemp = files.filter((f) => fs.readFileSync(f, 'utf-8').includes('mktemp'));
     expect(withMktemp.length).toBeGreaterThanOrEqual(5);
-    expect(withMktemp).toContain(path.join(ROOT, 'codex', 'sections', 'review-mode.md.tmpl'));
-    expect(withMktemp).toContain(path.join(ROOT, 'codex', 'sections', 'consult-mode.md.tmpl'));
-    expect(withMktemp).toContain(path.join(ROOT, 'scripts', 'resolvers', 'review.ts'));
+    expect(withMktemp).toContain(path.join(ROOT, 'gstack-upgrade', 'SKILL.md.tmpl'));
+    expect(withMktemp).toContain(path.join(ROOT, 'document-release', 'sections', 'release-body.md.tmpl'));
+    expect(withMktemp).toContain(path.join(ROOT, 'scripts', 'resolvers', 'design.ts'));
   });
 
   test('no .tmpl, SKILL.md, or resolver carries a suffix after the X-run', () => {

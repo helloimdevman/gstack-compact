@@ -100,15 +100,15 @@ test('a later explicit reselection follows the existing currentness rule', () =>
   p.transcript.assistantMessages.push({ ...m, timestamp: new Date(Date.parse(m.timestamp) + 2000).toISOString() }); expect(verdict(p)).toBe(true);
 });
 
-test('both new dependencies select exactly the existing five scope observers', () => {
+test('both new dependencies select exactly the existing four scope observers', () => {
   const expected = selectTests(['test/helpers/plan-scope-selection.ts'], E2E_TOUCHFILES, []).selected;
-  expect(expected).toHaveLength(5);
+  expect(expected).toHaveLength(4);
   for (const path of ['test/eng-option-b-scope-al.test.ts', 'test/fixtures/eng-option-b-scope-al.json']) expect(selectTests([path], E2E_TOUCHFILES, []).selected).toEqual(expected);
 });
 
 for (const owner of [
   'plan-ceo-review-plan-mode', 'plan-eng-review-plan-mode',
-  'plan-design-review-plan-mode', 'plan-devex-review-plan-mode', 'plan-mode-no-op',
+  'plan-devex-review-plan-mode', 'plan-mode-no-op',
 ]) test(`scope dependency registration is dense for ${owner}`, () => {
   const paths = E2E_TOUCHFILES[owner]!;
   for (let index = 0; index < paths.length; index++) {

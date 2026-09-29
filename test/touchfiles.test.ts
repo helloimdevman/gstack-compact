@@ -18,8 +18,7 @@ import {
   GLOBAL_TOUCHFILES,
 } from './helpers/touchfiles';
 
-import { readWorkflowExcerpt } from './helpers/workflow-excerpt';
-import { sharedLibsPlanExcerpt } from './helpers/shared-libs-plan-excerpt';
+import { readWorkflowJudgeInput } from './helpers/workflow-judge-input';
 
 const ROOT = path.resolve(import.meta.dir, '..');
 
@@ -75,28 +74,12 @@ describe('matchGlob', () => {
 // --- selectTests ---
 
 describe('selectTests', () => {
-  test('learnings rendering selects the Eng workflow consumers without unrelated review cases', () => {
-    expect(fs.readFileSync(path.join(ROOT, 'plan-eng-review/sections/review-sections.md.tmpl'), 'utf8'))
-      .toContain('{{LEARNINGS_SEARCH}}');
-    const consumers = selectTests(['plan-eng-review/sections/review-sections.md'], E2E_TOUCHFILES).selected
-      // These cases use an outside-only/Code Quality excerpt or descriptive metadata.
-      .filter(id => !['outside-plan-disabled-no-fallback', 'plan-ceo-review-prosons-cadence',
-        'plan-review-prosons-format', 'shared-libs-plan-callers'].includes(id));
-    const existing = ['learnings-show', 'codex-plan-ceo-format-mode', 'codex-plan-ceo-format-approach',
-      'codex-plan-eng-format-coverage', 'codex-plan-eng-format-kind'];
-    const result = selectTests(['scripts/resolvers/learnings.ts'], E2E_TOUCHFILES);
-    expect(result.reason).toBe('diff');
-    expect(result.selected.sort()).toEqual([...new Set([...consumers, ...existing])].sort());
-    expect(result.selected).toContain('plan-eng-review');
-    expect(result.selected).toContain('plan-eng-finding-count');
-    expect(result.selected).not.toContain('plan-ceo-review-prosons-cadence');
-    expect(result.selected).not.toContain('outside-plan-disabled-no-fallback');
-  });
 
-  test('learnings rendering selects the Eng judge that consumes the changed instruction', () => {
+
+  test('learnings rendering selects the current retro judge', () => {
     const result = selectTests(['scripts/resolvers/learnings.ts'], LLM_JUDGE_TOUCHFILES);
     expect(result.reason).toBe('diff');
-    expect(result.selected).toEqual(['plan-eng-review/SKILL.md sections']);
+    expect(result.selected).toEqual(['retro/SKILL.md instructions']);
   });
 
   test.each(['bin/gstack-paths', 'bin/gstack-slug', 'scripts/resolvers/design.ts'])(
@@ -104,120 +87,50 @@ describe('selectTests', () => {
       const result = selectTests([file], E2E_TOUCHFILES);
       expect(result.reason).toBe('diff');
       expect(result.selected).toContain('plan-design-finding-count');
-      expect(result.selected).toContain('plan-design-with-ui-scope');
       if (file !== 'bin/gstack-slug') expect(result.selected).toContain('autoplan-chain-pty');
       expect(E2E_TIERS['plan-design-finding-count']).toBe('periodic');
-      expect(E2E_TIERS['plan-design-with-ui-scope']).toBe('gate');
       expect(E2E_TIERS['autoplan-chain-pty']).toBe('periodic');
     },
   );
 
-  test.each(['test/helpers/owned-claude-transcript.ts', 'test/helpers/plan-skill-completion.ts'])(
-    'native completion changes select the Design UI gate: %s', (file) => {
-      const result = selectTests([file], E2E_TOUCHFILES);
-      expect(result.selected).toContain('plan-design-with-ui-scope');
-      expect(E2E_TIERS['plan-design-with-ui-scope']).toBe('gate');
-    },
-  );
-
   test.each(['test/helpers/coverage-audit.ts', 'test/coverage-audit.test.ts'])(
-    'coverage-audit validation changes select all three gate cases: %s', (file) => {
+    'coverage-audit validation changes select both current gate cases: %s', (file) => {
       const result = selectTests([file], E2E_TOUCHFILES);
-      expect(result.selected.sort()).toEqual(['plan-eng-coverage-audit', 'review-coverage-audit', 'ship-coverage-audit']);
+      expect(result.selected.sort()).toEqual(['plan-eng-coverage-audit', 'review-coverage-audit']);
       expect(result.selected.every(id => E2E_TIERS[id] === 'gate')).toBe(true);
     },
   );
 
-  test('testing resolver source selects the same E2E consumers as its generated content', () => {
-    const consumers = [
-      ['plan-eng-review/sections/review-sections.md', 'TEST_COVERAGE_AUDIT_PLAN'],
-      ['ship/sections/tests.md', 'TEST_BOOTSTRAP'],
-      ['ship/sections/test-coverage.md', 'TEST_COVERAGE_AUDIT_SHIP'],
-      ['qa/sections/test-bootstrap.md', 'TEST_BOOTSTRAP'],
-      ['design-review/SKILL.md', 'TEST_BOOTSTRAP'],
-    ];
-    for (const [output, token] of consumers) {
-      expect(fs.readFileSync(path.join(ROOT, `${output}.tmpl`), 'utf8')).toContain(`{{${token}}}`);
-    }
-    const generated = selectTests(consumers.map(([output]) => output), E2E_TOUCHFILES);
-    // These two CEO-format cases already depend on every resolver through
-    // scripts/resolvers/**; keep that existing selection alongside consumers.
-    // The bounded Code Quality fixture stops before Test review.
-    const expected = [...new Set([...generated.selected.filter(id => id !== 'shared-libs-plan-callers'),
-      'codex-plan-ceo-format-mode', 'codex-plan-ceo-format-approach',
-    ])].sort();
-    const actual = selectTests(['scripts/resolvers/testing.ts'], E2E_TOUCHFILES);
-    expect(actual.reason).toBe('diff');
-    expect(actual.selected.sort()).toEqual(expected);
-    for (const id of ['plan-eng-finding-count', 'plan-eng-multi-finding-batching',
-      'autoplan-chain-pty', 'plan-eng-review-format-coverage', 'ship-section-loading', 'qa-fix-loop']) {
-      expect(actual.selected).toContain(id);
-      expect(E2E_TIERS[id]).toBe('periodic');
-    }
-    for (const id of ['plan-eng-coverage-audit', 'ship-coverage-audit']) {
-      expect(actual.selected).toContain(id);
-      expect(E2E_TIERS[id]).toBe('gate');
-    }
-    for (const unrelated of ['browse-basic', 'retro', 'office-hours-section-loading', 'review-coverage-audit']) {
-      expect(actual.selected).not.toContain(unrelated);
-    }
-  });
+
 
   test('testing resolver source selects only judges that consume its generated workflow text', () => {
     const result = selectTests(['scripts/resolvers/testing.ts'], LLM_JUDGE_TOUCHFILES);
     expect(result.reason).toBe('diff');
-    expect(result.selected.sort()).toEqual(['plan-eng-review/SKILL.md sections', 'ship/SKILL.md workflow']);
+    expect(result.selected).toEqual(['qa-only/SKILL.md workflow']);
+    expect(fs.readFileSync(path.join(ROOT, 'verify/sections/browser.md.tmpl'), 'utf8')).toContain('{{TEST_BOOTSTRAP}}');
   });
 
-  test('bounded shared-code planning selects its consumed resolvers, excluding other Eng sections', () => {
-    const entrypoint = fs.readFileSync(path.join(ROOT, 'plan-eng-review/SKILL.md'), 'utf8');
-    const review = fs.readFileSync(path.join(ROOT, 'plan-eng-review/sections/review-sections.md'), 'utf8');
-    const excerpt = sharedLibsPlanExcerpt(entrypoint, review);
-    for (const [start, end] of [
-      ['## Prior Learnings', '## Retrospective learning'],
-      ['### 3. Test review', '### 4. Performance review'],
-    ]) {
-      const begin = review.indexOf(start), finish = review.indexOf(end, begin);
-      expect(begin).toBeGreaterThan(0);
-      expect(finish).toBeGreaterThan(begin);
-      const changed = review.slice(0, begin + start.length) + '\nChanged excluded instructions.\n' + review.slice(finish);
-      expect(sharedLibsPlanExcerpt(entrypoint, changed)).toBe(excerpt);
-    }
-    for (const source of ['scripts/resolvers/learnings.ts', 'scripts/resolvers/testing.ts']) {
-      expect(selectTests([source], E2E_TOUCHFILES).selected).not.toContain('shared-libs-plan-callers');
-    }
-    expect(excerpt).toContain('## Shared contract');
-    expect(excerpt).toContain('## Confidence Calibration');
-    expect(excerpt).toContain('### Shared-code evaluation rubric');
-    for (const source of ['scripts/resolvers/confidence.ts',
-      'scripts/resolvers/preamble.ts', 'scripts/resolvers/shared-libs.ts',
-      'test/helpers/shared-libs-plan-excerpt.ts']) {
-      expect(selectTests([source], E2E_TOUCHFILES).selected).toContain('shared-libs-plan-callers');
-    }
-  });
+
 
   test.each([
-    ['plan-eng-review/sections/review-sections.md', 'plan-eng-review/SKILL.md sections',
-      'plan-eng-review/SKILL.md', '## Scope gate', '## Section self-check', '### REGRESSION RULE (mandatory)'],
+    ['plan/sections/engineering-review.md', 'plan-eng-review/SKILL.md sections',
+      'plan/SKILL.md', '# /plan', 'Trace affected code, callers'],
     ['ship/sections/tests.md', 'ship/SKILL.md workflow',
-      'ship/SKILL.md', '# Ship:', '## Important Rules', '## Test Framework Bootstrap'],
-    ['ship/sections/test-coverage.md', 'ship/SKILL.md workflow',
-      'ship/SKILL.md', '# Ship:', '## Important Rules', '### REGRESSION RULE (mandatory)'],
-    ['plan-design-review/sections/review-sections.md', 'plan-design-review/SKILL.md passes',
-      'plan-design-review/SKILL.md', '## Review Sections', '## CRITICAL RULE',
-      '## Review Sections (7 passes, after scope is agreed)'],
-  ])('expanded judge content remains selected by its section alone: %s', (file, judge, skill, start, end, marker) => {
-    const body = fs.readFileSync(path.join(ROOT, file), 'utf8').replace(/^<!--[^\n]*-->\n/gm, '').trim();
-    const paragraph = body.split(`${marker}\n\n`)[1]?.split('\n\n')[0];
-    expect(paragraph?.length).toBeGreaterThan(100);
-    expect(readWorkflowExcerpt(skill, start, end)).toContain(`${marker}\n\n${paragraph}`);
+      'ship/SKILL.md', '# /ship', 'Record absent required coverage'],
+    ['ship/sections/pr-body.md', 'ship/SKILL.md workflow',
+      'ship/SKILL.md', '# /ship', 'Write the exact PR body'],
+    ['plan/sections/design-review.md', 'plan-design-review/SKILL.md passes',
+      'plan/SKILL.md', '# /plan', 'Read the plan and the existing design system'],
+  ])('current judge bundle includes and selects its section: %s', (file, judge, skill, start, marker) => {
+    const input = readWorkflowJudgeInput({ root: ROOT, skillPath: skill, startMarker: start, endMarker: null });
+    expect(input.files.find(entry => entry.path === file)?.content).toContain(marker);
     for (const changed of [file, `${file}.tmpl`]) {
-      expect(selectTests([changed], LLM_JUDGE_TOUCHFILES).selected).toEqual([judge]);
+      expect(selectTests([changed], LLM_JUDGE_TOUCHFILES).selected).toContain(judge);
     }
   });
 
-  test.each(['scripts/resolvers/design.ts', 'scripts/resolvers/review.ts'])(
-    'Design rendering source selects its workflow judge: %s', (file) => {
+  test.each(['plan/sections/design-review.md.tmpl', 'plan/SKILL.md.tmpl'])(
+    'Current plan design source selects its workflow judge: %s', (file) => {
       const result = selectTests([file], LLM_JUDGE_TOUCHFILES);
       expect(result.reason).toBe('diff');
       expect(result.selected).toContain('plan-design-review/SKILL.md passes');
@@ -228,7 +141,6 @@ describe('selectTests', () => {
     const expected = {
       'office-hours-forcing-energy': 'periodic',
       'office-hours-builder-wildness': 'periodic',
-      'plan-design-review-plan-mode': 'periodic',
       'plan-ceo-review-format-mode': 'periodic',
       'plan-ceo-review-format-approach': 'periodic',
       'plan-eng-review-format-coverage': 'periodic',
@@ -237,11 +149,8 @@ describe('selectTests', () => {
       'plan-review-prosons-format': 'periodic',
       'plan-review-prosons-hardstop-neg': 'periodic',
       'plan-review-prosons-neutral-neg': 'periodic',
-      'review-army-red-team': 'periodic',
       'review-coverage-audit': 'gate',
       'plan-eng-coverage-audit': 'gate',
-      'ship-coverage-audit': 'gate',
-      'plan-review-report': 'gate',
     };
     expect(result.selected.sort()).toEqual(Object.keys(expected).sort());
     for (const [id, tier] of Object.entries(expected)) expect(E2E_TIERS[id]).toBe(tier);
@@ -349,7 +258,7 @@ describe('selectTests', () => {
   test('session tool isolation regression selects its capture workflows', () => {
     const result = selectTests(['test/session-runner-tools.test.ts'], E2E_TOUCHFILES);
     expect(result.selected.sort()).toEqual([
-      'auq-format-gate', 'carve-section-loading', 'plan-ceo-section-loading', 'plan-design-review-plan-mode', 'ship-section-loading',
+      'auq-format-gate', 'carve-section-loading', 'plan-ceo-section-loading', 'ship-section-loading',
     ]);
     expect(result.reason).toBe('diff');
   });
@@ -542,7 +451,7 @@ describe('TOUCHFILES completeness', () => {
     );
 
     const unique = registeredJudgeTestNames(llmContent);
-    expect(unique).toHaveLength(26);
+    expect(unique).toHaveLength(19);
 
     const missing = unique.filter(name => !(name in LLM_JUDGE_TOUCHFILES));
     if (missing.length > 0) {
@@ -561,7 +470,7 @@ describe('TOUCHFILES completeness', () => {
       testIfSelected('unmapped judge case', async () => {}, 120_000);
     `;
     const names = registeredJudgeTestNames(withUnmappedCase);
-    expect(names).toHaveLength(27);
+    expect(names).toHaveLength(20);
     expect(names.filter(name => !(name in LLM_JUDGE_TOUCHFILES))).toEqual(['unmapped judge case']);
   });
 

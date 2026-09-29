@@ -71,9 +71,9 @@ test('a later current withdrawal invalidates selection until a later reselection
   expect(verdict(p)).toBe(true);
 });
 
-test('both regression sources select the same five existing scope observers', () => {
+test('both regression sources select the same four existing scope observers', () => {
   const expected = selectTests(['test/helpers/plan-scope-selection.ts'], E2E_TOUCHFILES, []).selected;
-  expect(expected).toHaveLength(5);
+  expect(expected).toHaveLength(4);
   for (const path of ['test/design-scope-announcement-ao.test.ts', 'test/fixtures/design-scope-announcement-ao.json']) {
     expect(selectTests([path], E2E_TOUCHFILES, []).selected).toEqual(expected);
   }

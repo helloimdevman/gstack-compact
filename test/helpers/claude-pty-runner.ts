@@ -25,6 +25,7 @@ import { bunHasTerminal, spawnPty } from '../../lib/pty-bridge';
 import * as fs from 'fs';
 import * as os from 'os';
 import * as path from 'path';
+import { StringDecoder } from 'node:string_decoder';
 import { stripVTControlCharacters, isDeepStrictEqual } from 'node:util';
 import { hermeticChildEnv, hermeticSkillsConfigDir, isHermeticEnabled } from './hermetic-env';
 import { withHermeticSkillRuntime } from './hermetic-skill-runtime';
@@ -4116,8 +4117,9 @@ export async function launchClaudePty(
         hooks[event] = [...(hooks[event] ?? []), ...entries];
       args.push('--settings', JSON.stringify({hooks}));
     } else if (pendingExit) args.push('--settings', pendingExit.settings);
+    const utf8 = new StringDecoder('utf8');
     const onData = (chunk: Buffer) => {
-      const text = chunk.toString('utf-8');
+      const text = utf8.write(chunk);
       buffer += text;
       if (screen && !screenClosing) screen.write(text);
       notifyOutput();

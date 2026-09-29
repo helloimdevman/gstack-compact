@@ -95,9 +95,9 @@ test('checkbox states retain final correction, function subtree and column owner
  expect(diagram('Example:\n'+base)).toBe(false);
 });
 
-test('all three existing coverage consumers are selected without judge expansion',()=>{
+test('both current coverage consumers are selected without judge expansion',()=>{
  for(const file of ['test/coverage-checkbox-tail-av.test.ts','test/fixtures/coverage-checkbox-tail-av.json']){
-  expect(selectTests([file],E2E_TOUCHFILES,[]).selected.sort()).toEqual(['plan-eng-coverage-audit','review-coverage-audit','ship-coverage-audit']);
+  expect(selectTests([file],E2E_TOUCHFILES,[]).selected.sort()).toEqual(['plan-eng-coverage-audit','review-coverage-audit']);
   expect(selectTests([file],LLM_JUDGE_TOUCHFILES,[]).selected).toEqual([]);
  }
 });

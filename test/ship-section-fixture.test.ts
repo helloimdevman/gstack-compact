@@ -34,7 +34,7 @@ mock.module(${JSON.stringify(path.join(ROOT, 'test/helpers/auq-sdk-capture.ts'))
       const red = runTest();
       expect(red.status, red.stderr).toBe(1);
       expect(red.stderr).toContain('Expected: 42');
-      return { readSections: new Set(['review-army.md', 'changelog.md']), reportProduced: true, output: 'Reviewed fixture. '.repeat(20) };
+      return { readSections: new Set(['tests.md', 'changelog.md']), reportProduced: true, output: 'Reviewed fixture. '.repeat(20) };
     } finally { fs.rmSync(cwd, { recursive: true, force: true }); }
   },
 }));

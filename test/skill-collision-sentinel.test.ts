@@ -7,16 +7,12 @@
  * or confabulated "this is a built-in you need to type directly" and nothing
  * was saved. We found out from users, not from tests.
  *
- * This file is the "never again" test. It enumerates every gstack skill name
- * from every SKILL.md.tmpl file in the repo and cross-checks against a
- * per-host list of known built-in slash commands. If any gstack skill name
- * collides with a host built-in, this test fails and names the collision.
+ * This file checks default-installed names from every SKILL.md.tmpl against
+ * host built-ins. Explicit --no-prefix installs can collide by user choice.
  *
  * Maintenance: when Claude Code (or any other host we support) ships a new
  * built-in slash command, add the name to the host's KNOWN_BUILTINS list
- * below. If a gstack skill needs to coexist with a built-in anyway (e.g.,
- * we decide the semantic overlap is acceptable), add it to
- * KNOWN_COLLISIONS_TOLERATED with a written justification.
+ * below so the default-installed name check stays current.
  *
  * Free tier. ~50ms runtime.
  */
@@ -24,6 +20,8 @@
 import { describe, test, expect } from 'bun:test';
 import * as fs from 'fs';
 import * as path from 'path';
+import * as os from 'os';
+import { spawnSync } from 'node:child_process';
 
 const ROOT = path.resolve(import.meta.dir, '..');
 
@@ -73,15 +71,6 @@ const KNOWN_BUILTINS: Record<string, string[]> = {
   // TODO: codex CLI built-ins (login, logout, exec, review, etc. — but we
   // invoke codex from gstack, we don't install skills INTO codex the same
   // way, so this is lower priority).
-};
-
-// Collisions we know about and have consciously decided to tolerate. The
-// justification is mandatory — reviewers need the context next time the
-// user reports confusion, and blind additions to this map should fail code
-// review.
-const KNOWN_COLLISIONS_TOLERATED: Record<string, string> = {
-  // skill name → one-line justification + action plan
-  'review': 'gstack /review (pre-landing diff analysis) pre-dates the Claude Code built-in /review (Review a pull request). The gstack skill is much richer (SQL safety, LLM trust boundary, specialist dispatch). Watch for user confusion reports and consider renaming to /diff-review or /pre-land if the collision bites. TODO: track user-reported incidents in TODOS.md.',
 };
 
 // Generic-verb watchlist: skill names that are single common verbs, which
@@ -151,50 +140,36 @@ describe('skill-collision-sentinel', () => {
     }
   });
 
-  // Hard check: no gstack skill name collides with a known host built-in
-  // unless the collision is explicitly tolerated. This is the test that
-  // would have caught the /checkpoint bug in April 2026.
+  // Hard check: the default install names must not collide with host built-ins.
   for (const [host, builtins] of Object.entries(KNOWN_BUILTINS)) {
-    test(`no skill name collides with a ${host} built-in (or has written justification)`, () => {
+    test(`no default skill name collides with a ${host} built-in`, () => {
+      const home = fs.mkdtempSync(path.join(os.tmpdir(), 'gstack-collision-'));
+      let prefix: string;
+      try {
+        const result = spawnSync(path.join(ROOT, 'bin/gstack-config'), ['get', 'skill_prefix'], {
+          env: { ...process.env, GSTACK_HOME: home }, encoding: 'utf8', timeout: 5000,
+        });
+        expect(result.status, result.stderr).toBe(0);
+        prefix = result.stdout.trim();
+      } finally { fs.rmSync(home, { recursive: true, force: true }); }
+      expect(prefix).toBe('true');
       const builtinSet = new Set(builtins);
       const collisions: Array<{ skill: string; builtin: string }> = [];
       for (const { name } of skills) {
-        if (builtinSet.has(name) && !(name in KNOWN_COLLISIONS_TOLERATED)) {
-          collisions.push({ skill: name, builtin: name });
+        const installed = name.startsWith('gstack-') ? name : `gstack-${name}`;
+        if (builtinSet.has(installed)) {
+          collisions.push({ skill: installed, builtin: installed });
         }
       }
       if (collisions.length > 0) {
         const msg = collisions.map(c =>
           `  /${c.skill} collides with ${host} built-in /${c.builtin}.\n` +
-          `    Fix: rename the gstack skill (precedent: /checkpoint → /context-save+/context-restore),\n` +
-          `    OR add an entry to KNOWN_COLLISIONS_TOLERATED with a written justification.`
+          `    Fix: rename the installed skill or adjust the safe default prefix.`
         ).join('\n\n');
         throw new Error(`Found ${collisions.length} unresolved collision(s) with ${host} built-ins:\n\n${msg}`);
       }
     });
   }
-
-  // Every KNOWN_COLLISIONS_TOLERATED entry must correspond to a real skill
-  // AND a real built-in. Prevents the exception list from rotting with
-  // stale entries after a rename.
-  test('KNOWN_COLLISIONS_TOLERATED entries are all still active collisions', () => {
-    const skillNames = new Set(skills.map(s => s.name));
-    const allBuiltins = new Set<string>();
-    for (const list of Object.values(KNOWN_BUILTINS)) {
-      for (const name of list) allBuiltins.add(name);
-    }
-    const stale: string[] = [];
-    for (const name of Object.keys(KNOWN_COLLISIONS_TOLERATED)) {
-      if (!skillNames.has(name)) {
-        stale.push(`  "${name}" is in KNOWN_COLLISIONS_TOLERATED but no gstack skill has that name — remove the exception`);
-      } else if (!allBuiltins.has(name)) {
-        stale.push(`  "${name}" is in KNOWN_COLLISIONS_TOLERATED but no host's KNOWN_BUILTINS lists it — remove the exception`);
-      }
-    }
-    if (stale.length > 0) {
-      throw new Error(`Stale tolerance entries:\n${stale.join('\n')}`);
-    }
-  });
 
   // Self-check: the /checkpoint rename actually landed. If someone reverts
   // the rename by accident, this catches it.

@@ -20,7 +20,7 @@ const event=(kind,value)=>fs.appendFileSync(events,JSON.stringify({kind,value,at
 const row=(type,content,stop)=>JSON.stringify({type,sessionId:sid,cwd,message:{role:type,content,stop_reason:stop}})+'\n';
 const text=s=>[{type:'text',text:s}];
 const append=(type,content,stop)=>fs.appendFileSync(file,row(type,content,stop));
-const rule='─'.repeat(120);
+const rule='─'.repeat(100);
 const frame=(s,history='',top=rule,bottom=rule)=>{
  const inputRows=1+(s.match(/\r\n/g)||[]).length;
  const topRow=(process.stdout.rows||40)-inputRows-2;

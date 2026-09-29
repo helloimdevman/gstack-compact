@@ -165,7 +165,7 @@ const observation=await runPlanSkillCounting({skillName:'plan-design-review',sla
   followUpPrompt:'Review the deadline fixture.',isLastStep0AUQ:()=>false,reviewCountCeiling:8,timeoutMs:mode==='boot'?12000:18000,
   pickAUQ:(_routing,_active,context)=>{
     const ready=fs.readFileSync(process.env.BOUNDARY_EVENTS,'utf8').trim().split('\n').map(line=>JSON.parse(line)).find(event=>event.event==='ready');
-    if(!Object.isFrozen(context)||context.cwd!==ready.cwd||!Number.isFinite(context.deadlineAt)||context.deadlineAt<=Date.now()||context.deadlineAt>start+18000)
+    if(!Object.isFrozen(context)||fs.realpathSync(context.cwd)!==fs.realpathSync(ready.cwd)||!Number.isFinite(context.deadlineAt)||context.deadlineAt<=Date.now()||context.deadlineAt>start+18000)
       throw new Error('Picker did not receive its owned fixture and bounded deadline');
     log('picker');while(Date.now()-start<12800){};return 2;
   },

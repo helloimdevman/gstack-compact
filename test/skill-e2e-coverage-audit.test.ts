@@ -1,7 +1,5 @@
-/** Current /review testing-specialist and /plan-eng-review test-review audits.
+/** Current /review and /plan-eng-review test-review audits.
  * Both use source-extracted instructions and the same billing coverage fixture.
- * The diagram is an explicit user request for the targeted /review specialist;
- * /review no longer has the historical Step 4.75 coverage-diagram section.
  */
 import { afterAll } from 'bun:test';
 import { randomUUID } from 'node:crypto';
@@ -22,10 +20,8 @@ import { resolveEvalModel } from '../lib/eval-model';
 const evalCollector = createEvalCollector('e2e');
 const CASES = [
   { id: 'review-coverage-audit', skill: 'review', suite: 'Review Coverage Audit E2E',
-    instructions: `Read review/SKILL.md and review/sections/review-army.md for the current review workflow.
-Apply ONLY the testing specialist checklist in review/specialists/testing.md to the supplied source and tests.
-This is a targeted --testing request, even though this fixture has no branch diff.
-Run that checklist directly; do not dispatch other specialists or perform fixes.` },
+    instructions: `Read review/SKILL.md for the current review workflow.
+This is a targeted test-coverage review of the supplied source and tests. Produce the requested ASCII coverage diagram directly. Do not delegate, perform fixes, or run unrelated workflow steps.` },
   { id: 'plan-eng-coverage-audit', skill: 'plan-eng-review', suite: 'Plan Eng Review Coverage Audit E2E',
     instructions: `Read plan-eng-review/SKILL.md and plan-eng-review/sections/review-sections.md.
 Run ONLY section "3. Test review": codepath tracing and the ASCII coverage diagram.

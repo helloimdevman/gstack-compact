@@ -442,7 +442,7 @@ Guard clauses tested: 0 / 4
   });
   test('coverage evidence files select their exact registered consumers',()=>{
     for(const file of ['test/helpers/coverage-audit-evidence.ts','test/coverage-audit-evidence.test.ts','test/fixtures/coverage-audit-ae.json','test/fixtures/coverage-audit-ci-diagrams.json']){
-      expect(selectTests([file],E2E_TOUCHFILES,GLOBAL_TOUCHFILES).selected.sort()).toEqual(file === 'test/helpers/coverage-audit-evidence.ts' ? ['plan-eng-coverage-audit','review-coverage-audit','ship-coverage-audit'] : ['plan-eng-coverage-audit','review-coverage-audit']);
+      expect(selectTests([file],E2E_TOUCHFILES,GLOBAL_TOUCHFILES).selected.sort()).toEqual(['plan-eng-coverage-audit','review-coverage-audit']);
       expect(selectTests([file],LLM_JUDGE_TOUCHFILES,GLOBAL_TOUCHFILES).selected).toEqual([]);
     }
   });

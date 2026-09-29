@@ -11,7 +11,6 @@ import type { NativePlanQuestionCall } from './helpers/plan-count-transcript';
 import captured from './fixtures/design-review-j-calls.json';
 import numberedPasses from './fixtures/design-review-l-calls.json';
 import scoredPasses from './fixtures/design-review-n-calls.json';
-import outsideCalls from './fixtures/design-outside-y-calls.json';
 import boundaryCalls from './fixtures/design-boundaries-y-calls.json';
 import gapCalls from './fixtures/design-gap-z-calls.json';
 import septemberFirst from './fixtures/design-count-sep21-first-call.json';
@@ -714,55 +713,6 @@ describe('Native finding and closed handoff boundaries', () => {
   });
 });
 
-describe('Completed outside-review participation stays setup', () => {
-  const actual = () => structuredClone(outsideCalls) as NativePlanQuestionCall[];
-  test('the actual first opt-in cannot start review; all seven later decisions still count', () => {
-    const input = actual();
-    expect(input).toHaveLength(8);
-    expect(isDesignCountSetup(fingerprint(input[0]!))).toBe(true);
-    expect(isDesignCountFirstReview(fingerprint(input[0]!))).toBe(false);
-    expect(replay(input)).toMatchObject({step0: 1, review: 7, administrative: 0});
-    expect(replay(input).phases[0]!.reviewStarted).toBe(false);
-    for (const call of input.slice(1)) expect(isDesignCountSetup(fingerprint(call))).toBe(false);
-  });
-  test('a late opt-in and either offered answer preserve the other decisions', () => {
-    for (const selected of [0, 1]) {
-      const input = actual(); const setup = input.shift()!;
-      const q = setup.questions[0]!; setup.answers = {[q.question]: q.options[selected]!.label};
-      input.splice(3, 0, setup);
-      expect(replay(input)).toMatchObject({step0: 1, review: 7, administrative: 0});
-    }
-  });
-  test('the existing outside-voices identity and comma labels also stay setup', () => {
-    const call = actual()[0]!; const q = call.questions[0]!;
-    q.question = 'D4 — Want outside design voices before the detailed review? Codex evaluates the design; a Claude subagent reviews completeness. <gstack-qid:outside-voices-design>';
-    q.options = [{label:'Yes, run outside design voices'}, {label:'No, proceed without (Recommended)'}];
-    call.answers = {[q.question]:q.options[1]!.label};
-    expect(isDesignCountSetup(fingerprint(call))).toBe(true);
-    expect(isDesignCountFirstReview(fingerprint(call))).toBe(false);
-  });
-  test('incomplete, mismatched, mixed and substantive questions cannot be hidden as setup', () => {
-    const mutations: Array<(call: NativePlanQuestionCall) => void> = [
-      c => {c.answered = false;}, c => {c.failed = true;}, c => {c.answers = {};},
-      c => {c.unansweredQuestionIndices = [0];}, c => {c.questions[0]!.multiSelect = true;},
-      c => {c.questions.push(actual()[1]!.questions[0]!);},
-      c => {c.questions[0]!.options.push({label: 'Fix the missing export state'});},
-      c => {c.questions[0]!.options[0]!.label = 'No — leave the defect unfixed';},
-      c => {c.questions[0]!.options[0]!.description += ' Also remove the account-owner authorization check from Export.';},
-      c => {c.questions[0]!.options[1]!.description += ' Also remove the account-owner authorization check from Export.';},
-      c => {c.questions[0]!.question = c.questions[0]!.question.replace(' <gstack-qid:', ' Also remove the account-owner authorization check from Export. <gstack-qid:');},
-      c => {c.questions[0]!.question = c.questions[0]!.question.replace('plan-design-review-outside-voices', 'plan-design-review-auth');},
-      c => {c.questions[0]!.question = 'D1 — Should the product require outside design voices for every customer? <gstack-qid:plan-design-review-outside-voices>';},
-      c => {c.questions[0]!.question = c.questions[0]!.question.replace('before the review passes?', 'before the review passes? Also fix Export?');},
-    ];
-    for (const mutate of mutations) {
-      const call = actual()[0]!; mutate(call);
-      expect(isDesignCountSetup(fingerprint(call))).toBe(false);
-    }
-    expect(isDesignCountSetup({...fingerprint(actual()[0]!), signature:'foreign'})).toBe(false);
-  });
-});
-
 describe('Design count native review phases and completion handoff', () => {
   test('numbered native pass decisions retain the first hierarchy approval after learnings setup', () => {
     const input = numberedCalls();
@@ -939,15 +889,6 @@ describe('Design count native review phases and completion handoff', () => {
       call.answers = { [q.question]: q.options[0]!.label };
       expect(isDesignCompletionHandoff(fingerprint(call))).toBe(true);
     }
-  });
-  test('the existing outside opt-out keeps precedence under the composed caller policy', () => {
-    const question = 'Want outside design voices before the detailed review? <gstack-qid:outside-voices-design>';
-    const call: NativePlanQuestionCall = { sessionId: 'outside', toolUseId: 'opt-in', answered: false,
-      questions: [{ header: 'Outside voices', question, multiSelect: false,
-        options: [{ label: 'Yes, run outside design voices' }, { label: 'No, proceed without (Recommended)' }] }] };
-    const fp = fingerprint(call);
-    expect(pickDesignCountQuestion(fp, fp)).toBe(2);
-    expect(isDesignCompletionHandoff(fp)).toBe(false);
   });
   test('captured handoff timing does not make a completed report stale; a missing substantive update still does', () => {
     const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'design-handoff-report-'));

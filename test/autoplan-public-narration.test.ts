@@ -129,7 +129,7 @@ test('public narration changes select every existing shared native-reader consum
  const expected=[
   'auto-decide-preserved','autoplan-chain-pty','conductor-prose',
   'plan-ceo-finding-count','plan-ceo-mode-routing','plan-ceo-split-overflow',
-  'plan-design-finding-count','plan-design-review-plan-mode','plan-design-with-ui-scope',
+  'plan-design-finding-count',
   'plan-devex-finding-count','plan-eng-finding-count','plan-eng-multi-finding-batching',
   'plan-eng-review-plan-mode',
  ].sort();

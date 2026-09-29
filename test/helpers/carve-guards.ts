@@ -102,7 +102,7 @@ export const CARVE_GUARDS: Record<string, CarveGuard> = {
     requiredReads: ['tests.md', 'pr-body.md'],
     scenario: 'Prepare a feature branch for a PR, verify and review the final candidate, then explain the publication gate without actually pushing or creating a PR.',
     staticInvariants: {
-      mustStayInSkeleton: ['## 1. Prepare', '## 2. Verify', '## 3. Review', '## 4. Publish', 'Do not dispatch an agent'],
+      mustStayInSkeleton: ['## 1. Prepare', '## 2. Verify', '## 3. Review', '## 4. Publish', 'do not dispatch an agent'],
       mustPrecedeStop: ['## 1. Prepare', '## 2. Verify', '## 3. Review', '## 4. Publish'],
       mustMoveToSection: ['gh pr create --base', 'gh pr edit --title'],
     },

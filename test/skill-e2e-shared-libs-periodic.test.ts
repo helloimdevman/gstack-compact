@@ -5,10 +5,8 @@ import * as path from 'node:path';
 import { CAPTURE_LONG_MS } from './helpers/eval-budgets';
 import { describeE2ETier, e2eTierEnabled } from './helpers/e2e-gate';
 import { EvalCollector } from './helpers/eval-store';
-import { sharedLibsPlanExcerpt } from './helpers/shared-libs-plan-excerpt';
-import { createSharedPlanReuseSelector } from './helpers/shared-libs-plan-actor';
 import {
-  SHARED_LIBS_ROOT, commitFixture, createSharedLibsFixture, fixtureWrite, installSourceShims,
+  commitFixture, createSharedLibsFixture, fixtureWrite, installSourceShims,
   readRequests, runSharedCapture, runSharedInteractive, seedOpportunitySources,
   sharedReadOnlyViolations, snapshotFixture, standaloneInstructions, toolCommandTrace, type SharedLibsFixture,
   SharedCaptureAccumulator, type SharedCaptureAttempt,
@@ -175,43 +173,5 @@ describeE2E('Shared-code opportunity and coordination judgment (periodic)', () =
     } finally { fs.rmSync(f.root, { recursive: true, force: true }); }
   }), CAPTURE_LONG_MS);
 
-  test('shared-libs-plan-callers', () => captures.runAttempt('shared-libs-plan-callers', ['plan'], CAPTURE_LONG_MS, async attempt => {
-    const f = createSharedLibsFixture('plan-callers');
-    try {
-      seedOpportunitySources(f);
-      const entrypoint = fs.readFileSync(path.join(SHARED_LIBS_ROOT, 'plan-eng-review/SKILL.md'), 'utf8');
-      const source = fs.readFileSync(path.join(SHARED_LIBS_ROOT, 'plan-eng-review/sections/review-sections.md'), 'utf8');
-      const instructions = path.join(f.root, 'eng-code-quality.md');
-      fs.writeFileSync(instructions, sharedLibsPlanExcerpt(entrypoint, source));
-      const plan = path.join(f.root, 'PLAN.md');
-      fs.writeFileSync(plan, `# Import and synchronization retry planning\nAdd two FUTURE TypeScript callers, src/import-worker.ts and src/sync-route.ts (neither exists yet). Both use the current server runtime, accept Retry-After strings/null plus injected now, need a 3600-second ceiling and caller-provided fallback, and must match the existing scheduler semantics. The draft proposes implementing a local parser in each caller. No files are implemented yet. Each caller will have an integration test; the plan currently does not mention a shared helper or shared-contract test coverage.\n\nCompatibility with current scheduler behavior, including edge cases, is fixed. This plan covers the two future callers and the shared-contract/caller proof they need. Changing existing parser semantics or migrating existing callers is outside this plan. Report discovered compatibility risks and unrelated concerns as limitations; do not silently assume compatibility or waive required proof.\n`);
-      const before = snapshotFixture(f.repo);
-      let questions: any[] = [];
-      await judgedCapture(attempt, 'plan', 'shared-libs-plan-callers', async () => {
-        const capture = await runSharedInteractive(f, 'shared-libs-plan-callers',
-          `Run only the generated engineering Code Quality section and its supplied decision prerequisites in ${instructions}. The selected target and report file are ${plan}; you may update that file with the decision ledger and approved plan amendments. Review the two proposed callers' parser source under the fixed current scheduler contract, including necessary shared-contract and caller integration proof. Inspect src/scheduler.ts, its parser dependency and their tests; read other source only if needed to establish that compatibility. Do not run a repository-wide opportunity sweep. The fixture user can answer the parser-reuse choice under that unchanged contract, including its required tests and wiring; independent helper hardening or existing-caller migrations are outside this actor's interface. Report any such concerns as limitations instead of opening new decisions. Use the actual AskUserQuestion approval flow; the user will answer. After applying and reading back the approved resolution and plan amendments, return the section's findings and stop. Do not run startup or other review sections, or implement the proposed source files.`, createSharedPlanReuseSelector());
-        questions = capture.questions;
-        return capture.result;
-      }, async result => {
-        const after = snapshotFixture(f.repo);
-        // The real Code Quality workflow may run git status. The observed SDK
-        // run rewrote an otherwise byte-identical index with group-write
-        // permission. Permit only that observed metadata change; all source,
-        // test, index bytes, and other filesystem effects remain exact checks.
-        const [beforeMode, beforeDigest] = (before['.git/index'] || '').split(':');
-        const [afterMode, afterDigest] = (after['.git/index'] || '').split(':');
-        if (beforeDigest && beforeDigest === afterDigest &&
-          Number(afterMode) === (Number(beforeMode) | 0o020)) after['.git/index'] = before['.git/index'];
-        expect(after).toEqual(before);
-        expect(questions.length).toBeGreaterThan(0);
-        expect(toolCommandTrace(result).join('\n')).not.toMatch(/gh\s+(?:pr|api)|git\s+log\s+--since/);
-        await assertJudgment(result.output + '\n' + fs.readFileSync(plan, 'utf8') + '\nQUESTIONS: ' + JSON.stringify(questions), {
-          proposed_callers: 'Treats import-worker.ts and sync-route.ts as explicitly proposed future callers, not verified existing files, while permitting the plan-level reuse recommendation.',
-          existing_contract: 'Recommends using the actual lib/retry-after.ts retrySeconds implementation and its established scheduler use/contract instead of duplicating the parser twice.',
-          tests_and_adoption: 'Names compatibility or shared-contract coverage and caller integration coverage, with a concrete adoption route for the two proposed callers.',
-          estimates_are_proposed: 'Savings are estimates for the proposed parser blocks, separate implementation from total testing/integration cost; does not assert real deleted lines or force five/top-three findings.',
-        });
-      });
-    } finally { fs.rmSync(f.root, { recursive: true, force: true }); }
-  }), CAPTURE_LONG_MS);
+
 });

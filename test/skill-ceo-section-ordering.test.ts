@@ -15,11 +15,10 @@ const ROOT = path.resolve(import.meta.dir, '..');
 const SKELETON = path.join(ROOT, 'plan-ceo-review', 'SKILL.md');
 
 describe('plan-ceo-review skeleton', () => {
-  test('job card points at the shared contract and does not pace one question per turn', () => {
+  test('job card routes to current plan review without old pacing', () => {
     const body = fs.readFileSync(SKELETON, 'utf-8');
-    expect(body).toContain('## Outcome');
-    expect(body).toContain('## Shared contract');
-    expect(body).toContain('Do not implement');
+    expect(body).toContain('`../plan/SKILL.md`');
+    expect(body).toContain('`review-product` mode');
     expect(body).not.toContain('Completeness Principle — Boil the Ocean');
     expect(body.toLowerCase()).not.toContain('one question per turn');
     expect(body.length).toBeGreaterThan(200);

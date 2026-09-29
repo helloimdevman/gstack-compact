@@ -185,11 +185,18 @@ function isConcretePath(raw: string): boolean {
 function collectRefs(): Ref[] {
   const refs: Ref[] = [];
   for (const skill of installedSkillDirs()) {
-    const content = fs.readFileSync(path.join(installDir, skill, 'SKILL.md'), 'utf-8');
-    for (const m of content.matchAll(REF_RE)) {
-      const rel = m[2].replace(/[.,:;/]+$/, '');
-      if (!rel || !isConcretePath(rel)) continue;
-      refs.push({ fromSkill: skill, skillName: m[1], rel });
+    const dir = path.join(installDir, skill);
+    const sections = path.join(dir, 'sections');
+    const files = [path.join(dir, 'SKILL.md'), ...(
+      fs.existsSync(sections) ? fs.readdirSync(sections).filter(name => name.endsWith('.md')).map(name => path.join(sections, name)) : []
+    )];
+    for (const file of files) {
+      const content = fs.readFileSync(file, 'utf-8');
+      for (const m of content.matchAll(REF_RE)) {
+        const rel = m[2].replace(/[.,:;/]+$/, '');
+        if (!rel || !isConcretePath(rel)) continue;
+        refs.push({ fromSkill: skill, skillName: m[1], rel });
+      }
     }
   }
   return refs;

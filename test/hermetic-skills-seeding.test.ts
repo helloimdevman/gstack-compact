@@ -44,10 +44,9 @@ describe('hermeticSkillsConfigDir', () => {
     expect(seeded).toEqual([...skillCensus(ROOT).registryEntries, 'gstack'].sort());
     const runtime = path.join(skillsDir, 'gstack');
     expect(fs.lstatSync(runtime).isDirectory()).toBe(true);
-    expect(fs.readFileSync(path.join(runtime, 'plan-design-review/sections/review-sections.md'), 'utf8'))
-      .toBe(fs.readFileSync(path.join(ROOT, 'plan-design-review/sections/review-sections.md'), 'utf8'));
-    for (const rel of ['bin/gstack-config', 'lib/claude-bin.ts', 'SKILL.md', 'ETHOS.md', 'extension/manifest.json',
-      'browser-skills/hackernews-frontpage/script.ts', 'browser-skills/hackernews-frontpage/script.test.ts',
+    expect(fs.readFileSync(path.join(runtime, 'plan/SKILL.md'), 'utf8'))
+      .toBe(fs.readFileSync(path.join(ROOT, 'plan/SKILL.md'), 'utf8'));
+    for (const rel of ['bin/gstack-config', 'lib/claude-bin.ts', 'SKILL.md', 'ETHOS.md',
       'docs/askuserquestion-split.md', 'docs/askuserquestion-cjk.md',
       'docs/designs/PLAN_TUNING_V0.md', 'docs/designs/PLAN_TUNING_V1.md'])
       expect(fs.realpathSync(path.join(runtime, rel))).toBe(fs.realpathSync(path.join(ROOT, rel)));

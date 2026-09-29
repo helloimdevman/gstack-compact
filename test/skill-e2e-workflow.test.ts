@@ -8,15 +8,9 @@ import {
   createEvalCollector, finalizeEvalCollector,
 } from './helpers/e2e-helpers';
 import { spawnSync } from 'child_process';
-import { randomUUID } from 'node:crypto';
 import * as fs from 'fs';
 import * as path from 'path';
 import * as os from 'os';
-import { extractSkillBody } from './helpers/skill-fixture';
-import { createCoverageAuditFixture } from './fixtures/coverage-audit-fixture';
-import { validateCoverageAudit, type CoverageFile } from './helpers/coverage-audit';
-import { runRecordedOfficeHoursAttempt, OFFICE_HOURS_BUN_GRACE_MS } from './helpers/office-hours-attempt';
-import { resolveEvalModel } from '../lib/eval-model';
 
 const evalCollector = createEvalCollector('e2e');
 
@@ -319,70 +313,6 @@ IMPORTANT: The install directory is at ./.claude/skills/gstack — use that exac
 
     expect(['success', 'error_max_turns']).toContain(result.exitReason);
     expect(versionAfter).toBe('0.6.0');
-  }, CAPTURE_MS);
-});
-
-// --- Test Coverage Audit E2E ---
-
-describeIfSelected('Test Coverage Audit E2E', ['ship-coverage-audit'], () => {
-  testConcurrentIfSelected('ship-coverage-audit', async () => {
-    let coverageDir: string | undefined;
-    let files: CoverageFile[] = [];
-    try {
-      await runRecordedOfficeHoursAttempt({
-        collector: evalCollector, name: 'ship-coverage-audit', suite: 'Test Coverage Audit E2E',
-        model: process.env.EVALS_MODEL ?? resolveEvalModel('capture'),
-        // Keep the original 300s Bun cap and 120s runner work budget, including
-        // the existing helper's bounded abort/drain/record reserve in that cap.
-        budgetMs: CAPTURE_MS - OFFICE_HOURS_BUN_GRACE_MS,
-        run: async signal => {
-          coverageDir = fs.mkdtempSync(path.join(os.tmpdir(), 'skill-e2e-coverage-'));
-          copyDirSync(path.join(ROOT, 'ship'), path.join(coverageDir, 'ship'));
-          copyDirSync(path.join(ROOT, 'review'), path.join(coverageDir, 'review'));
-          fs.writeFileSync(path.join(coverageDir, 'ship', 'SKILL.md'), extractSkillBody(path.join(ROOT, 'ship')));
-          createCoverageAuditFixture(coverageDir);
-          files = ['src/billing.ts', 'test/billing.test.ts'].map(relative => {
-            const file = path.join(coverageDir!, relative);
-            // The complete contents and fresh marker must occur in successful
-            // native tool output; the prompt does not disclose the marker.
-            fs.appendFileSync(file, `\n// coverage-read-evidence: ${randomUUID()}\n`);
-            return { path: file, content: fs.readFileSync(file, 'utf8') };
-          });
-          return runSkillTest({
-            prompt: `Read ship/SKILL.md and ship/sections/test-coverage.md for the current ship workflow.
-
-You are on the feature/billing branch. The base branch is main.
-This is a test project — there is no remote, no PR to create.
-
-Run ONLY Step 7 (Test Coverage Audit), applying the section's audit instructions directly
-to the two supplied billing functions. This is a targeted audit with no branch diff.
-Run the audit inline; do not dispatch subagents.
-Skip all other steps (tests, evals, review, version, changelog, commit, push, PR).
-
-The source code is in ${coverageDir}/src/billing.ts.
-Existing tests are in ${coverageDir}/test/billing.test.ts.
-
-Produce the ASCII coverage diagram showing which code paths are tested and which have gaps.
-Output the diagram directly, name both billing functions, and include a coverage summary.
-Do not generate tests or modify the supplied source or tests.`,
-            workingDirectory: coverageDir,
-            maxTurns: 15,
-            allowedTools: ['Bash', 'Read', 'Write', 'Edit', 'Glob', 'Grep'],
-            timeout: JUDGE_MS,
-            testName: 'ship-coverage-audit',
-            runId, signal,
-          });
-        },
-        validate: result => {
-          logCost('/ship coverage audit', result);
-          validateCoverageAudit(result, coverageDir!, files);
-        },
-      });
-    } finally {
-      // Native retries retain this case's original registration and own fresh
-      // fixtures, so each attempt must prove its own source and test reads.
-      if (coverageDir) try { fs.rmSync(coverageDir, { recursive: true, force: true }); } catch {}
-    }
   }, CAPTURE_MS);
 });
 

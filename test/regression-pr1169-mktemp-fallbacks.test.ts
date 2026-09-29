@@ -36,20 +36,15 @@ describe("#2679: skill-content mktemp guards", () => {
     // interpolation's closing brace).
     const body = readScript("scripts/resolvers/redact-doc.ts");
     expect(body).toMatch(/REDACT_FILE=\$\(mktemp\)\s*\|\|\s*\{.*exit 1/);
-    // And the rendered output (interpolation resolved) carries the guard too.
-    const rendered = readScript("spec/sections/gate-and-file.md");
-    expect(rendered).toMatch(/REDACT_FILE=\$\(mktemp\)\s*\|\|\s*\{[^}]*exit 1/);
+    const current = readScript("plan/sections/spec.md.tmpl");
+    expect(current).toContain('private `ISSUE_BODY_FILE` (mode 0600)');
+    expect(current).toContain('If scanning or filing fails, retain the draft');
   });
 
   test("ship pr-body template guards PR_BODY_FILE=$(mktemp) with a loud exit", () => {
     const body = readScript("ship/sections/pr-body.md.tmpl");
-    expect(body).toMatch(/PR_BODY_FILE=\$\(mktemp\)\s*\|\|\s*\{[^}]*exit 1/);
-  });
-
-  test("ship pr-body GitLab path sends the SCANNED file, never a re-rendered heredoc", () => {
-    const body = readScript("ship/sections/pr-body.md.tmpl");
-    expect(body).toContain('-d "$(cat "$PR_BODY_FILE")"');
-    expect(body).not.toMatch(/glab mr create[^\n]*-d "\$\(cat <<'EOF'/);
+    expect(body).toContain('private temporary `PR_BODY_FILE` (mode 0600); stop if creation or writing fails');
+    expect(body).toContain('--body-file "$PR_BODY_FILE"');
   });
 
   test("gstack-upgrade vendored block guards mktemp -d and clone with loud aborts", () => {

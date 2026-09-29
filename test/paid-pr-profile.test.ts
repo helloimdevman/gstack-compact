@@ -62,7 +62,7 @@ describe('PR profile paid-runner integration', () => {
   test('unknown dependencies restore full gate while missing prompt coverage fails before execution', () => {
     const fallback = computePaidCaseSelection({ profile: 'pr', env: {}, changedFiles: ['lib/unknown-pr-runtime.ts'] });
     expect(fallback.coverage?.mode).toBe('full-fallback');
-    expect(fallback.selection.e2e).toContain('review-army-delivery-audit');
+    expect(fallback.selection.e2e).toContain('plan-ceo-review-plan-mode');
     expect(fallback.selection.e2e).not.toContain('autoplan-chain-pty');
     expect(fallback.coverage?.deferred.some(item => item.id === 'autoplan-chain-pty')).toBe(true);
     expect(() => computePaidCaseSelection({ profile: 'pr', env: {}, changedFiles: ['unregistered/nested/SKILL.md'] })).toThrow('requires full validation');
@@ -108,7 +108,7 @@ describe('PR profile paid-runner integration', () => {
     expect(() => parseRunManifest(JSON.stringify({ ...manifest, selection: undefined }))).toThrow('coverage/selection');
     expect(() => parseRunManifest(JSON.stringify({ ...manifest, prCoverage: { ...manifest.prCoverage, missingCoverage: ['missing/SKILL.md'] } }))).toThrow('full validation');
     const broad = structuredClone(manifest);
-    broad.selection!.e2e!.push('review-army-delivery-audit'); broad.prCoverage!.e2e.push('review-army-delivery-audit');
+    broad.selection!.e2e!.push('plan-ceo-review-plan-mode'); broad.prCoverage!.e2e.push('plan-ceo-review-plan-mode');
     expect(() => parseRunManifest(JSON.stringify(broad))).toThrow('broad-only');
     const injected = structuredClone(manifest);
     injected.entries.find(entry => entry.file.includes('opus-47'))!.status = 'planned';
@@ -141,10 +141,10 @@ describe('PR profile paid-runner integration', () => {
   });
 
   test('name filters handle literal labels and never select broad raw tests', () => {
-    const selection = { e2e: ['plan-review-report', 'auq-format-gate'], judges: ['plan-ceo-review/SKILL.md modes'] };
+    const selection = { e2e: ['plan-ceo-review-benefits', 'auq-format-gate'], judges: ['plan-ceo-review/SKILL.md modes'] };
     const report = new RegExp(prProfileTestNamePattern('test/skill-e2e-plan.test.ts', selection));
-    expect(report.test('Plan Review Report E2E /plan-eng-review writes GSTACK REVIEW REPORT to plan file')).toBe(true);
-    expect(report.test('Plan Review Report E2E plan-ceo-review')).toBe(false);
+    expect(report.test('Plan Benefits E2E plan-ceo-review-benefits')).toBe(true);
+    expect(report.test('Plan Benefits E2E plan-ceo-review')).toBe(false);
     const auq = new RegExp(prProfileTestNamePattern('test/skill-e2e-ask-user-question-format-compliance.test.ts', selection));
     expect(auq.test("/plan-ceo-review's first AskUserQuestion is a compliant decision brief (7/7 + substance)")).toBe(true);
     const judge = new RegExp(prProfileTestNamePattern('test/skill-llm-eval.test.ts', selection));
@@ -164,9 +164,9 @@ describe('PR profile paid-runner integration', () => {
         import { test } from 'bun:test';
         import { appendFileSync } from 'node:fs';
         import { describeIfSelected, testIfSelected } from ${JSON.stringify(path.join(ROOT, 'test/helpers/e2e-helpers.ts'))};
-        describeIfSelected('fixture', ['plan-ceo-review-benefits', 'plan-review-report'], () => {
+        describeIfSelected('fixture', ['plan-ceo-review-benefits', 'plan-ceo-review-plan-mode'], () => {
           testIfSelected('plan-ceo-review-benefits', async () => { appendFileSync(${JSON.stringify(receipt)}, 'selected\\n'); }, 5000);
-          testIfSelected('plan-review-report', async () => { throw new Error('unselected model boundary executed'); }, 5000);
+          testIfSelected('plan-ceo-review-plan-mode', async () => { throw new Error('unselected model boundary executed'); }, 5000);
           test('unexpected raw paid call', () => { throw new Error('raw model boundary executed'); });
         });
       `);

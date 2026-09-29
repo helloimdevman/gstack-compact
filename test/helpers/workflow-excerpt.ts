@@ -3,11 +3,11 @@ import * as path from 'path';
 
 const ROOT = path.resolve(import.meta.dir, '..', '..');
 
-// Include the scope/Aside prerequisites used by Step 0, through report outputs.
+// Evaluate the current /plan owner rather than the compatibility alias.
 export const ENG_REVIEW_EXCERPT = {
-  skillPath: 'plan-eng-review/SKILL.md',
-  startMarker: '## Scope gate',
-  endMarker: '## Section self-check (before you finish)',
+  skillPath: 'plan/SKILL.md',
+  startMarker: '# /plan',
+  endMarker: null,
 } as const;
 
 // Same generated two-line pointer consumed by setup-gbrain-fixture.ts.

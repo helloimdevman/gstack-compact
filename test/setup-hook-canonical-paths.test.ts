@@ -143,14 +143,14 @@ describe('gstack-settings-hook: shared prelude (dedupe key == prune predicate)',
     expect(prelude).not.toContain('`');
   });
 
-  test('KNOWN_HOOKS table carries all six identities with source+event+relpath', () => {
+  test('KNOWN_HOOKS table carries all six active identities with source+event+relpath', () => {
     for (const [name, source, event] of [
       ['question-log-hook', 'plan-tune-cathedral', 'PostToolUse'],
       ['question-preference-hook', 'plan-tune-cathedral', 'PreToolUse'],
       ['auq-error-fallback-hook', 'auq-error-fallback', 'PostToolUse'],
       ['timeline-stop-hook', 'gstack-timeline-stop', 'Stop'],
       ['gstack-session-update', 'gstack-session-update', 'SessionStart'],
-      ['memorable-user-prompt-hook', 'gstack-memorable', 'UserPromptSubmit'],
+      ['gstack-verify-gate', 'verify-gate', 'Stop'],
     ]) {
       const rowStart = hookBinSrc.indexOf(`"${name}":`);
       expect(rowStart).toBeGreaterThan(-1);

@@ -298,8 +298,6 @@ describe('native AUQ accepts one action per displayed question', () => {
           long: true,
         },
         { name: 'late-packet', count: 2, late: true, permission: false },
-        { name: 'design-outside-tab', count: 2, late: false, permission: false, designQuestions: designOutsideQuestions },
-        { name: 'design-outside-late', count: 2, late: true, permission: false, designQuestions: designOutsideQuestions },
       ].map((item) => ({
         ...item,
         record: path.join(dir, item.name + '.jsonl'),
@@ -452,7 +450,6 @@ process.stdout.write('PTY_READY:' + item.record + '\x1b[2J\x1b[H');
       fs.writeFileSync(
         worker,
         `import {runPlanSkillCounting} from ${JSON.stringify(pathToFileURL(path.resolve(import.meta.dir, 'helpers/claude-pty-runner.ts')).href)};
-import {pickDesignCountOutsideVoices} from ${JSON.stringify(pathToFileURL(path.resolve(import.meta.dir, 'helpers/design-count-outside.ts')).href)};
 const cases=${JSON.stringify(cases)};
 const results = await Promise.all(cases.map(async item => ({
   name: item.name,
@@ -464,7 +461,6 @@ const results = await Promise.all(cases.map(async item => ({
     isLastStep0AUQ: () => false,
     isReviewAUQ: () => true,
     firstAUQPick: item.designQuestions ? undefined : () => 2,
-    pickAUQ: item.designQuestions ? pickDesignCountOutsideVoices : undefined,
     reviewCountCeiling: 8,
     timeoutMs: 35000,
     env: { NATIVE_INPUT_CASE: JSON.stringify(item) },

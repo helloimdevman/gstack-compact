@@ -89,5 +89,4 @@ jobs:
           shellcheck --severity=error
           setup
           scripts/build.sh
-          scripts/build-app.sh
           scripts/write-version-files.sh

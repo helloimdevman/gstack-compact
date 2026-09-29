@@ -37,27 +37,10 @@ import * as path from 'path';
 // If gen-skill-docs renames a heading, test/skill-fixture.test.ts fails free.
 
 /** /review E2E (sql-injection, enum-completeness, design-lite): the core
- *  review workflow without the shared preamble, Review Army, or Fix-First. */
+ *  review workflow without the shared preamble. */
 export const REVIEW_E2E_SECTIONS = [
-  'Step 0: Detect platform and base branch',
-  'Step 1: Check branch',
-  'Step 1.5: Scope Drift Detection',
-  'Step 4: Critical pass (core review)',
-  'Confidence Calibration',
-  'Important Rules',
-];
-
-/** Review Army E2E: core workflow + Scope Drift / Plan Completion Audit
- *  (delivery-audit test) + Step 4.5 specialist dispatch (quality score,
- *  JSON findings schema, MULTI-SPECIALIST consensus, Red Team). */
-export const REVIEW_ARMY_E2E_SECTIONS = [
-  'Step 0: Detect platform and base branch',
-  'Step 1: Check branch',
-  'Step 1.5: Scope Drift Detection',
-  'Step 4: Critical pass (core review)',
-  'Confidence Calibration',
-  'Step 4.5: Review Army — Specialist Dispatch',
-  'Important Rules',
+  'Outcome',
+  'Section index — Read each section when its situation applies',
 ];
 
 /** /retro E2E (retro, retro-base-branch): the repo-scoped retro flow
@@ -74,12 +57,8 @@ export const RETRO_E2E_SECTIONS = [
  *  REVIEW_E2E_SECTIONS, minus "When to invoke this skill" (the Codex host
  *  adapter does not emit that section). */
 export const CODEX_REVIEW_E2E_SECTIONS = [
-  'Step 0: Detect platform and base branch',
-  'Step 1: Check branch',
-  'Step 1.5: Scope Drift Detection',
-  'Step 4: Critical pass (core review)',
-  'Confidence Calibration',
-  'Important Rules',
+  'Outcome',
+  'Section index — Read each section when its situation applies',
 ];
 
 // ─── Parsing internals ──────────────────────────────────────────────────────
@@ -244,6 +223,9 @@ export function extractSkillBody(skillDir: string): string {
       throw new Error(`skill-fixture: ${file} has no job text after the shared contract.`);
     }
     return [frontmatter, '', intro, '', tail, ''].join('\n');
+  }
+  if (!all.some(section => section.heading.startsWith('Preamble (') || section.heading === SHARED_PREAMBLE_LAST)) {
+    return fs.readFileSync(file, 'utf8');
   }
   const boundary = (names: string[]): H2Section => {
     const matches = all.filter(section => names.includes(section.heading));

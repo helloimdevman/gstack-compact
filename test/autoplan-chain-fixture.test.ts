@@ -26,12 +26,9 @@ test('the chain fixture retains the complete original UI/API scope', () => {
 
 test('the new fixture is isolated to the chain and its selection dependencies', () => {
   expect(read('test/skill-e2e-autoplan-chain.test.ts')).toContain("'plans', 'autoplan-dashboard.md'");
-  expect(read('test/skill-e2e-plan-design-with-ui.test.ts')).toContain("'plans', 'ui-heavy-feature.md'");
   for (const file of [fixture, 'test/autoplan-chain-fixture.test.ts']) {
     expect(selectTests([file], E2E_TOUCHFILES).selected).toEqual(['autoplan-chain-pty']);
   }
-  expect(selectTests(['test/fixtures/plans/ui-heavy-feature.md'], E2E_TOUCHFILES).selected)
-    .toEqual(['plan-design-with-ui-scope']);
 });
 
 

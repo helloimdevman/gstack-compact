@@ -62,8 +62,7 @@ afterAll(() => {
  * The STATUS-key contract. Post-Phase-2 these split into two consumers:
  * keys the rendered prose still interprets directly (SESSION_KIND,
  * CONDUCTOR_SESSION, SESSION_ID/TEL_START, EXPLAIN_LEVEL, QUESTION_TUNING,
- * PROACTIVE, SKILL_PREFIX, REPO_MODE, GSTACK_PLAN_MODE,
- * ARTIFACTS_SYNC, ...) and keys the script's OWN emission gates consume
+ * PROACTIVE, SKILL_PREFIX, REPO_MODE, GSTACK_PLAN_MODE) and keys the script's OWN emission gates consume
  * (ACTIVATED, FIRST_TASK, LAKE_INTRO, TEL_PROMPTED, PROACTIVE_PROMPTED,
  * HAS_ROUTING, ROUTING_DECLINED, VENDORED_GSTACK, ...). Both classes stay in
  * the emitted contract: the echoes are the debugging surface for the gates,
@@ -94,7 +93,6 @@ const PROSE_REFERENCED_KEYS = [
   'VENDORED_GSTACK',
   'MODEL_OVERLAY',
   'GSTACK_PLAN_MODE',
-  'ARTIFACTS_SYNC',
 ];
 
 describe('gstack-skill-start contract', () => {
@@ -368,10 +366,6 @@ describe('gstack-skill-start behavior', () => {
     expect(out).toMatch(/^MODEL_OVERLAY: opus$/m);
   });
 
-  test('ARTIFACTS_SYNC reports off in a cold home', () => {
-    const out = runStart();
-    expect(out).toMatch(/^ARTIFACTS_SYNC: off$/m);
-  });
 });
 
 describe('gstack-skill-end', () => {
@@ -386,14 +380,6 @@ describe('gstack-skill-end', () => {
     expect(m).not.toBeNull();
     expect(Number(m![1])).toBeGreaterThanOrEqual(7);
     expect(Number(m![1])).toBeLessThan(60);
-  });
-
-  test('drains the artifacts queue (discover-new + once) — render prose promises it', () => {
-    // Every render says "do not run gstack-brain-sync separately — skill-end
-    // drains it"; dropping these lines would silently orphan the queue.
-    const s = fs.readFileSync(END, 'utf-8');
-    expect(s).toContain('gstack-brain-sync" --discover-new');
-    expect(s).toContain('gstack-brain-sync" --once');
   });
 
   test('cleans the pending analytics marker for the session', () => {

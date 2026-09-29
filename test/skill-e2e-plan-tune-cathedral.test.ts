@@ -10,7 +10,6 @@
  *   - plan-tune-hook-capture
  *   - plan-tune-enforcement
  *   - plan-tune-annotation
- *   - plan-tune-codex-import
  *   - plan-tune-dream-cycle
  *
  * Each scenario uses GSTACK_STATE_ROOT to isolate from the user's real
@@ -60,7 +59,6 @@ function scaffoldFixture(workDir: string): { workDir: string; stateRoot: string;
     'gstack-question-log',
     'gstack-question-preference',
     'gstack-developer-profile',
-    'gstack-codex-session-import',
     'gstack-distill-free-text',
     'gstack-distill-apply',
   ]) {
@@ -315,62 +313,7 @@ describeIfSelected('PlanTune cathedral E2E: annotation', ['plan-tune-annotation'
 });
 
 // ---------------------------------------------------------------------------
-// Scenario 4: Codex import — JSONL session → import bin → log fills
-// ---------------------------------------------------------------------------
-
-describeIfSelected('PlanTune cathedral E2E: codex import', ['plan-tune-codex-import'], () => {
-  testCathedral('plan-tune-codex-import', 'cathedral-cdx-', async (fixture) => {
-    const sessionFile = path.join(fixture.workDir, 'rollout-cathedral.jsonl');
-    const lines = [
-      JSON.stringify({
-        type: 'session_meta',
-        payload: { id: 'cathedral-sess-1', cwd: fixture.workDir },
-      }),
-      JSON.stringify({
-        timestamp: new Date().toISOString(),
-        type: 'event_msg',
-        payload: {
-          type: 'agent_message',
-          message:
-            'D1 — Cathedral import <gstack-qid:plan-eng-review-scope-reduce>\nRecommendation: A\nA) Reduce (recommended)\nB) Keep',
-        },
-      }),
-      JSON.stringify({
-        timestamp: new Date().toISOString(),
-        type: 'event_msg',
-        payload: { type: 'user_message', message: 'A' },
-      }),
-    ];
-    fs.writeFileSync(sessionFile, lines.join('\n') + '\n');
-    const bin = path.join(fixture.workDir, 'bin', 'gstack-codex-session-import');
-    const res = spawnSync(bin, [sessionFile], {
-      env: {
-        ...fixture.env,
-        GSTACK_STATE_ROOT: fixture.stateRoot,
-        GSTACK_QUESTION_LOG_NO_DERIVE: '1',
-      },
-      encoding: 'utf-8',
-      cwd: fixture.workDir,
-      timeout: 30_000,
-    });
-    expect(res.status).toBe(0);
-    expect(res.stdout).toContain('IMPORTED: 1');
-    const logPath = path.join(fixture.stateRoot, 'projects', fixture.slug, 'question-log.jsonl');
-    expect(fs.existsSync(logPath)).toBe(true);
-    const events = fs
-      .readFileSync(logPath, 'utf-8')
-      .trim()
-      .split('\n')
-      .filter(Boolean)
-      .map((l) => JSON.parse(l));
-    expect(events.length).toBe(1);
-    expect(events[0].source).toBe('codex-import-marker');
-    expect(events[0].question_id).toBe('plan-eng-review-scope-reduce');
-  });
-});
-
-// ---------------------------------------------------------------------------
-// Scenario 5: Dream cycle round-trip — capture → distill (mocked) → apply →
+// Scenario 4: Dream cycle round-trip — capture → distill (mocked) → apply →
 //             re-fire → memory injection
 // ---------------------------------------------------------------------------
 

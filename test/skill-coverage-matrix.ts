@@ -50,7 +50,7 @@ export const SKILL_COVERAGE: Record<string, SkillCoverage> = {
   },
   review: {
     gate: ['test/skill-e2e-review.test.ts', 'test/skill-e2e-shared-libs.test.ts', 'test/skill-e2e-shared-libs-paths.test.ts', 'test/shared-libs-evidence.test.ts', 'test/shared-libs-rendering.test.ts', 'test/skill-coverage-floor.test.ts'],
-    periodic: ['test/skill-e2e-review-army.test.ts', 'test/regression-1539-review-self-verify.test.ts'],
+    periodic: [],
   },
   'deslop-shared-libs': {
     gate: ['test/shared-libs-rendering.test.ts', 'test/skill-e2e-shared-libs.test.ts', 'test/skill-coverage-floor.test.ts'],
@@ -117,8 +117,6 @@ export const SKILL_COVERAGE: Record<string, SkillCoverage> = {
   'plan-design-review': {
     gate: [
       'test/skill-e2e-plan-design-finding-floor.test.ts',
-      'test/skill-e2e-plan-design-plan-mode.test.ts',
-      'test/skill-e2e-plan-design-with-ui.test.ts',
       'test/skill-coverage-floor.test.ts',
     ],
     periodic: ['test/skill-e2e-plan-design-finding-count.test.ts'],

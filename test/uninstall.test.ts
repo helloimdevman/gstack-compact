@@ -340,7 +340,7 @@ describe('the Memorable bridge hook is removed by name and the kept config is le
         stdio: 'pipe', timeout: 30_000, env, cwd: tmp, encoding: 'utf-8',
       });
       expect(result.status).toBe(0);
-      expect(result.stdout).toContain('Memorable UserPromptSubmit hook');
+      expect(result.stdout).toContain('memorable_recall consent (set off)');
       const s = JSON.parse(fs.readFileSync(settingsFile, 'utf-8'));
       // gstack's entry gone, the vendor's own entry untouched
       expect(s.hooks.UserPromptSubmit).toHaveLength(1);

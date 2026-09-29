@@ -94,17 +94,4 @@ describe('docs ↔ gstack-config key drift guard', () => {
     }
   });
 
-  test.skipIf(process.platform === 'win32')('`gstack-config get artifacts_sync_mode` returns a value (the rename landed)', () => {
-    // Run from a clean HOME so the user's local config doesn't pollute.
-    const tmpHome = fs.mkdtempSync(path.join(require('os').tmpdir(), 'gstack-cfg-'));
-    try {
-      const result = runConfig(['get', 'artifacts_sync_mode'], tmpHome);
-      expect(result.status).toBe(0);
-      // A known key returns its default value, not the "unknown key" error string.
-      expect(result.stderr).not.toContain('not recognized');
-      expect(result.stdout.trim().length).toBeGreaterThan(0);
-    } finally {
-      fs.rmSync(tmpHome, { recursive: true, force: true });
-    }
-  });
 });

@@ -4,8 +4,6 @@ import * as fs from 'node:fs';
 import * as path from 'node:path';
 import * as os from 'node:os';
 import { validateOfficeHoursCompletion, validateOfficeHoursReviewerHandoffs, validateOfficeHoursReviewArtifacts, validateOfficeHoursReviewPreservation, validateOfficeHoursSpecSummary, type OfficeHoursCompletionEvidence } from './helpers/office-hours-completion';
-import { E2E_TOUCHFILES, E2E_TIERS } from './helpers/touchfiles-data';
-import { selectTests } from './helpers/test-selection';
 
 const designPath = '/tmp/office-hours-fixture/docs/designs/roster-check.md';
 const finalReview = `## Completeness
@@ -51,27 +49,6 @@ function completed(): OfficeHoursCompletionEvidence {
 }
 
 describe('office-hours fixture completion', () => {
-  test('the fixture composes completion outcomes before mechanical report finalization and native acknowledgement', () => {
-    const caller = fs.readFileSync(path.join(import.meta.dir, 'skill-e2e-office-hours-section-loading.test.ts'), 'utf8');
-    const instructions = /artifactCommands: `([\s\S]*?)`,\n\s*reportMarker:/.exec(caller)?.[1] ?? '';
-    const compose = instructions.indexOf('Compose REPORT.md as a completion record');
-    const finalize = instructions.indexOf('--report REPORT.md');
-    const finish = instructions.indexOf('Only after the report finalization succeeds');
-    expect(compose).toBeGreaterThan(-1);
-    expect(finalize).toBeGreaterThan(compose);
-    expect(finish).toBeGreaterThan(finalize);
-    expect(instructions).toContain('summarize each phase\'s outcome and actual decisions with their rationale');
-    expect(instructions).toContain('link the approved design and saved review evidence');
-    expect(instructions).toContain('full actual Assignment, coaching/relationship closing, approval outcome, and Handoff');
-    expect(instructions).toContain('complete every required phase and preserve all findings');
-    expect(instructions).toContain('completed round files and any actual unreviewed failure');
-    expect(instructions).toContain('persist the complete managed Spec Review section');
-    expect(instructions).toContain('Write the complete diagnostic, premise challenge, alternatives, independent opinion and rationale into the design');
-    expect(instructions).toContain('write the full relationship closing and handoff directly into REPORT.md');
-    expect(instructions.indexOf('Delivery throughout this non-interactive run')).toBeLessThan(compose);
-    expect(instructions).toContain('A failed command remains a failure');
-  });
-
   test('accepts a completed approved design with unresolved reviewer concerns', () => {
     const review = validateOfficeHoursCompletion(completed());
     expect(review?.report).toBe(report);
@@ -688,22 +665,6 @@ Convergence stopped round 2: the empty CSV issue persisted after an attempted fi
   test('semantic evidence cannot omit the declared disposition', async () => {
     await expect(validateOfficeHoursReviewPreservation({ verdict: finalReview, concerns: finalReview } as any, async () => accepted))
       .rejects.toThrow('missing or invalid declared disposition');
-  });
-});
-
-describe('office-hours completion eval selection', () => {
-  test('office-hours source selects its dedicated workflow instead of the generic carve file', () => {
-    const { selected } = selectTests(['office-hours/sections/design-and-handoff.md.tmpl'], E2E_TOUCHFILES);
-    expect(selected).toContain('office-hours-section-loading');
-    expect(selected).not.toContain('carve-section-loading');
-  });
-
-  test('completion helper changes select its gate and dedicated periodic workflow', () => {
-    const { selected } = selectTests(['test/helpers/office-hours-completion.ts'], E2E_TOUCHFILES);
-    expect(selected).toEqual(['office-hours-spec-review', 'office-hours-section-loading']);
-    expect(selected.filter(name => E2E_TIERS[name] === 'periodic')).toEqual(['office-hours-section-loading']);
-    expect(E2E_TIERS['office-hours-spec-review']).toBe('gate');
-    expect(E2E_TOUCHFILES['office-hours-section-loading']).toContain('test/skill-e2e-office-hours-section-loading.test.ts');
   });
 });
 

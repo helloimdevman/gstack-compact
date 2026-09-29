@@ -149,7 +149,8 @@ CLAUDE_SKILLS="$HOME/.claude/skills"
 # name is in this inventory AND its SKILL.md carries the generated banner.
 # The seed names below are the alias dirs setup's _install_alias_skill_md
 # creates (setup: link_claude_root_skill_alias) — keep in sync with setup.
-_INVENTORY=" _gstack-command "
+# Legacy connect-chrome copies are still ours to remove when banner-verified.
+_INVENTORY=" _gstack-command connect-chrome "
 if [ -d "$GSTACK_DIR" ]; then
   for _SRC in "$GSTACK_DIR"/*/; do
     [ -f "$_SRC/SKILL.md" ] || continue

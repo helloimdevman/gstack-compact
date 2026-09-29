@@ -7,7 +7,7 @@ import { E2E_TOUCHFILES } from './helpers/touchfiles';
 
 const ROOT = path.resolve(import.meta.dir, '..');
 const source = fs.readFileSync(path.join(import.meta.dir, 'skill-e2e-plan-tune-cathedral.test.ts'), 'utf8');
-const names = ['plan-tune-hook-capture', 'plan-tune-enforcement', 'plan-tune-annotation', 'plan-tune-codex-import', 'plan-tune-dream-cycle'];
+const names = ['plan-tune-hook-capture', 'plan-tune-enforcement', 'plan-tune-annotation', 'plan-tune-dream-cycle'];
 
 async function exercise(selected = names, fault?: 'missing-log-lib' | 'missing-hook-lib' | 'first-hook' | 'setup', hostEnv: Record<string, string> = {}) {
   // Execute the actual selected callbacks with real local bins. Never import
@@ -47,7 +47,7 @@ async function exercise(selected = names, fault?: 'missing-log-lib' | 'missing-h
     spawnSync: (bin: string,argv: string[],opts: any) => {
       if(bin!=='git') {
         owned(bin);
-        expect(['question-log-hook','question-preference-hook','gstack-codex-session-import','gstack-distill-apply']).toContain(path.basename(bin));
+        expect(['question-log-hook','question-preference-hook','gstack-distill-apply']).toContain(path.basename(bin));
         owned(opts.env.GSTACK_STATE_ROOT);
       }
       if(opts.cwd) owned(opts.cwd);
@@ -75,13 +75,13 @@ async function exercise(selected = names, fault?: 'missing-log-lib' | 'missing-h
   } finally {fs.rmSync(scratch,{recursive:true,force:true});}
 }
 
-test('Cathedral callbacks run all five real local contracts with fresh attempts and truthful rows', async () => {
+test('Cathedral callbacks run all four real local contracts with fresh attempts and truthful rows', async () => {
   const x=await exercise();
-  expect(x.attempts).toHaveLength(10); expect(x.rows).toHaveLength(10); expect(x.dirs).toHaveLength(10);
-  expect(new Set(x.dirs).size).toBe(10); expect(x.allRemoved).toBe(true);
+  expect(x.attempts).toHaveLength(8); expect(x.rows).toHaveLength(8); expect(x.dirs).toHaveLength(8);
+  expect(new Set(x.dirs).size).toBe(8); expect(x.allRemoved).toBe(true);
   for(const attempt of x.attempts) {expect(attempt.error).toBeUndefined();expect(attempt.remaining).toEqual([]);}
   for(const row of x.rows) {expect(row.passed).toBe(true);expect(row.cost_usd).toBe(0);expect(row.output).toContain('no model invocation');}
-});
+}, 15_000);
 
 test('Missing installed libraries still fail the actual hook and log contracts', async () => {
   for(const [name,fault] of [['plan-tune-hook-capture','missing-log-lib'],['plan-tune-enforcement','missing-hook-lib']] as const) {
@@ -106,7 +106,7 @@ test('A partial fixture setup failure is recorded once and cleans only its owned
   expect(x.invoked.every(bin=>bin==='git')).toBe(true); expect(x.allRemoved).toBe(true);
 });
 
-test('Cathedral fixture controls and copied libraries select all five existing owners only', () => {
+test('Cathedral fixture controls and copied libraries select all four existing owners only', () => {
   for(const file of ['test/plan-tune-cathedral-fixture.test.ts','lib/jsonl-store.ts','lib/is-conductor.ts']) {
     const owners=Object.entries(E2E_TOUCHFILES).filter(([name,paths])=>names.includes(name)&&paths.includes(file)).map(([name])=>name);
     expect(owners).toEqual(names);

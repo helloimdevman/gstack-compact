@@ -23,8 +23,8 @@ describe('hermetic seeded PTY runtime', () => {
     const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'gstack-runtime-probe-'));
     const operatorHome = path.join(dir, 'operator-home');
     const oldRoot = path.join(operatorHome, '.claude', 'skills', 'gstack');
-    const section = 'autoplan/sections/ceo-phase.md';
-    fs.mkdirSync(path.join(oldRoot, 'autoplan', 'sections'), { recursive:true });
+    const section = 'plan/SKILL.md';
+    fs.mkdirSync(path.join(oldRoot, 'plan'), { recursive:true });
     fs.mkdirSync(path.join(oldRoot, 'bin'));
     fs.writeFileSync(path.join(oldRoot, section), 'STALE OPERATOR PHASE\n');
     fs.writeFileSync(path.join(oldRoot, 'bin/gstack-config'), '#!/bin/sh\necho stale-runtime\n', { mode:0o755 });
@@ -52,12 +52,12 @@ const args = process.argv.slice(2);
 const addDirs = args.flatMap((arg,index) => arg === '--add-dir' ? [args[index+1]] : []);
 const addDir = addDirs[0] || null;
 const registryDirectory = path.join(process.env.CLAUDE_CONFIG_DIR || path.join(process.env.HOME,'.claude'),'skills');
-const registeredSection = path.join(registryDirectory,'autoplan','sections','design-phase.md');
+const registeredSection = path.join(registryDirectory,'plan','SKILL.md');
 const stateDirectory = path.join(process.env.HOME,'.gstack');
 const methodologyPath = path.join(stateDirectory,'projects','probe','autoplan-design-methodology-owned','methodology.md');
 const inside = (file,directory) => { const relative=path.relative(directory,file); return relative==='' || (!relative.startsWith('..'+path.sep) && relative!=='..' && !path.isAbsolute(relative)); };
 
-const phase = spawnSync('bash',['-c','cat ~/.claude/skills/gstack/autoplan/sections/ceo-phase.md'],{timeout:5000});
+const phase = spawnSync('bash',['-c','cat ~/.claude/skills/gstack/plan/SKILL.md'],{timeout:5000});
 const config = spawnSync('bash',['-c','"$HOME/.claude/skills/gstack/bin/gstack-config" get codex_reviews'],{timeout:5000});
 const canonicalConfig = process.env.CLAUDE_CONFIG_DIR && spawnSync('bash',['-c','"$CLAUDE_CONFIG_DIR/skills/gstack/bin/gstack-config" get codex_reviews'],{timeout:5000});
 const codexHome = process.env.CODEX_HOME || path.join(process.env.HOME,'.codex');
@@ -78,7 +78,7 @@ const record = {
   codexHome, codexConfig:fs.readFileSync(path.join(codexHome,'config.toml'),'utf8'),
   codexAuthPreserved:JSON.parse(fs.readFileSync(path.join(codexHome,'auth.json'),'utf8')).fixture_auth === true,
   browserCache:process.env.PLAYWRIGHT_BROWSERS_PATH,
-  discovery: ['plan-design-review/sections/review-sections.md', 'plan-devex-review/dx-hall-of-fame.md', 'plan-devex-review/sections/review-sections.md', 'review/checklist.md'].map(relative => {
+  discovery: ['plan/SKILL.md', 'review/sections/risk.md', 'ship/sections/tests.md', 'verify/SKILL.md'].map(relative => {
     const homePath = path.join(process.env.HOME, '.claude', 'skills', relative);
     const configPath = path.join(process.env.CLAUDE_CONFIG_DIR || path.join(process.env.HOME, '.claude'), 'skills', relative);
     const configRuntimePath = path.join(process.env.CLAUDE_CONFIG_DIR || path.join(process.env.HOME, '.claude'), 'skills', 'gstack', relative);
@@ -155,7 +155,7 @@ try {
           // an inherited/explicit GSTACK_HOME, or a broad policy-setting answer.
           expect(result.methodologyAllowed, item.name + ': owned methodology Read is covered').toBe(true);
           expect(result.registeredSectionAllowed, item.name + ': installed registry section Read is covered').toBe(true);
-          expect(result.registeredSectionHash).toBe(digest(path.join(ROOT,'autoplan/sections/design-phase.md')));
+          expect(result.registeredSectionHash).toBe(digest(path.join(ROOT,'plan/SKILL.md')));
           expect(result.registryNeighborsAllowed).toEqual([false,false,false]);
           expect(result.stateDirectoryExists).toBe(true);
           expect(result.ownedStateRoot).toBe(result.stateDirectory);
@@ -378,7 +378,7 @@ describe('hermetic skill runtime', () => {
       fs.chmodSync(path.join(commands, 'curl'), 0o755);
       write(path.join(state, 'config.yaml'), 'update_check: false\nartifacts_sync_mode_prompted: true\n');
       const env = { PATH: `${commands}${path.delimiter}${process.env.PATH!}`, HOME: runtimeHome, GSTACK_HOME: state };
-      const installed = read(path.join(config, 'skills', 'autoplan', 'SKILL.md'));
+      const installed = read(path.join(config, 'skills', 'plan', 'SKILL.md'));
       expect(installed).toContain('## Shared contract');
       expect(installed).not.toContain('## Preamble (run first)');
       const output = execFileSync(path.join(runtime, 'bin', 'gstack-skill-start'), [], { cwd: home, env, encoding: 'utf8', timeout: 20_000 });

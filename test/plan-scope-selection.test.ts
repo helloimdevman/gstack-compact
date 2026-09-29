@@ -152,7 +152,7 @@ test('design scope question still requires the actual branch option', () => {
 test('seeded plan selection dependencies select the existing design and Eng mode checks', () => {
   for (const file of ['test/helpers/plan-scope-selection.ts', 'test/plan-scope-selection.test.ts']) {
     const selection = selectTests([file], E2E_TOUCHFILES);
-    expect(selection.selected).toContain('plan-design-review-plan-mode'); expect(selection.selected).toContain('plan-eng-review-plan-mode');
+    expect(selection.selected).toContain('plan-eng-review-plan-mode');
   }
 });
 
@@ -262,7 +262,7 @@ test('AG completed selection still requires this parent and a successful prior s
 
 test('AG actual scope fixture has exactly the existing two plan-mode owners', () => {
   const selected = selectTests(['test/fixtures/design-plan-scope-ag.json'], E2E_TOUCHFILES).selected;
-  expect([...selected].sort()).toEqual(['plan-design-review-plan-mode', 'plan-eng-review-plan-mode']);
+  expect([...selected].sort()).toEqual(['plan-eng-review-plan-mode']);
 });
 
 

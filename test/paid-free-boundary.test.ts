@@ -159,7 +159,7 @@ describe('paid/free dependency boundary', () => {
     expect(result.coverage?.unknownFiles).toEqual([]);
     expect(result.selection.e2e).toEqual([...PR_PROFILE_CASE_IDS].sort());
     expect(result.selection.judges).toEqual(Object.keys(LLM_JUDGE_TOUCHFILES).sort());
-    expect(result.coverage?.deferred.some(item => item.id === 'review-army-delivery-audit')).toBe(true);
+    expect(result.coverage?.deferred.some(item => item.id === 'plan-ceo-review-plan-mode')).toBe(true);
     expect(result.coverage?.needsFullValidation).toBe(false);
   });
 

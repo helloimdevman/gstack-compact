@@ -201,7 +201,7 @@ test.skipIf(process.platform === 'win32')('real count launcher scopes QA approva
         expect(result.boundRoot).not.toBe(result.nativeState);
         expect(result.approvalStartedAt).toBeLessThanOrEqual(result.commandReceivedAt);
         expect(result.commandReceivedAt - result.approvalStartedAt).toBeLessThan(2000);
-        expect(result.first ? JSON.parse(result.first).hookSpecificOutput.permissionDecision : null).toBe(variant === 'owned' ? 'allow' : null);
+        expect(result.first ? JSON.parse(result.first).hookSpecificOutput.permissionDecision : null, JSON.stringify(result)).toBe(variant === 'owned' ? 'allow' : null);
         expect(result.repeat).toBe(''); expect(result.hookStatuses).toEqual([0, 0]);
         expect(result.unchanged).toBe(true); expect(fs.existsSync(result.stateFile)).toBe(false);
       }

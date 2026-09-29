@@ -352,7 +352,6 @@ export function expectedPrCaseCount(file: string, selection: PaidCaseSelection):
 
 export function prProfileTestNamePattern(file: string, selection: PaidCaseSelection): string {
   const labels: Record<string, string> = {
-    'plan-review-report': '/plan-eng-review writes GSTACK REVIEW REPORT to plan file',
     'auq-format-gate': "/plan-ceo-review's first AskUserQuestion is a compliant decision brief (7/7 + substance)",
   };
   const ids = file === 'test/skill-llm-eval.test.ts'

@@ -970,7 +970,7 @@ describe('design dump allow-list under the configured state root', () => {
       expect(s.code).toBe(2);
       expect(s.err).not.toContain(`${SENTINEL.DETECT_REFUSED}: ${dom}/home.dom.html`);
       expect(s.err).toContain(`${SENTINEL.DETECT_REFUSED}: ${outside}`);
-      expect(s.err).toContain(`${SENTINEL.DETECT_REFUSED}: ${link}`);
+      expect(s.err.split('\n').filter(line => line.startsWith(`${SENTINEL.DETECT_REFUSED}: `))).toHaveLength(2);
       const argv = JSON.parse(fs.readFileSync(log, 'utf-8').trim().split('\n')[0]).argv as string[];
       expect(argv.slice(2)).toEqual(['--no-inline-ignores', fs.realpathSync(path.join(dom, 'home.dom.html'))]);
     } finally {

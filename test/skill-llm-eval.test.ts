@@ -439,10 +439,10 @@ describeIfSelected('Ship & Release skill evals', ['ship/SKILL.md workflow', 'doc
       suite: 'Ship & Release skill evals',
       // The contract now precedes platform detection; keep the complete workflow.
       skillPath: 'ship/SKILL.md',
-      startMarker: '# Ship:',
-      endMarker: '## Important Rules',
+      startMarker: '# /ship',
+      endMarker: null,
       judgeContext: 'a ship/release workflow document',
-      judgeGoal: 'how to create a PR: merge base branch, run tests, review diff, bump version, update changelog, push, and open PR',
+      judgeGoal: 'how to prepare a candidate, run required checks, review the final diff, scan the PR body, then push and open or update a PR with authorized scope',
     });
   }, WORKFLOW_JUDGE_TEST_MS);
 
@@ -451,8 +451,8 @@ describeIfSelected('Ship & Release skill evals', ['ship/SKILL.md workflow', 'doc
       testName: 'document-release/SKILL.md workflow',
       suite: 'Ship & Release skill evals',
       skillPath: 'document-release/SKILL.md',
-      startMarker: '# Document Release:',
-      endMarker: '## Important Rules',
+      startMarker: '# /document-release',
+      endMarker: null,
       judgeContext: 'a post-ship documentation update workflow',
       judgeGoal: 'how to audit and update project documentation after code ships: README, ARCHITECTURE, CONTRIBUTING, CLAUDE.md, CHANGELOG, TODOS',
     });
@@ -467,11 +467,11 @@ describeIfSelected('Plan Review skill evals', [
     await runWorkflowJudge({
       testName: 'plan-ceo-review/SKILL.md modes',
       suite: 'Plan Review skill evals',
-      skillPath: 'plan-ceo-review/SKILL.md',
-      startMarker: '## Step 0: Nuclear Scope Challenge',
-      endMarker: '## Review Sections',
+      skillPath: 'plan/SKILL.md',
+      startMarker: '# /plan',
+      endMarker: null,
       judgeContext: 'a CEO/founder plan review framework with 4 scope modes',
-      judgeGoal: 'how to conduct a CEO-perspective plan review: challenge scope, select a mode (Expansion, Selective Expansion, Hold Scope, Reduction), then review sections interactively',
+      judgeGoal: 'how /plan review-product checks user value, useful scope, alternatives, adoption friction, and decisions while preserving user-approved scope',
     });
   }, WORKFLOW_JUDGE_TEST_MS);
 
@@ -480,10 +480,10 @@ describeIfSelected('Plan Review skill evals', [
       testName: 'plan-eng-review/SKILL.md sections',
       suite: 'Plan Review skill evals',
       skillPath: ENG_REVIEW_EXCERPT.skillPath,
-      startMarker: '# Plan Review Mode',
-      endMarker: null,
+      startMarker: ENG_REVIEW_EXCERPT.startMarker,
+      endMarker: ENG_REVIEW_EXCERPT.endMarker,
       judgeContext: 'an engineering plan review framework with 4 review sections',
-      judgeGoal: 'how to review a plan for architecture quality, code quality, test coverage, and performance — walking through each section interactively with AskUserQuestion',
+      judgeGoal: 'how /plan review-engineering traces affected code, failure paths, interfaces, and acceptance checks before locking an executable plan',
     });
   }, WORKFLOW_JUDGE_TEST_MS);
 
@@ -491,11 +491,11 @@ describeIfSelected('Plan Review skill evals', [
     await runWorkflowJudge({
       testName: 'plan-design-review/SKILL.md passes',
       suite: 'Plan Review skill evals',
-      skillPath: 'plan-design-review/SKILL.md',
-      startMarker: '## Review Sections',
-      endMarker: '## CRITICAL RULE',
+      skillPath: 'plan/SKILL.md',
+      startMarker: '# /plan',
+      endMarker: null,
       judgeContext: 'a design plan review framework with 7 review passes',
-      judgeGoal: 'how to review a plan for design quality using a 0-10 rating method: rate each dimension, explain what a 10 looks like, edit the plan to fix gaps, then re-rate',
+      judgeGoal: 'how /plan review-design checks interface states, accessibility, hierarchy, and consistency, then updates only the authorized plan',
     });
   }, WORKFLOW_JUDGE_TEST_MS);
 });
@@ -506,11 +506,11 @@ describeIfSelected('Design skill evals', ['design-review/SKILL.md fix loop', 'de
     await runWorkflowJudge({
       testName: 'design-review/SKILL.md fix loop',
       suite: 'Design skill evals',
-      skillPath: 'design-review/SKILL.md',
-      startMarker: '## Phase 7:',
-      endMarker: '## Additional Rules',
+      skillPath: 'verify/SKILL.md',
+      startMarker: '# /verify',
+      endMarker: null,
       judgeContext: 'a design audit triage and fix loop workflow',
-      judgeGoal: 'how to triage design issues by severity, fix them atomically in source code, commit each fix, and re-verify with before/after screenshots',
+      judgeGoal: 'how /verify visual-fix reproduces visible defects, fixes them within scope, and compares before/after browser evidence',
     });
   }, WORKFLOW_JUDGE_TEST_MS);
 
@@ -519,8 +519,8 @@ describeIfSelected('Design skill evals', ['design-review/SKILL.md fix loop', 'de
       testName: 'design-consultation/SKILL.md research',
       suite: 'Design skill evals',
       skillPath: 'design-consultation/SKILL.md',
-      startMarker: '## Phase 0:',
-      endMarker: '## Phase 4:',
+      startMarker: '# /design-consultation',
+      endMarker: null,
       judgeContext: 'a design consultation research and proposal workflow',
       judgeGoal: 'how to gather product context, research the competitive landscape, and produce a complete design system proposal with typography, color, spacing, and motion specifications',
     });
@@ -537,8 +537,8 @@ describeIfSelected('Deploy skill evals', [
       testName: 'land-and-deploy/SKILL.md workflow',
       suite: 'Deploy skill evals',
       skillPath: 'land-and-deploy/SKILL.md',
-      startMarker: '## Step 1: Pre-flight',
-      endMarker: '## Important Rules',
+      startMarker: '# /land-and-deploy',
+      endMarker: null,
       judgeContext: 'a merge-deploy-verify workflow for landing PRs to production',
       judgeGoal: 'how to merge a PR via GitHub CLI, wait for CI and deploy workflows (with platform-specific strategies for Fly.io/Render/Vercel/Netlify), run canary health checks on production, and offer revert if something breaks — with timing data logged for retrospectives',
     });
@@ -549,10 +549,10 @@ describeIfSelected('Deploy skill evals', [
       testName: 'canary/SKILL.md monitoring loop',
       suite: 'Deploy skill evals',
       skillPath: 'canary/SKILL.md',
-      startMarker: '### Phase 2: Baseline Capture',
-      endMarker: '## Important Rules',
+      startMarker: '# /canary',
+      endMarker: null,
       judgeContext: 'a post-deploy canary monitoring workflow using the host-provided user browser',
-      judgeGoal: 'how to capture baseline screenshots and metrics before deploy, run a continuous monitoring loop checking each page every 60 seconds for console errors and performance regressions, fire alerts with evidence (screenshots), and produce a health report with per-page status and verdict',
+      judgeGoal: 'how to check the production page after deploy, compare console and screenshot evidence with a prior baseline when available, and report new failures',
     });
   }, WORKFLOW_JUDGE_TEST_MS);
 
@@ -561,10 +561,10 @@ describeIfSelected('Deploy skill evals', [
       testName: 'benchmark/SKILL.md perf collection',
       suite: 'Deploy skill evals',
       skillPath: 'benchmark/SKILL.md',
-      startMarker: '### Phase 3: Performance Data Collection',
-      endMarker: '## Important Rules',
+      startMarker: '# /benchmark',
+      endMarker: null,
       judgeContext: 'a performance regression detection workflow using browser-based Web Vitals measurement in the host-provided user browser',
-      judgeGoal: 'how to collect real performance metrics (TTFB, FCP, LCP, bundle sizes, request counts) via performance.getEntries(), compare against baselines with regression thresholds, produce a performance report with delta analysis, and track trends over time',
+      judgeGoal: 'how to measure observable page speed and resource metrics in the user browser, compare with an available baseline, and report the delta',
     });
   }, WORKFLOW_JUDGE_TEST_MS);
 
@@ -573,8 +573,8 @@ describeIfSelected('Deploy skill evals', [
       testName: 'setup-deploy/SKILL.md platform setup',
       suite: 'Deploy skill evals',
       skillPath: 'setup-deploy/SKILL.md',
-      startMarker: '### Step 2: Detect platform',
-      endMarker: '## Important Rules',
+      startMarker: '# /setup-deploy',
+      endMarker: null,
       judgeContext: 'a deployment configuration setup workflow that detects deploy platforms and writes config to CLAUDE.md',
       judgeGoal: 'how to detect deploy platforms (Fly.io, Render, Vercel, Netlify, Heroku, GitHub Actions, custom), gather platform-specific configuration (URLs, status commands, health checks, custom hooks), and persist everything to CLAUDE.md for future automated use',
     });
@@ -590,8 +590,8 @@ describeIfSelected('Other skill evals', [
       testName: 'retro/SKILL.md instructions',
       suite: 'Other skill evals',
       skillPath: 'retro/SKILL.md',
-      startMarker: '## Instructions',
-      endMarker: '## Tone',
+      startMarker: '# /retro',
+      endMarker: null,
       judgeContext: 'an engineering retrospective data gathering and analysis workflow',
       judgeGoal: 'how to gather git metrics (commit history, test counts, work patterns), analyze them, produce a structured retro report with praise, growth areas, and trend tracking',
     });
@@ -601,11 +601,11 @@ describeIfSelected('Other skill evals', [
     await runWorkflowJudge({
       testName: 'qa-only/SKILL.md workflow',
       suite: 'Other skill evals',
-      skillPath: 'qa-only/SKILL.md',
-      startMarker: '## Workflow',
-      endMarker: '## Important Rules',
+      skillPath: 'verify/SKILL.md',
+      startMarker: '# /verify',
+      endMarker: null,
       judgeContext: 'a report-only QA testing workflow',
-      judgeGoal: 'how to systematically QA test a web application and produce a structured report with health score, screenshots, and repro steps — without fixing anything',
+      judgeGoal: 'how /verify browser-report reproduces a requested flow with browser evidence and a negative control while leaving source unchanged',
     });
   }, WORKFLOW_JUDGE_TEST_MS);
 
@@ -614,8 +614,8 @@ describeIfSelected('Other skill evals', [
       testName: 'gstack-upgrade/SKILL.md upgrade flow',
       suite: 'Other skill evals',
       skillPath: 'gstack-upgrade/SKILL.md',
-      startMarker: '## Inline upgrade flow',
-      endMarker: '## Standalone usage',
+      startMarker: '# /gstack-upgrade',
+      endMarker: null,
       judgeContext: 'a version upgrade detection and execution workflow',
       judgeGoal: 'how to detect install type, compare versions, back up current install, upgrade via git or fresh clone, run setup, and show what changed',
     });

@@ -437,7 +437,7 @@ exec ${quote(realRm)} "$@"
       const result = runBashScript(`bash ${fixture.setup} --local -q 2>&1`, { cwd: fixture.cwd, env: fixture.env, timeout: 10000 });
       expect(result.status, result.stdout + result.stderr).toBe(0);
       expect(result.stdout).toContain('deprecated');
-      expect(fs.realpathSync(path.join(fixture.cwd, '.claude/skills/qa/SKILL.md'))).toBe(path.join(fs.realpathSync(fixture.cwd), 'qa/SKILL.md'));
+      expect(fs.realpathSync(path.join(fixture.cwd, '.claude/skills/gstack-qa/SKILL.md'))).toBe(path.join(fs.realpathSync(fixture.cwd), 'qa/SKILL.md'));
     }),
     180_000,
   );

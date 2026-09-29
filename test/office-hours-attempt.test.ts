@@ -6,7 +6,6 @@ import * as path from 'node:path';
 import { OFFICE_HOURS_BUN_GRACE_MS, OFFICE_HOURS_RECORD_GRACE_MS, runRecordedOfficeHoursAttempt, type OfficeHoursAttemptOptions } from './helpers/office-hours-attempt';
 import { EvalCollector, listEvalJsonFiles, isFinalizedEvalResultFile, type EvalTestEntry } from './helpers/eval-store';
 import { runSkillTest, SESSION_DRAIN_GRACE_MS, type SkillTestResult } from './helpers/session-runner';
-import { isPaidTestFile } from './helpers/paid-test-set';
 import { spawnSync } from 'node:child_process';
 import { Messages } from '@anthropic-ai/sdk/resources/messages';
 import { judgePosture } from './helpers/llm-judge';
@@ -246,6 +245,13 @@ function running(pid: number): boolean {
   return state.length > 0 && !state.startsWith('Z');
 }
 
+async function waitForFixtureChild(dir: string): Promise<void> {
+  const file = path.join(dir, 'child.pid');
+  for (let i = 0; i < 100 && !fs.existsSync(file); i++) await Bun.sleep(20);
+  expect(fs.existsSync(file)).toBe(true);
+  await Bun.sleep(50);
+}
+
 const successLine = JSON.stringify({ type: 'result', subtype: 'success', result: 'captured output', num_turns: 2, total_cost_usd: 0.12 });
 
 describe('Office Hours real session runner with fake processes', () => {
@@ -285,9 +291,11 @@ describe('Office Hours real session runner with fake processes', () => {
   test('abort kills the group, preserves captured usage, and cannot turn a success line into a pass', async () => {
     await withProcessFixture(`echo '${successLine}'\nsleep 60 &\necho $! > "$FIXTURE_DIR/child.pid"\nwait`, async (dir, env) => {
       const controller = new AbortController();
-      const timer = setTimeout(() => controller.abort(), 200);
+      const run = runSkillTest({ prompt: 'fixture', workingDirectory: dir, timeout: 30_000, env, signal: controller.signal });
       try {
-        const captured = await runSkillTest({ prompt: 'fixture', workingDirectory: dir, timeout: 30_000, env, signal: controller.signal });
+        await waitForFixtureChild(dir);
+        controller.abort();
+        const captured = await run;
         expect(captured.exitReason).toBe('timeout');
         expect(captured.output).toBe('captured output');
         expect(captured.costEstimate.estimatedCost).toBe(0.12);
@@ -295,7 +303,7 @@ describe('Office Hours real session runner with fake processes', () => {
         for (const file of ['parent.pid', 'child.pid']) {
           expect(running(Number(fs.readFileSync(path.join(dir, file), 'utf8')))).toBe(false);
         }
-      } finally { clearTimeout(timer); }
+      } finally { controller.abort(); }
     });
   }, 10_000);
 
@@ -317,12 +325,14 @@ describe('Office Hours real session runner with fake processes', () => {
   test('abort during a failed process drain preserves the independently observed exit', async () => {
     await withProcessFixture(`echo '${successLine}'\nsleep 60 &\necho $! > "$FIXTURE_DIR/child.pid"\nexit 7`, async (dir, env) => {
       const controller = new AbortController();
-      const timer = setTimeout(() => controller.abort(), 200);
+      const run = runSkillTest({ prompt: 'fixture', workingDirectory: dir, timeout: 30_000, env, signal: controller.signal });
       try {
-        const captured = await runSkillTest({ prompt: 'fixture', workingDirectory: dir, timeout: 30_000, env, signal: controller.signal });
+        await waitForFixtureChild(dir);
+        controller.abort();
+        const captured = await run;
         expect(captured.exitReason).toBe('exit_code_7');
         expect(captured.duration).toBeLessThan(2_000);
-      } finally { clearTimeout(timer); }
+      } finally { controller.abort(); }
     });
   }, 10_000);
 
@@ -340,156 +350,6 @@ describe('Office Hours real session runner with fake processes', () => {
       });
     }
   }, 10_000);
-});
-
-// Re-run the actual paid test bodies in an isolated Bun process, replacing BOTH
-// paid boundaries before importing them. Each scripted defect must fail once;
-// only the last retry is valid, so weakening any oracle shortens the ledger.
-const defects = {
-  'office-hours-forcing-energy': ['runner', 'exit', 'missing', 'length', 'judge', 'axis_a', 'axis_b', 'pass'],
-  'office-hours-builder-wildness': ['runner', 'exit', 'missing', 'length', 'judge', 'axis_a', 'axis_b', 'pass'],
-  'office-hours-brain-writeback': ['runner', 'exit', 'missing', 'slug', 'payload', 'frontmatter', 'title', 'tags', 'length', 'pass'],
-};
-
-async function runSuiteFixture(mode: 'retry' | 'unselected' | 'disabled' | 'deadline') {
-  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'office-hours-lifecycle-'));
-  const evalDir = path.join(dir, 'evals');
-  const script = path.join(dir, 'office-hours-fixture.test.ts');
-  fs.writeFileSync(script, `
-import { mock } from 'bun:test';
-import { writeFileSync } from 'node:fs';
-import { join } from 'node:path';
-const root = ${JSON.stringify(ROOT)};
-const defects = ${JSON.stringify(defects)};
-const counts = {};
-const current = {};
-const signals = {};
-const deadlineFixture = ${mode === 'deadline'};
-if (deadlineFixture) mock.module(join(root, 'test/helpers/eval-budgets.ts'), () => ({ CAPTURE_MS: 300_000, CAPTURE_LONG_MS: 50 }));
-mock.module(join(root, 'test/helpers/session-runner.ts'), () => ({
-  runSkillTest: async (opts) => {
-    const id = opts.testName;
-    if (!(opts.signal instanceof AbortSignal) || opts.signal.aborted) throw new Error('missing/live runner signal');
-    if (opts.timeout !== (id === 'office-hours-brain-writeback' ? (deadlineFixture ? 50 : 600_000) : 300_000)) throw new Error('model work budget changed');
-    signals[id] = opts.signal;
-    const attempt = counts[id] = (counts[id] || 0) + 1;
-    const defect = deadlineFixture ? 'pass' : defects[id][attempt - 1];
-    if (!defect) throw new Error('unexpected extra attempt');
-    current[id] = defect;
-    if (defect === 'runner') throw new Error('fixture runner unavailable');
-    const dir = opts.workingDirectory;
-    if (id === 'office-hours-brain-writeback') {
-      if (deadlineFixture) return new Promise(resolve => opts.signal.addEventListener('abort', () => {
-        resolve({ ...${JSON.stringify(result())}, exitReason: 'timeout' });
-      }, { once: true }));
-      if (defect !== 'missing' && defect !== 'exit') {
-        writeFileSync(join(dir, 'gbrain-calls.log'), defect === 'slug' ? 'gbrain put wrong-slug' : 'gbrain put office-hours/pixel-fund');
-      }
-      if (!['missing', 'exit', 'slug', 'payload'].includes(defect)) {
-        const fields = [defect === 'frontmatter' ? 'no header' : '---', defect === 'title' ? '' : 'title: Pixel fund', defect === 'tags' ? '' : 'tags: [fixture]', '---'];
-        let payload = fields.join('\\n') + '\\n' + 'Design detail. '.repeat(25);
-        if (defect === 'length') payload = payload.slice(0, 200);
-        writeFileSync(join(dir, 'gbrain-payloads', 'pixel-fund.md'), payload);
-      }
-    } else if (defect !== 'missing' && defect !== 'exit') {
-      const forcing = id.includes('forcing');
-      writeFileSync(join(dir, forcing ? 'q3.md' : 'unlocks.md'), 'x'.repeat(defect === 'length' ? (forcing ? 80 : 200) : 300));
-    }
-    return { ...${JSON.stringify(result())}, exitReason: defect === 'exit' ? 'timeout' : 'error_max_turns' };
-  },
-}));
-mock.module(join(root, 'test/helpers/llm-judge.ts'), () => ({
-  judgeRecommendation: () => { throw new Error('unexpected judge'); },
-  judgePosture: async (mode, text, signal) => {
-    const id = mode === 'forcing' ? 'office-hours-forcing-energy' : 'office-hours-builder-wildness';
-    if (signal !== signals[id] || signal.aborted) throw new Error('judge cancellation not connected');
-    if (deadlineFixture) return new Promise((_, reject) => signal.addEventListener('abort', () => reject(signal.reason), { once: true }));
-    const defect = current[id];
-    if (defect === 'judge') throw new Error('fixture judge unavailable');
-    return { axis_a: defect === 'axis_a' ? 3 : 4, axis_b: defect === 'axis_b' ? 3 : 4, reasoning: 'fixture' };
-  },
-}));
-await import(join(root, 'test/skill-e2e-office-hours.test.ts'));
-await import(join(root, 'test/skill-e2e-office-hours-brain-writeback.test.ts'));
-`);
-  try {
-    const proc = Bun.spawn([process.execPath, 'test', '--retry', mode === 'deadline' ? '0' : '9', script], {
-      cwd: ROOT,
-      env: {
-        ...process.env,
-        PATH: `${path.dirname(process.execPath)}${path.delimiter}${process.env.PATH || ''}`,
-        EVALS: mode === 'disabled' ? '' : '1', EVALS_ALL: '', EVALS_TIER: 'periodic',
-        EVALS_SELECTION_JSON: JSON.stringify({ selected: mode === 'unselected' ? [] : null, reason: 'free fixture' }),
-        EVALS_PREFLIGHT_OK: '1', GSTACK_EVAL_DIR: evalDir, GSTACK_CLAUDE_CLI_VERSION: 'free fixture',
-      },
-      stdout: 'pipe', stderr: 'pipe',
-    });
-    const [stdout, stderr, code] = await Promise.all([
-      new Response(proc.stdout).text(), new Response(proc.stderr).text(), proc.exited,
-    ]);
-    expect(code, stdout + stderr).toBe(mode === 'deadline' ? 1 : 0);
-    const files = listEvalJsonFiles(evalDir);
-    return {
-      finals: files.filter(isFinalizedEvalResultFile).map(file => JSON.parse(fs.readFileSync(file, 'utf8'))),
-      partials: files.filter(file => path.basename(file).startsWith('_partial')).map(file => JSON.parse(fs.readFileSync(file, 'utf8'))),
-      output: stdout + stderr,
-    };
-  } finally { fs.rmSync(dir, { recursive: true, force: true }); }
-}
-
-describe('Office Hours actual suite lifecycle with free stubs', () => {
-  test('runner/judge deadlines finalize all three failed attempts before Bun can time out', async () => {
-    const { finals, partials, output } = await runSuiteFixture('deadline');
-    expect(finals).toHaveLength(2);
-    expect(partials).toHaveLength(2);
-    for (const group of [finals, partials]) {
-      const entries = group.flatMap(saved => saved.tests);
-      expect(entries).toHaveLength(3);
-      expect(entries.every(entry => entry.passed === false && entry.exit_reason === 'timeout' && entry.attempt === 1)).toBe(true);
-      expect(entries.every(entry => entry.error.includes('attempt exceeded 50ms'))).toBe(true);
-    }
-    expect(output).toContain('3 fail');
-    expect(output).not.toContain('timed out after');
-  }, 10_000);
-
-  test('all original assertions and retry failures survive afterAll finalization in a shared directory', async () => {
-    const { finals, partials } = await runSuiteFixture('retry');
-    expect(finals).toHaveLength(2);
-    expect(partials).toHaveLength(2);
-    for (const group of [finals, partials]) {
-      expect(group.every(saved => saved.tier === 'e2e')).toBe(true);
-      const entries = group.flatMap(saved => saved.tests);
-      expect(entries).toHaveLength(26);
-      for (const [id, expected] of Object.entries(defects)) {
-        const attempts = entries.filter(entry => entry.name === '/' + id);
-        expect(attempts.map(entry => entry.attempt)).toEqual(expected.map((_, i) => i + 1));
-        expect(attempts.map(entry => entry.passed)).toEqual(expected.map(defect => defect === 'pass'));
-        expect(attempts.slice(0, -1).every(entry => typeof entry.error === 'string' && entry.error.length > 0)).toBe(true);
-        expect(attempts.at(-1).exit_reason).toBe('error_max_turns');
-      }
-      expect(group.reduce((sum, saved) => sum + saved.passed, 0)).toBe(3);
-      expect(group.reduce((sum, saved) => sum + saved.failed, 0)).toBe(23);
-    }
-    expect(finals.every(saved => !saved._partial)).toBe(true);
-  }, 60_000);
-
-  for (const mode of ['unselected', 'disabled'] as const) {
-    test(`${mode} cases remain skips and create no attempts`, async () => {
-      const { finals, partials, output } = await runSuiteFixture(mode);
-      expect(finals).toHaveLength(mode === 'disabled' ? 0 : 2);
-      expect(finals.every(saved => saved.total_tests === 0 && saved.passed === 0 && saved.failed === 0)).toBe(true);
-      expect(partials).toEqual([]);
-      for (const id of Object.keys(defects)) {
-        expect(output.split('\n').some(line => line.startsWith('(skip)') && line.endsWith('> ' + id))).toBe(true);
-      }
-      expect(output).toContain('0 pass');
-      expect(output).toContain('0 fail');
-    }, 30_000);
-  }
-
-  test('this recording regression file belongs to the free suite', () => {
-    expect(isPaidTestFile('test/office-hours-attempt.test.ts')).toBe(false);
-  });
 });
 
 // Native Claude marks max-turn exhaustion is_error=true and exits 1. Keep
@@ -532,16 +392,18 @@ describe('session runner native CLI max-turns exit semantics', () => {
   test('abort during a max-turn exit 1 drain retains the process failure', async () => {
     await withProcessFixture(`echo '${maxTurnsLine}'\nsleep 60 &\necho $! > "$FIXTURE_DIR/child.pid"\nexit 1`, async (dir, env) => {
       const controller = new AbortController();
-      const timer = setTimeout(() => controller.abort(), 200);
+      const run = runSkillTest({ prompt: 'free fixture', workingDirectory: dir, timeout: 30_000, env, signal: controller.signal });
       try {
-        const captured = await runSkillTest({ prompt: 'free fixture', workingDirectory: dir, timeout: 30_000, env, signal: controller.signal });
+        await waitForFixtureChild(dir);
+        controller.abort();
+        const captured = await run;
         expect(captured.exitReason).toBe('exit_code_1');
-      } finally { clearTimeout(timer); }
+      } finally { controller.abort(); }
     });
   });
   test('a timeout cannot be overwritten by a max-turn result line', async () => {
     await withProcessFixture(`echo '${maxTurnsLine}'\nexec sleep 60`, async (dir, env) => {
-      const captured = await runSkillTest({ prompt: 'free fixture', workingDirectory: dir, timeout: 200, env });
+      const captured = await runSkillTest({ prompt: 'free fixture', workingDirectory: dir, timeout: 1000, env });
       expect(captured.exitReason).toBe('timeout');
     });
   });

@@ -38,7 +38,7 @@ describe('catalog mode CLI behavior', () => {
   });
 
   test('omitting the flag defaults to trim', () => {
-    expect(frontmatter(defaultContent)).toMatch(/^description: "?Ship workflow:[^\n]*\(gstack\)"?$/m);
+    expect(frontmatter(defaultContent)).toMatch(/^description: "?Prepare a release candidate[^\n]*\(gstack\)"?$/m);
     expect(frontmatter(defaultContent)).not.toMatch(/Use when asked to/i);
     expect(defaultContent).toContain('## When to invoke this skill');
   });
@@ -51,7 +51,7 @@ describe('catalog mode CLI behavior', () => {
       expect(result.status, result.stderr).toBe(0);
       const fm = frontmatter(result.content);
       expect(fm).toMatch(/^description: \|\s*$/m);
-      expect(fm).toMatch(/Use when asked to/i);
+      expect(fm).toContain('Merge and deployment are separate');
       expect(fm).not.toBe(frontmatter(defaultContent));
       expect(result.content.slice(fm.length)).not.toContain('## When to invoke this skill');
     });

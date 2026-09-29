@@ -9,7 +9,7 @@
  * defeat the regex — it reported `read: []` even when the agent did the work). It
  * now runs the skill through `claude -p` (the SDK path the AUQ matrix uses) and
  * detects section reads from the tool-use stream (`Read` calls whose file_path
- * contains `sections/review-army.md` / `sections/changelog.md`).
+ * contains `sections/tests.md` / `sections/changelog.md`).
  *
  * Hermetic, not install-mutating: the freshly-generated worktree skeleton +
  * sections are copied into a throwaway fixture dir and the absolute path is pinned,
@@ -39,7 +39,7 @@ const describeE2E = describeE2ETier('periodic');
 const runId = `ship-section-loading-${process.env.EVALS_RUN_ID ?? 'local'}`;
 
 // Sections every version-changing ship must consult.
-const REQUIRED_SECTIONS = ['review-army.md', 'changelog.md'];
+const REQUIRED_SECTIONS = ['tests.md', 'changelog.md'];
 
 const FIXTURES: Record<string, string> = {
   VERSION: '0.0.1\n',

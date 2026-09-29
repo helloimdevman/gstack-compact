@@ -66,9 +66,11 @@ describe('question-tuning registry path is absolute (#2489)', () => {
     expect(fs.existsSync(path.join(ROOT, 'scripts', 'question-registry.ts'))).toBe(true);
   });
 
-  test('rendered SKILL.md carries the absolute path', () => {
+  test('compatibility skill routes to the current plan while the resolver keeps absolute paths', () => {
     const rendered = fs.readFileSync(path.join(ROOT, 'plan-eng-review', 'SKILL.md'), 'utf-8');
-    expect(rendered).toContain('~/.claude/skills/gstack/scripts/question-registry.ts');
+    expect(rendered).toContain('`../plan/SKILL.md`');
+    expect(rendered).toContain('`review-engineering` mode');
+    expect(generateQuestionTuning(makeCtx('claude'))).toContain('~/.claude/skills/gstack/scripts/question-registry.ts');
     expect(rendered).not.toContain('`scripts/question-registry.ts`');
   });
 });

@@ -359,7 +359,7 @@ describe("installed pre-push guard uses the actual destination", () => {
     expect(push.status).toBe(0);
     const priorTip = git(origin, "rev-parse", "refs/heads/main");
     expect(priorTip).not.toBe(head);
-    fs.writeFileSync(path.join(repo, "too-long.txt"), "x".repeat(1_100_000) + "\n");
+    fs.writeFileSync(path.join(repo, "too-long.txt"), "x".repeat(2_200_000) + "\n");
     git(repo, "add", "too-long.txt");
     git(repo, "commit", "-qm", "over cap line");
     push = spawnSync("git", ["push", "origin", "main"], { cwd: repo, encoding: "utf8", timeout: 60_000 });

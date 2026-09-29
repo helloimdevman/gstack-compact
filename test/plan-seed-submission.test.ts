@@ -27,10 +27,11 @@ for (const scenario of ['success', 'completed-tool', 'status-updating', 'history
     const script = path.join(dir, 'cli.ts'); fs.writeFileSync(script, CLI);
     const decoder = new PtyCurrentScreen({ cols: 120, rows: 40 });
     let raw = '', exited = false;
+    const utf8 = new TextDecoder();
     const launchedAt = Date.now();
     const proc = Bun.spawn([process.execPath, script], {
       cwd: dir, env: { ...process.env, CLAUDE_CONFIG_DIR: config, SEED_CASE: scenario },
-      terminal: { cols: 120, rows: 40, data(_terminal, data) { const s = Buffer.from(data).toString(); raw += s; decoder.feed(s); } },
+      terminal: { cols: 120, rows: 40, data(_terminal, data) { raw += utf8.decode(data, { stream: true }); decoder.feed(data); } },
       onExit() { exited = true; },
     });
     const sent: string[] = [];

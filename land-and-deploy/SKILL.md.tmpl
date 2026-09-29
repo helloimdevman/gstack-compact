@@ -28,17 +28,60 @@ Stay on the `/land-and-deploy` job. Do not expand `/land-and-deploy` into adjace
 Stop `/land-and-deploy` when the outcome above is verified, or when `/land-and-deploy` is blocked on a destructive, irreversible, or product-defining fact. If blocked, ask that decision with a recommendation and wait for the answer. Then finish `/land-and-deploy` or stop.
 
 ## Tool contract
-After `/ship` has a PR, merge it, watch CI and the deploy command from `setup-deploy`, and hit the production health URL. Stop when production matches the merge or the health check fails.
+After `/ship` has a PR, merge it, watch CI and the deploy command from `setup-deploy`, and hit the production health URL. Stop when production matches the merge or the health check fails. A failed check, unknown target, or missing approval stops the merge.
 
 ## Carve routing
 
-land-deploy-confirmed means a prior setup exists. If it does not, stop and run /setup-deploy.
+land-deploy-confirmed means a prior setup exists. If it does not, read first-run-validation and confirm the actual deployment configuration before continuing.
+
+## Step 1: Pin the PR and local evidence
+
+Accept an explicit PR number or detect the current branch's PR once. Check `gh auth status`. Resolve `REPO` with `gh repo view --json nameWithOwner`; query the selected PR, never an implicit current PR after this point:
+
+```bash
+PR_JSON=$(gh pr view "$PR_NUMBER" --repo "$REPO" --json number,state,title,url,mergeable,baseRefName,headRefName,headRefOid,baseRefOid) || exit 1
+PR_HEAD=$(printf '%s' "$PR_JSON" | jq -er .headRefOid) || exit 1
+HEAD_BRANCH=$(printf '%s' "$PR_JSON" | jq -er .headRefName) || exit 1
+BASE_BRANCH=$(printf '%s' "$PR_JSON" | jq -er .baseRefName) || exit 1
+```
+
+Only an OPEN PR continues. A query error or unknown state stops. Print the repository, PR number, head, base, and SHA. Bind the local tests and review to that exact head; do not switch, stash, or reset the user's work:
+
+```bash
+LOCAL_HEAD=$(git rev-parse HEAD) || exit 1
+LOCAL_BRANCH=$(git branch --show-current) || exit 1
+LOCAL_STATUS=$(git status --porcelain) || exit 1
+if [ "$LOCAL_HEAD" != "$PR_HEAD" ] || [ "$LOCAL_BRANCH" != "$HEAD_BRANCH" ] || [ -n "$LOCAL_STATUS" ]; then
+  echo "LOCAL_TARGET_MISMATCH"
+  exit 1
+fi
+git fetch "https://github.com/$REPO.git" "$BASE_BRANCH" || exit 1
+BASE_SHA=$(git rev-parse FETCH_HEAD) || exit 1
+SCOPE_RESULT=$("$GSTACK_BIN/gstack-diff-scope" "$BASE_SHA") || exit 1
+eval "$SCOPE_RESULT"
+```
+
+## Step 2: Required CI and readiness
+
+Query `gh pr checks "$PR_NUMBER" --repo "$REPO" --required --json name,state,bucket,link`; use native `bucket` values. Auth/network/schema errors stop, never "no required checks". An empty successful response or the CLI's explicit no-required-checks response means none are configured. Failed/cancelled checks, conflicts, or an unknown `mergeable` state block. Wait for pending checks with a bounded deadline, then query again. Resolve VERSION drift on this pinned head; a changed head/base invalidates every approval. Read the readiness gate and obtain explicit merge approval for `REPO`, `PR_NUMBER`, `PR_HEAD`, and `BASE_BRANCH` only when there are no blockers.
 
 ## Step 3.4: VERSION drift detection
-Compare VERSION on the branch with the base. On a clean compare, continue to Step 3.4, then Step 3.5 before merging.
+Compare VERSION on the branch with the base. Resolve drift, then complete Step 3.5 before merging.
 
 ## Step 6: Wait for deploy
-Poll the health URL after merge. Do not claim production is healthy early.
+Use the configured deployment status command or workflow and match its revision to `MERGE_SHA`; a reachable URL alone does not prove this revision is live. Poll with a bounded deadline. A failed or unknown deploy remains failed or unknown even if the old site answers. An explicit verification URL or observed deployment takes precedence over a docs-only skip.
+
+## Step 7: Verify production
+
+Use the host-provided browser on the configured production URL when available. Record the response, page content, critical console errors, and a screenshot. Missing browser access is SKIPPED, not healthy. Staging choice A returns to its production route; C goes to Step 9 without claiming production is verified. A failed canary remains DEGRADED if the user accepts it; it cannot be approved into a pass. Offer a rollback only as a separate explicit decision.
+
+## Step 8: Rollback after approval
+
+Explain that a revert is a new commit and does not restore production until its deploy and health are checked. Inspect `git show --no-patch --format='%H %P' "$MERGE_SHA"` and require a clean base checkout. For a two-parent merge with parent 1 verified as the base side, run `git revert -m 1 "$MERGE_SHA" --no-edit`; for a confirmed squash, revert its one landed commit. For a rebase, establish the exact landed commit range and revert newest first. If method, range, worktree, or parentage is unknown, stop with ROLLBACK PENDING. Never guess, reset, force-push, or replay a merge. After a successful revert push, set `ROLLBACK=true`, `TARGET=production`, `DEPLOY_SHA=REVERT_SHA`, and reset production deployment/health evidence before returning to Steps 6-7.
+
+## Step 9: Evidence-based verdict
+
+Report the pinned PR and head, merge SHA, required CI, deploy revision, production and staging health, missing evidence, and next action. Only a confirmed matching deployment and healthy production is DEPLOYED AND VERIFIED. A confirmed no-deploy route is MERGED — NO DEPLOY NEEDED. Failed health is DEGRADED; a merge with missing deploy or health evidence is MERGED (UNVERIFIED). An unfinished rollback is ROLLBACK PENDING. Do not mark a failed canary healthy or infer a successful deploy from HTTP reachability.
 
 {{SECTION_INDEX:land-and-deploy}}
 {{SECTION:first-run-validation}}

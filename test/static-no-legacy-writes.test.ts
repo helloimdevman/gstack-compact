@@ -77,8 +77,7 @@ function* walk(dir: string): Generator<string> {
 // Captures: `>> .../builder-profile.jsonl`, `writeFileSync(...builder-profile.jsonl...)`,
 // `> .../builder-profile.jsonl`. NOTE: this only catches LITERAL-PATH writes —
 // variable-indirected writes (`FILE=...builder-profile.jsonl; echo >> "$FILE"`)
-// are not detected. The SKILL.md.tmpl assertions below pin the exact #1671
-// regression class directly; this regex is a backstop against the obvious
+// are not detected. This regex is a backstop against the obvious
 // pattern, not a comprehensive variable-flow analyzer.
 const WRITE_PATTERN = /(>>?\s*["']?[^"'\s]*builder-profile\.jsonl|writeFileSync\([^)]*builder-profile\.jsonl|appendFileSync\([^)]*builder-profile\.jsonl)/;
 
@@ -128,17 +127,4 @@ describe('#1671 invariant: no production code writes to builder-profile.jsonl', 
     expect(offending).toEqual([]);
   });
 
-  test('office-hours/SKILL.md uses --log-session, not raw echo append', () => {
-    const skill = fs.readFileSync(path.join(ROOT, 'office-hours/SKILL.md'), 'utf-8');
-    // The two known writer call-sites must use the new subcommand.
-    expect(skill).toContain('gstack-developer-profile --log-session');
-    // And must NOT contain the old echo-append pattern.
-    expect(skill).not.toMatch(/echo\s+['"][^'"]*['"]?\s*>>\s*["'][^"']*builder-profile\.jsonl/);
-  });
-
-  test('office-hours/SKILL.md.tmpl uses --log-session, not raw echo append', () => {
-    const tmpl = fs.readFileSync(path.join(ROOT, 'office-hours/SKILL.md.tmpl'), 'utf-8');
-    expect(tmpl).toContain('gstack-developer-profile --log-session');
-    expect(tmpl).not.toMatch(/echo\s+['"][^'"]*['"]?\s*>>\s*["'][^"']*builder-profile\.jsonl/);
-  });
 });

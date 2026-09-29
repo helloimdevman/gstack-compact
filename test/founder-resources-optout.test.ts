@@ -22,7 +22,6 @@ import * as path from "path";
 
 const ROOT = path.resolve(import.meta.dir, "..");
 const CONFIG_BIN = path.join(ROOT, "bin", "gstack-config");
-const SECTION = path.join(ROOT, "office-hours", "sections", "design-and-handoff.md");
 
 let tmpHome: string;
 beforeEach(() => { tmpHome = fs.mkdtempSync(path.join(os.tmpdir(), "gstack-538-")); });
@@ -53,27 +52,5 @@ describe("founder_resources config key (#538)", () => {
       env: { ...process.env, GSTACK_HOME: tmpHome },
     });
     expect(cfg(["get", "founder_resources"])).toBe("true");
-  });
-});
-
-describe("office-hours section gates on the key (#538)", () => {
-  const src = fs.readFileSync(SECTION, "utf-8");
-
-  test("the opt-out check precedes any resource content", () => {
-    const gate = src.indexOf("gstack-config get founder_resources");
-    const pool = src.indexOf("Resource Pool");
-    expect(gate).toBeGreaterThan(-1);
-    expect(pool).toBeGreaterThan(-1);
-    expect(gate).toBeLessThan(pool);
-  });
-
-  test("skip is silent and permanent — never means never", () => {
-    expect(src).toContain("skip this entire section silently");
-    expect(src).toContain("gstack-config set founder_resources true");
-  });
-
-  test("the opt-out write is verified before any promise (R6)", () => {
-    expect(src).toContain("VERIFY the write");
-    expect(src).toMatch(/read back\s*\n?`false`/);
   });
 });

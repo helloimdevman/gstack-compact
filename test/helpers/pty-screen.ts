@@ -29,9 +29,12 @@ function loadTerminal(): Promise<any> {
       });
       if (!build.success) throw new AggregateError(build.logs, 'Installed xterm headless build failed');
       // A data: URL of this bundle exceeds the macOS path limit (ENAMETOOLONG).
-      const file = path.join(fs.mkdtempSync(path.join(os.tmpdir(), 'gstack-pty-')), 'terminal.mjs');
-      await Bun.write(file, await build.outputs[0].text());
-      return (await import(file)).Terminal;
+      const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'gstack-pty-'));
+      try {
+        const file = path.join(dir, 'terminal.mjs');
+        await Bun.write(file, await build.outputs[0].text());
+        return (await import(file)).Terminal;
+      } finally { fs.rmSync(dir, { recursive: true, force: true }); }
     } catch (cause) {
       throw new Error('PTY screen unavailable; cannot safely observe terminal input.', { cause });
     }

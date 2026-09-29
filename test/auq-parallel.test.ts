@@ -63,7 +63,7 @@ function exercise(spec: Spec) {
         systemPrompt: { type: 'preset', preset: 'claude_code' } });
       expect(input.skill).toBe(fs.readFileSync(path.join(ROOT, input.id === 'verbose'
         ? 'test/fixtures/auq-pre-cut-plan-ceo-review-SKILL.md' : 'plan-ceo-review/SKILL.md'), 'utf8'));
-      expect(input.sections.length > 0).toBe(input.id !== 'verbose');
+      // /plan now owns review sections; this fixture exercises capture scheduling.
       expect(input.prompt).toContain(path.join(input.cwd, 'plan-ceo-review/SKILL.md'));
       expect(input.prompt).toContain(path.join(input.cwd, 'plan.md'));
     }

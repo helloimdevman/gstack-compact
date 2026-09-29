@@ -30,7 +30,7 @@ test('installed canonical entries receive a proven patch once; alias does not du
 
 test('setup passes an explicit Claude model to the Claude generator', () => {
   const setup = readFileSync(join(import.meta.dir, '../setup'), 'utf8');
-  expect(setup).toContain('--host claude --model opus-5.5');
-  expect(setup).toContain('gen:skill-docs --host claude --model "$CLAUDE_GENERATION_MODEL"');
+  expect(setup).toContain('./setup --host claude --model opus-5.5');
+  expect(setup).toContain('gen:skill-docs --host claude --model "$CLAUDE_CORE_MODEL"');
   expect(setup).toContain('INSTALL_CODEX" -eq 0 ] && [ "$INSTALL_CLAUDE" -eq 0');
 });

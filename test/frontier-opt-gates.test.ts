@@ -26,23 +26,11 @@ const JOBS = {
   'design-critique': '/plan',
   'code-review': '/review',
   'browser-qa': '/verify',
-  'security-audit': '/cso',
   ship: '/ship',
   investigate: '/investigate',
   retro: '/retro',
   sprint: '/sprint',
 } as const;
-
-const COMMANDS = [
-  '/office-hours', '/plan-ceo-review', '/plan-eng-review', '/plan-design-review',
-  '/design-consultation', '/design-shotgun', '/design-html', '/review',
-  '/deslop-shared-libs', '/ship', '/land-and-deploy', '/canary', '/benchmark',
-  '/browse', '/connect-chrome', '/qa', '/qa-only', '/design-review', '/scrape',
-  '/setup-browser-cookies', '/setup-deploy', '/setup-gbrain', '/retro',
-  '/investigate', '/document-release', '/document-generate', '/codex', '/cso',
-  '/autoplan', '/plan-devex-review', '/devex-review', '/careful', '/freeze',
-  '/guard', '/unfreeze', '/gstack-upgrade', '/learn',
-];
 
 const SEVEN = [
   'plan/SKILL.md',
@@ -123,15 +111,18 @@ describe('frontier router gate', () => {
     const map = routerMap();
     expect(map.version).toBe(2);
     expect(map.core).toHaveLength(11);
+    expect(Object.keys(map.jobs).sort()).toEqual(Object.keys(JOBS).sort());
     for (const [job, expected] of Object.entries(JOBS)) {
       expect(map.jobs[job], job).toBe(expected);
       const target = path.join(ROOT, map.commands[expected].skill, 'SKILL.md');
       expect(fs.statSync(target).size).toBeGreaterThan(0);
     }
-    for (const command of COMMANDS) {
+    expect(Object.keys(map.commands).length).toBeGreaterThanOrEqual(map.core.length);
+    for (const command of Object.keys(map.commands)) {
       const route = map.commands[command];
       expect(route, command).toBeTruthy();
-      expect(fs.statSync(path.join(ROOT, route.skill, 'SKILL.md')).size).toBeGreaterThan(0);
+      const file = route.skill === 'gstack' ? path.join(ROOT, 'SKILL.md') : path.join(ROOT, route.skill, 'SKILL.md');
+      expect(fs.statSync(file).size).toBeGreaterThan(0);
     }
   });
 });

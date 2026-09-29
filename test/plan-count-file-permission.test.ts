@@ -123,8 +123,8 @@ const hook=async(name,id)=>{
  }
 };
 let stage='startup';const paint=()=>process.stdout.write('\x1b[2J\x1b[H'+item.screen.replaceAll('__ACTIVE_PLAN_PATH__',path.join(process.cwd(),'PLAN.md')).replaceAll('\n','\r\n'));
-process.stdin.setRawMode?.(true);process.stdin.on('data',async data=>{
- const input=data.toString();log({type:'input',stage,input});
+let pendingInput='';process.stdin.setRawMode?.(true);process.stdin.on('data',async data=>{
+ pendingInput+=data.toString();if(!pendingInput.endsWith('\r'))return;const input=pendingInput;pendingInput='';log({type:'input',stage,input});
  if(stage==='startup'){stage='first';await hook('PreToolUse','first');paint();return;}
  if(stage==='old-pane'||stage==='done'){log({type:'unexpected'});return;}
  if(input!=='1\r')throw Error('default permission input changed');

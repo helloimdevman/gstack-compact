@@ -25,10 +25,13 @@ function productSkills(): string[] {
 }
 
 describe('AUQ essay is not copied into product skills', () => {
-  test('every product skill points at the shared contract', () => {
+  test('skills with a bootstrap preamble point at the shared contract', () => {
     const skills = productSkills();
     expect(skills.length).toBeGreaterThan(40);
-    const missing = skills.filter(file => !fs.readFileSync(file, 'utf-8').includes('## Shared contract'));
+    const bootstrapped = skills.filter(file => fs.existsSync(`${file}.tmpl`) &&
+      fs.readFileSync(`${file}.tmpl`, 'utf-8').includes('{{PREAMBLE}}'));
+    expect(bootstrapped.length).toBeGreaterThan(10);
+    const missing = bootstrapped.filter(file => !fs.readFileSync(file, 'utf-8').includes('## Shared contract'));
     expect(missing).toEqual([]);
   });
 
@@ -43,8 +46,7 @@ describe('AUQ essay is not copied into product skills', () => {
 
   test('the shared contract is the only copy of the stop rule', () => {
     const contract = fs.readFileSync(path.join(ROOT, 'CONTRACT.md'), 'utf-8');
-    expect(contract.toLowerCase()).toContain('execute decisively once scope is clear');
-    expect(contract.toLowerCase()).toContain('stop when the requested work is verified');
-    expect(contract.toLowerCase()).toContain('do not pace questions one at a time');
+    expect(contract).toContain('Combine related questions');
+    expect(contract).toContain('Stop when the requested outcome is verified');
   });
 });

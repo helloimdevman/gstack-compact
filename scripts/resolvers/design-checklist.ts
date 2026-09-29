@@ -1,8 +1,7 @@
 /**
  * Design checklist resolver — renders review/design-checklist.md from the catalog.
  *
- * The checklist is the one artifact both /review (Review Army Design specialist)
- * and /ship (DESIGN_REVIEW_LITE) read at runtime. It used to be hand-written
+ * The checklist is the one artifact both /review and /ship read at runtime. It used to be hand-written
  * and its own header admitted it drifted from DESIGN_METHODOLOGY category 9.
  * Now category 1 renders from lib/design-catalog.ts (the same entries category
  * 9 renders), the font blacklist renders from BANNED_FONTS, and everything else

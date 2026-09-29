@@ -183,7 +183,7 @@ test('rejected completion does not erase a genuine earlier question or change un
 });
 
 test('completion evidence dependencies select exactly the seeded observation owners', () => {
-  const owners = ['plan-ceo-review-plan-mode', 'plan-eng-review-plan-mode', 'plan-design-review-plan-mode',
+  const owners = ['plan-ceo-review-plan-mode', 'plan-eng-review-plan-mode',
     'plan-devex-review-plan-mode', 'plan-mode-no-op', 'auto-decide-preserved', 'conductor-prose'].sort();
   for (const file of ['test/eng-seeded-completion-ai.test.ts', 'test/fixtures/eng-seeded-completion-ai.json']) {
     expect(selectTests([file], E2E_TOUCHFILES).selected.sort()).toEqual(owners);
