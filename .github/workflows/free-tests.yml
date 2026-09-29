@@ -63,7 +63,7 @@ jobs:
 
   free-suite:
     needs: free-plan
-    runs-on: ubicloud-standard-8
+    runs-on: ubuntu-24.04
     timeout-minutes: 20
     strategy:
       fail-fast: false
