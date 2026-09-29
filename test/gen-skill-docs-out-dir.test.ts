@@ -12,11 +12,7 @@ describe('gen-skill-docs --out-dir (B2 render isolation)', () => {
     return r.status === 0 ? r.stdout : '';
   }
 
-  // #2692: the swap-in callers render
-  // into claude.tmp.<pid> then RENAME it into place — so section refs must be
-  // rewritten to the FINAL serving dir (--link-root), never the tmp out-dir,
-  // or every rendered Read dies the moment the swap completes.
-  test('--link-root repoints section refs at the FINAL dir, not the tmp out-dir (#2692)', () => {
+  test('relative section refs survive moving an out-dir render into place', () => {
     const tmpHome = fs.mkdtempSync(path.join(os.tmpdir(), 'gstack-home-'));
     const base = fs.mkdtempSync(path.join(os.tmpdir(), 'gstack-swap-'));
     // Mirror the real caller shape, including a `$`-bearing path segment so a
@@ -27,27 +23,19 @@ describe('gen-skill-docs --out-dir (B2 render isolation)', () => {
     try {
       const res = spawnSync(
         'bun',
-        ['run', 'scripts/gen-skill-docs.ts', '--host', 'claude',
-         '--out-dir', outDir, '--link-root', finalDir],
+        ['run', 'scripts/gen-skill-docs.ts', '--host', 'claude', '--out-dir', outDir],
         { cwd: ROOT, encoding: 'utf-8', timeout: 120_000, env: { ...process.env, GSTACK_HOME: tmpHome } },
       );
       expect(res.status).toBe(0);
       const skillContent = fs.readFileSync(path.join(outDir, 'ship', 'SKILL.md'), 'utf-8');
-      // Files land in the tmp out-dir; their CONTENT references the final dir.
-      expect(skillContent).toContain(`${finalDir}/ship/sections/`);
+      expect(skillContent).toContain('`sections/tests.md` relative to this SKILL.md');
       expect(skillContent).not.toContain(`${outDir}/ship/sections/`);
-      expect(skillContent).not.toContain('~/.claude/skills/gstack/ship/sections/');
+      fs.renameSync(outDir, finalDir);
+      expect(fs.existsSync(path.join(finalDir, 'ship', 'sections', 'tests.md'))).toBe(true);
     } finally {
       fs.rmSync(tmpHome, { recursive: true, force: true });
       fs.rmSync(base, { recursive: true, force: true });
     }
-  });
-
-  test('both swap-in callers pass --link-root with the final render dir (#2692 wiring)', () => {
-    const setupSrc = fs.readFileSync(path.join(ROOT, 'setup'), 'utf-8');
-    const configSrc = fs.readFileSync(path.join(ROOT, 'bin', 'gstack-config'), 'utf-8');
-    expect(setupSrc).toContain('--out-dir "$_GSTACK_RENDER_TMP" --link-root "$_GSTACK_RENDER_DIR"');
-    expect(configSrc).toContain('--out-dir "$RENDER_TMP" --link-root "$RENDER_DIR"');
   });
 
   test('retired global extras (proactive-suggestions.json) are not written anywhere', () => {

@@ -107,6 +107,26 @@ describe("pre-push hook gating", () => {
     expect(code).toBe(0);
     expect(stderr).toContain("MEDIUM");
   });
+
+  test("a 1.1 MiB generated line is scanned, including a credential near its end", () => {
+    const base = git(["rev-parse", "HEAD"]);
+    const body = "x".repeat(1_100_000);
+    const clean = commit("bundle.txt", body + "\n", "add generated bundle");
+    expect(runHook(`refs/heads/main ${clean} refs/heads/main ${base}\n`).code).toBe(0);
+
+    const leaky = commit("bundle.txt", body + " " + FAKE_AWS_KEY + "\n", "add credential");
+    const result = runHook(`refs/heads/main ${leaky} refs/heads/main ${clean}\n`);
+    expect(result.code).toBe(1);
+    expect(result.stderr).toContain("aws.access_key");
+  });
+
+  test("a line beyond the raised safety cap still blocks unscanned", () => {
+    const base = git(["rev-parse", "HEAD"]);
+    const head = commit("bundle.txt", "x".repeat(2_200_000) + "\n", "add oversized bundle");
+    const result = runHook(`refs/heads/main ${head} refs/heads/main ${base}\n`);
+    expect(result.code).toBe(1);
+    expect(result.stderr).toContain("engine.input_too_large");
+  });
 });
 
 describe("diff direction + special refs", () => {

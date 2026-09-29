@@ -310,7 +310,9 @@ function collectAddedLines(diff: string): string {
  */
 const SCAN_CHUNK_BYTES = 768 * 1024;
 const SCAN_OVERLAP_CHARS = 16 * 1024;
-const MAX_SCAN_BYTES = 1024 * 1024;
+// ponytail: 2 MiB covers the bundled renderer; larger single lines still fail closed.
+// Raise this only with a measured case and a credential-bearing regression check.
+const MAX_SCAN_BYTES = 2 * 1024 * 1024;
 
 /**
  * Scan complete-line core slices with bounded left and right context. Admit
@@ -398,7 +400,7 @@ function scanAddedLines(added: string, opts: Parameters<typeof scan>[1]): Findin
   for (const core of cores) {
     const left = contextStart(core.start);
     const text = added.slice(left, contextEnd(core.end));
-    const result = scan(text, opts);
+    const result = scan(text, { ...opts, maxBytes: MAX_SCAN_BYTES });
     if (result.oversize) {
       findings.push(...result.findings);
       return findings;
