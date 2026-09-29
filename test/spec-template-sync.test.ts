@@ -4,9 +4,8 @@
  * Per codex T8 / eng plan: regen and assert no drift. Catches commits that
  * edit a template but forget to run `bun run gen:skill-docs`, or vice versa.
  *
- * /spec is carved (skeleton + sections/gate-and-file.md), so BOTH generated
- * artifacts are checked: a stale section is the same drift bug as a stale
- * skeleton — the on-demand file is what the agent executes at Phase 4.5.
+ * /spec delegates to /plan mode=spec; both the alias and its on-demand
+ * plan section must match their templates.
  *
  * The regen renders into an isolated --out-dir and compares the rendered
  * bytes against the TRACKED files — the working tree is only ever read.
@@ -21,11 +20,11 @@ const ROOT = path.resolve(import.meta.dir, '..');
 
 const GENERATED_PATHS = [
   path.join(ROOT, 'spec', 'SKILL.md'),
-  path.join(ROOT, 'spec', 'sections', 'gate-and-file.md'),
+  path.join(ROOT, 'plan', 'sections', 'spec.md'),
 ];
 
 describe('/spec template/generated sync', () => {
-  test('regenerating spec/SKILL.md + sections produces byte-identical output', () => {
+  test('regenerating the spec alias and plan section produces byte-identical output', () => {
     const outDir = fs.mkdtempSync(path.join(os.tmpdir(), 'gstack-spec-sync-'));
 
     const res = spawnSync('bun', ['run', 'gen:skill-docs', '--out-dir', outDir], {
@@ -50,14 +49,8 @@ describe('/spec template/generated sync', () => {
       for (const trackedPath of GENERATED_PATHS) {
         const rel = path.relative(ROOT, trackedPath);
         const rendered = fs.readFileSync(path.join(outDir, rel), 'utf-8');
-        // --out-dir repoints the literal section-base paths
-        // (~/.claude/skills/gstack/<skill>/sections/ → <outDir>/<skill>/sections/)
-        // so section Reads resolve inside the render. Undo that single
-        // documented rewrite before comparing; every OTHER byte must match
-        // the tracked file exactly.
-        const normalized = rendered.replaceAll(`${outDir}/`, '~/.claude/skills/gstack/');
         const tracked = fs.readFileSync(trackedPath, 'utf-8');
-        expect({ file: rel, identical: normalized === tracked })
+        expect({ file: rel, identical: rendered === tracked })
           .toEqual({ file: rel, identical: true });
       }
     } finally {
