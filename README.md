@@ -47,10 +47,10 @@ Git과 [Bun](https://bun.sh/)을 준비하고, 이 저장소를 AI 도구의 스
 
 Codex에서는 `$gstack-` 접두사를 사용합니다. 예를 들어 Claude의 `/gstack-plan`은 Codex에서 `$gstack-plan`입니다. 전체 사용법은 [스킬 가이드](docs/skills.md)를 참고하세요.
 
-## 현재 상태
+## 검증
 
-원본 대비 토큰·속도·성공률 개선은 아직 입증되지 않았습니다. 변경을 게시하기 전 전체 무료 테스트와 보안 검사를 통과해야 합니다. 자세한 범위와 검증 계획은 [최적화 계획](docs/superpowers/plans/2026-09-27-gstack-frontier-optimization.md)에 있습니다.
+2026-09-29 기준 전체 무료 테스트(`bun run test`)는 **18,180 통과 / 0 실패 / 1 건너뜀**입니다. 빌드와 생성 문서 검사, 자격증명 검사도 통과했습니다.
 
-개발 시 `bun run test:quick`으로 빠르게 확인하고, 최종 인수에는 `bun run test`를 사용합니다. 스킬 문서는 템플릿에서 생성되므로 변경할 때 `SKILL.md.tmpl`과 `sections/*.md.tmpl`을 수정하세요. 개발 구조는 [CONTRIBUTING.md](CONTRIBUTING.md)와 [ARCHITECTURE.md](ARCHITECTURE.md)에 있습니다.
+이 포크의 “가벼움”은 기본 설치에서 등록하는 명령과 처음 읽는 지침의 범위를 뜻합니다. 원본 대비 토큰 사용량·실행 속도·성공률의 정량적 개선을 주장하지 않습니다.
 
 원본: [garrytan/gstack](https://github.com/garrytan/gstack) · 라이선스: [MIT](LICENSE)

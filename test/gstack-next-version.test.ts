@@ -1,7 +1,6 @@
 // Pure-function tests for bin/gstack-next-version.
 // Covers the version arithmetic and slot-picking logic. Subprocess paths
-// (gh/glab/git) are covered by the integration test at the bottom (skipped
-// when the relevant CLI isn't available).
+// (gh/glab/git) are covered by local-repository CLI fixtures below.
 
 import { test, expect, describe } from "bun:test";
 import { execFileSync } from "node:child_process";
@@ -438,6 +437,7 @@ describe("offline output contract (what /ship branches on, #2545)", () => {
     // The whole point: degraded queue view, NOT a degraded allocation.
     expect(out.version).toMatch(/^\d+\.\d+\.\d+\.\d+$/);
     expect(out.warnings.join(" ")).toContain("allocated from git");
+    expect(out.version_path).toBe("VERSION");
   }, 30000);
 
   test("online runs leave fallback null", async () => {
@@ -453,7 +453,8 @@ describe("offline output contract (what /ship branches on, #2545)", () => {
     );
     const proc = Bun.spawnSync(
       ["bun", "run", NEXTVER, "--base", "main",
-       "--bump", "patch", "--current-version", "1.0.0.0", "--workspace-root", "null"],
+       "--bump", "patch", "--current-version", "1.0.0.0", "--workspace-root", "null",
+       "--version-path", "Tinas Second Brain/health-tracker/VERSION"],
       { cwd: work, env: { ...process.env, PATH: `${stubDir}:${process.env.PATH}` }, timeout: 30_000 },
     );
     rmSync(stubDir, { recursive: true, force: true });
@@ -463,6 +464,11 @@ describe("offline output contract (what /ship branches on, #2545)", () => {
     expect(out.offline).toBe(false);
     expect(out.fallback).toBe(null);
     expect(out.version).toMatch(/^\d+\.\d+\.\d+\.\d+$/);
+    expect(parseVersion(out.version)).not.toBeNull();
+    expect(out.bump).toBe("patch");
+    expect(Array.isArray(out.claimed)).toBe(true);
+    expect(out.siblings).toEqual([]);
+    expect(out.version_path).toBe("Tinas Second Brain/health-tracker/VERSION");
   }, 30000);
 });
 
@@ -929,59 +935,6 @@ describe("width pinned on failed base read (3-digit repos)", () => {
   }, 30_000);
 });
 
-describe("integration (smoke)", () => {
-  // Bumps timeout to 30s — the test spawns a real `bun run` subprocess that
-  // does a `gh pr list` against the live GitHub API to inspect claimed slots.
-  // Network latency makes 5s tight on developer machines.
-  test("CLI runs against real repo and emits parseable JSON", async () => {
-    const proc = Bun.spawnSync([
-      "bun",
-      "run",
-      "./bin/gstack-next-version",
-      "--base",
-      "main",
-      "--bump",
-      "patch",
-      "--current-version",
-      "1.6.3.0",
-      "--workspace-root",
-      "null", // skip sibling scan in CI
-    ], { timeout: 30_000 });
-    const out = new TextDecoder().decode(proc.stdout);
-    const parsed = JSON.parse(out);
-    expect(parsed).toHaveProperty("version");
-    expect(parseVersion(parsed.version)).not.toBeNull();
-    expect(parsed).toHaveProperty("bump", "patch");
-    expect(parsed).toHaveProperty("host");
-    expect(["github", "gitlab", "unknown"]).toContain(parsed.host);
-    expect(parsed).toHaveProperty("claimed");
-    expect(Array.isArray(parsed.claimed)).toBe(true);
-    expect(parsed).toHaveProperty("siblings");
-    expect(parsed.siblings).toEqual([]); // --workspace-root null disabled scanning
-    expect(parsed).toHaveProperty("version_path", "VERSION"); // default when no config + no flag
-  }, 30_000); // Headroom over the 4-5s wall time of the spawned process under load
-
-  test("CLI runs with --version-path and surfaces it in JSON output", async () => {
-    const proc = Bun.spawnSync([
-      "bun",
-      "run",
-      "./bin/gstack-next-version",
-      "--base",
-      "main",
-      "--bump",
-      "patch",
-      "--current-version",
-      "1.6.3.0",
-      "--workspace-root",
-      "null",
-      "--version-path",
-      "Tinas Second Brain/health-tracker/VERSION",
-    ], { timeout: 30_000 });
-    const out = new TextDecoder().decode(proc.stdout);
-    const parsed = JSON.parse(out);
-    expect(parsed).toHaveProperty("version_path", "Tinas Second Brain/health-tracker/VERSION");
-  }, 30_000);
-});
 
 describe("fetchGitClaimed — laundered ls-remote (exit 0, empty output) is never trusted", () => {
   // Some sandbox git wrappers launder exit codes: `git ls-remote --heads origin`
