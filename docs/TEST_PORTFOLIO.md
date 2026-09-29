@@ -126,8 +126,10 @@ test/plan-count-preview-footer.test.ts
 test/eng-test-plan-edit-approval.test.ts
 ```
 
-The publication/watchdog pair is `test/autoplan-publication-guard.test.ts` and
-`test/cso-watchdog.test.ts`. The live pair is
+The historical publication/watchdog pair was `test/autoplan-publication-guard.test.ts`
+and `test/cso-watchdog.test.ts`. The publication-guard test was retired when
+`/autoplan` became an alias for `/plan review-all`; its current route is checked
+by `test/frontier-workflows.test.ts`. The live pair is
 `test/skill-e2e-auq-consistency.test.ts` and
 `test/skill-e2e-auq-verbose-vs-carved-ab.test.ts`, using the default three
 consistency samples plus the two A/B captures.
@@ -135,8 +137,9 @@ consistency samples plus the two A/B captures.
 These are separate comparisons; do not add their percentages or call them a
 complete paid-suite result. The terminal aggregate is 56% faster, the two
 publication/watchdog files are 83% faster, and the live AUQ pair is 58% faster.
-Watchdog assertion counts fall only because identical compilation is checked
-once; all behavioral and security assertions remain.
+In that historical comparison, watchdog assertion counts fell only because
+identical compilation was checked once; its behavioral and security assertions
+remained.
 
 The matched complete local free-suite comparison used the same four-CPU Linux
 machine, Bun 1.4.0, Node 24.18.0, built artifacts, display and isolated Git

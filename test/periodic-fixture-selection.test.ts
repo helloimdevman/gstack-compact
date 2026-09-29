@@ -671,7 +671,6 @@ test('promoted public transcript decoder keeps its actual callers selected', () 
 test('Autoplan publication libraries and captured hook controls select the native chain', () => {
   for (const file of [
     'lib/autoplan-phase-publication.ts',
-    'test/autoplan-publication-guard.test.ts',
     'test/autoplan-publication-hook.test.ts',
     'test/autoplan-publication-generation.test.ts',
     'test/fixtures/autoplan-publication-boundary-361c.json',

@@ -29,3 +29,5 @@ jobs:
       - name: Run curated Windows-safe suite
         shell: bash
         run: bun run test:windows
+        env:
+          GSTACK_FREE_JOBS: '2'

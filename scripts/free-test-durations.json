@@ -97,7 +97,6 @@
     "test/autoplan-preconfigured-onboarding-ar.test.ts": 525,
     "test/autoplan-public-narration.test.ts": 76,
     "test/autoplan-publication-generation.test.ts": 41,
-    "test/autoplan-publication-guard.test.ts": 46388,
     "test/autoplan-publication-hook.test.ts": 2217,
     "test/autoplan-rendered-batch-at.test.ts": 255,
     "test/autoplan-repeated-header-ak.test.ts": 63,
