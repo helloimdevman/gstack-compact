@@ -21,12 +21,6 @@ export const PERIODIC_CI_EXCLUDE: Record<string, { reason: string; tracking: str
       + '(readiness/typing race vs CLI 2.1.x); never green since it was born in v1.63',
     tracking: 'TODOS.md "periodic tier — three documented-red tests need structural repair" (1 of 3 resolved: sidebar trio already deleted)',
   },
-  'test/skill-e2e-brain-privacy-gate.test.ts': {
-    reason:
-      'documented-red: the artifacts-sync stop-gate preconditions do not survive the hermetic env '
-      + 'even with per-test HOME/GSTACK_HOME injection; never green anywhere',
-    tracking: 'TODOS.md "periodic tier — three documented-red tests need structural repair"',
-  },
   'test/skill-e2e-ios.test.ts': {
     reason: 'requires a live iOS device/simulator toolchain (xcodebuild, devicectl) — manual hardware, not a CI runner capability',
     tracking: 'TODOS.md "skill-e2e-ios CI story" (device/runner decision)',
