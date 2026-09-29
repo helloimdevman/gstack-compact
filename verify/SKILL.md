@@ -50,7 +50,7 @@ equivalents (cat, sed, find, grep). The dedicated tools are cheaper and clearer.
 
 ## When to invoke
 
-Input: request, current diff or artifact, and optional `developer-flow | health` mode. Default: report findings and evidence without source edits. Fix only scoped defects when the user asks for a fix.
+Input: request, current diff or artifact, and optional `browser-report | browser-fix | visual-fix | developer-flow | health` mode. Default: report findings and evidence without source edits. `browser-report` checks a browser flow without editing; `browser-fix` fixes requested browser defects and re-verifies them. Fix only scoped defects when the user asks for a fix.
 
 Exercise the changed interface: CLI valid/invalid commands and effects, API public behavior and edge cases, and docs links and commands. For a UI flow, use a browser already supplied by the host if available; otherwise report it as `unavailable`. Run relevant tests and retain failures. Report pass, fail, skipped, `unavailable` for missing tools, or `not_applicable` for absent interfaces. Unavailable is not pass.
 

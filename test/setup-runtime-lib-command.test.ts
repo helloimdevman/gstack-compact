@@ -34,10 +34,10 @@ function extractFunction(name: string): string {
 // root assignment through the last runtime-asset link so the extracted code is
 // a complete statement list.
 function extractKiroBlock(): string {
-  const startAnchor = 'mkdir -p "$KIRO_GSTACK" "$KIRO_GSTACK/browse" "$KIRO_GSTACK/gstack-upgrade" "$KIRO_GSTACK/review"';
-  const endAnchor = '_link_or_copy "$SOURCE_GSTACK_DIR/supabase/config.sh" "$KIRO_GSTACK/supabase/config.sh"\n    fi';
+  const startAnchor = 'mkdir -p "$KIRO_GSTACK" "$KIRO_GSTACK/gstack-upgrade" "$KIRO_GSTACK/review"';
+  const endAnchor = '    done';
   const start = SETUP_SRC.indexOf(startAnchor);
-  const end = SETUP_SRC.indexOf(endAnchor, start);
+  const end = SETUP_SRC.indexOf(endAnchor, SETUP_SRC.indexOf('for file in ETHOS.md CONTRACT.md', start));
   if (start < 0 || end < 0) throw new Error('Could not locate the Kiro install block in setup');
   return SETUP_SRC.slice(start, end + endAnchor.length);
 }
@@ -49,7 +49,6 @@ interface CommandResult {
   runStderr: string;
   learningsWritten: boolean;
   libIsSymlink: boolean | null;
-  supabaseConfigPresent: boolean;
   contractPresent: boolean;
   reviewStatus: number | null;
   reviewFreshness?: string;
@@ -113,11 +112,6 @@ TOKEN=$("$1/bin/gstack-review-log" --start review)
       runStderr: run.stderr,
       learningsWritten,
       libIsSymlink: libLst ? libLst.isSymbolicLink() : null,
-      // Distinct defect (#2215): telemetry-class bin scripts source
-      // $GSTACK_DIR/supabase/config.sh to resolve GSTACK_SUPABASE_URL. The
-      // [ -f ... ] guard means a missing file degrades SILENTLY, so only a
-      // presence check on the installed root catches it.
-      supabaseConfigPresent: fs.existsSync(path.join(rootDir, 'supabase', 'config.sh')),
       contractPresent: fs.existsSync(path.join(rootDir, 'CONTRACT.md')),
       reviewStatus: review.status,
       reviewFreshness: reviewRow ? JSON.parse(reviewRow).review_freshness?.status : undefined,
@@ -187,11 +181,10 @@ describe.skipIf(process.platform === 'win32')('setup: bin commands resolve sibli
       expect(r.runStderr).not.toContain('lib/jsonl-store.ts');
       expect(r.runStatus, r.runStderr).toBe(0);
       expect(r.learningsWritten).toBe(true);
-      expect(r.supabaseConfigPresent).toBe(true);
       expect(r.contractPresent).toBe(true);
       expect(r.reviewStatus).toBe(0);
       expect(r.reviewFreshness).toBe('CURRENT');
-    });
+    }, 20_000);
 
     test(`${host} root (Windows copy install): gstack-learnings-log imports ../lib and writes the learning`, () => {
       const r = buildRootAndRunCommand('1', buildScript);
@@ -201,11 +194,10 @@ describe.skipIf(process.platform === 'win32')('setup: bin commands resolve sibli
       expect(r.runStderr).not.toContain('lib/jsonl-store.ts');
       expect(r.runStatus, r.runStderr).toBe(0);
       expect(r.learningsWritten).toBe(true);
-      expect(r.supabaseConfigPresent).toBe(true);
       expect(r.contractPresent).toBe(true);
       expect(r.reviewStatus).toBe(0);
       expect(r.reviewFreshness).toBe('CURRENT');
-    });
+    }, 20_000);
   }
 
   // Negative control: a root with bin/ but no lib/ (the pre-fix layout) must

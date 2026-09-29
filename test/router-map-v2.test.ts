@@ -20,8 +20,8 @@ test('v2 map covers every discovered command and validates direct canonical rout
   expect(map.commands['/sprint']).toEqual({ skill: 'sprint' });
   const core = JSON.parse(router.generateRouterMap({ skillProfile: 'core' } as any).replace(/^```json\n|\n```$/g, ''));
   expect(core.commands['/cso']).toBeUndefined();
-  expect(core.unavailableCommands).toContain('/cso');
-  expect(core.unavailableJobs['security-audit']).toBe('/cso');
+  expect(core.unavailableCommands).toContain('/autoplan');
+  expect(core.unavailableJobs['security-audit']).toBeUndefined();
 });
 
 test('v2 map rejects missing targets, invalid modes, aliases, and duplicate core ids', () => {
