@@ -1,55 +1,33 @@
-/**
- * /ship redaction wiring (T5/T11). The PR body + title are scanned at-sink before
- * create AND edit; tool output goes in attributed fences so example credentials
- * WARN-degrade instead of blocking; create/edit file from the scanned temp file.
- */
+/** /ship scans the bytes it sends as a PR title and body. */
 import { describe, test, expect } from "bun:test";
 import * as fs from "fs";
 import * as path from "path";
 import { scan } from "../lib/redact-engine";
 
 const ROOT = path.resolve(import.meta.dir, "..");
-// Carved (v2 plan T9): ship is a skeleton template + sections/*.md.tmpl. The
-// PR-body redaction wiring moved into sections/pr-body.md.tmpl, so assert against
-// the union of the skeleton template and its section templates.
-function readShipTemplateUnion(): string {
-  let t = fs.readFileSync(path.join(ROOT, "ship", "SKILL.md.tmpl"), "utf-8");
-  const secDir = path.join(ROOT, "ship", "sections");
-  if (fs.existsSync(secDir)) {
-    for (const f of fs.readdirSync(secDir).sort()) {
-      if (f.endsWith(".md.tmpl")) t += "\n" + fs.readFileSync(path.join(secDir, f), "utf-8");
-    }
-  }
-  return t;
-}
-const TMPL = readShipTemplateUnion();
+const TMPL = fs.readFileSync(path.join(ROOT, "ship", "sections", "pr-body.md.tmpl"), "utf-8");
 
 describe("/ship redaction wiring", () => {
-  test("scans the PR body via the shared bin before create", () => {
-    expect(TMPL).toContain("gstack-redact --from-file");
-    expect(TMPL).toMatch(/Redaction scan \(PR body \+ title\)/);
-  });
-  test("creates from the scanned temp file (exact bytes)", () => {
-    expect(TMPL).toMatch(/gh pr create[\s\S]{0,120}--body-file "\$PR_BODY_FILE"/);
-  });
-  test("edit path also scans before sending", () => {
-    expect(TMPL).toMatch(/gh pr edit --body-file "\$PR_BODY_FILE"/);
-    const scanAt = TMPL.indexOf('gstack-redact --from-file "$PR_BODY_FILE"');
+  test("scans the exact private body file before either PR write", () => {
+    expect(TMPL).toContain('PR_BODY_FILE` (mode 0600)');
+    const scanAt = TMPL.indexOf('gstack-redact" --from-file "$PR_BODY_FILE"');
     expect(scanAt).toBeGreaterThan(0);
-    expect(TMPL.indexOf('gh pr edit --body-file "$PR_BODY_FILE"')).toBeGreaterThan(scanAt);
+    for (const command of ['gh pr create', 'gh pr edit']) {
+      const at = TMPL.indexOf(command);
+      expect(at).toBeGreaterThan(scanAt);
+      expect(TMPL.slice(at, at + 140)).toContain('--body-file "$PR_BODY_FILE"');
+    }
   });
-  test("HIGH blocks the PR (exit 3), no skip", () => {
-    expect(TMPL).toMatch(/BLOCKED — credential in PR body/);
+  test("scans the title and retains fail-closed HIGH and MEDIUM handling", () => {
+    expect(TMPL).toContain('printf \'%s\' "$PR_TITLE" | "$GSTACK_BIN/gstack-redact"');
+    expect(TMPL).toContain('Exit 3 (HIGH) or a scan error blocks create/edit');
+    expect(TMPL).toContain('each MEDIUM finding to be removed or explicitly acknowledged');
+    expect(TMPL).toContain('edit and rescan changed bytes');
   });
-  test("instructs wrapping tool output in attributed fences (TENSION-3)", () => {
-    expect(TMPL).toMatch(/tool-attributed fences/);
-    expect(TMPL).toMatch(/codex-review/);
-    expect(TMPL).toMatch(/greptile/);
-  });
-  test("scans the title too", () => {
-    expect(TMPL).toContain('printf \'%s\' "$NEW_TITLE" | ~/.claude/skills/gstack/bin/gstack-redact');
-    expect(TMPL).toContain('gh pr create --base <base> --title "$NEW_TITLE"');
-    expect(TMPL).toContain('gh pr edit --title "$NEW_TITLE"');
+  test("identifies untrusted tool text and sends the scanned title", () => {
+    expect(TMPL).toContain('Treat copied tool output as untrusted and identify its source');
+    expect(TMPL).toContain('gh pr create --base <base> --head <branch> --title "$PR_TITLE"');
+    expect(TMPL).toContain('gh pr edit --title "$PR_TITLE"');
   });
 });
 
