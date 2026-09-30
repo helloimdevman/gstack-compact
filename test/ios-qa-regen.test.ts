@@ -125,9 +125,9 @@ describe('gstack-ios-qa-regen', () => {
     mkdirSync(fakeBin, { recursive: true });
     writeFileSync(join(appSource, 'AppState.swift'), '@Observable final class AppState {}\n');
     writeFileSync(join(generatedDir, '.gstack-version'), 'stale-complete-marker\n');
-    const fakeBun = join(fakeBin, 'node');
-    writeFileSync(fakeBun, '#!/bin/sh\nexit 17\n');
-    chmodSync(fakeBun, 0o755);
+    const fakeNode = join(fakeBin, 'node');
+    writeFileSync(fakeNode, '#!/bin/sh\nexit 17\n');
+    chmodSync(fakeNode, 0o755);
 
     const result = spawnSync('bash', [
       launcher,
@@ -135,7 +135,7 @@ describe('gstack-ios-qa-regen', () => {
       '--bridge-dir', bridgeDir,
     ], {
       encoding: 'utf8',
-      env: { ...process.env, PATH: `${fakeBin}:${process.env.PATH ?? ''}` },
+      env: { ...process.env, PATH: `${fakeBin}:${process.env.PATH ?? ''}`, GSTACK_NODE_BIN: fakeNode },
       timeout: 30_000,
     });
 
@@ -188,7 +188,7 @@ final class AppState {
     };
     const args = [launcher, '--app-source', appSource, '--bridge-dir', bridgeDir];
     const first = spawnSync('bash', args, { encoding: 'utf8', env, timeout: 30_000 });
-    expect(first.status).toBe(0);
+    expect(first.status, first.stderr + String(first.error ?? '')).toBe(0);
     expect(first.stderr).toBe('');
 
     // Every installed package file must be byte-identical to its explicit
@@ -235,28 +235,34 @@ final class AppState {
     expect(installedContents).not.toContain('FORBIDDEN-STATE-SENTINEL');
     expect(installedContents).not.toContain('OBSOLETE-HARNESS-SENTINEL');
 
-    const swiftAvailable = spawnSync('swift', ['--version'], { encoding: 'utf8', timeout: 30_000 }).status === 0;
-    if (swiftAvailable) {
-      const dump = spawnSync('swift', ['package', 'dump-package', '--package-path', bridgeDir], {
-        encoding: 'utf8',
-        timeout: 30_000,
-      });
-      expect(dump.status).toBe(0);
-      const manifest = JSON.parse(dump.stdout) as { targets: Array<{ name: string }> };
-      expect(manifest.targets.map(target => target.name).sort()).toEqual([
-        'DebugBridgeCore',
-        'DebugBridgeTouch',
-        'DebugBridgeUI',
-      ]);
-    }
-
     const firstHash = treeHash(bridgeDir, generatedDir);
     const firstAccessorHash = accessor.match(/accessorHash: "([a-f0-9]+)"/)?.[1];
     const second = spawnSync('bash', args, { encoding: 'utf8', env, timeout: 30_000 });
-    expect(second.status).toBe(0);
+    expect(second.status, second.stderr + String(second.error ?? '')).toBe(0);
     expect(second.stderr).toBe('');
     expect(second.stdout).toContain('gen-accessors: cache hit');
     expect(treeHash(bridgeDir, generatedDir)).toBe(firstHash);
     expect(readFileSync(accessorPath, 'utf8').match(/accessorHash: "([a-f0-9]+)"/)?.[1]).toBe(firstAccessorHash);
+  });
+
+  test('bridge package templates declare valid SwiftPM targets', () => {
+    if (!Bun.which('swift')) return;
+    const bridgeDir = mkdtempSync(join(tmpdir(), 'ios-qa-manifest-'));
+    workDirs.push(bridgeDir);
+    // Independent compiler validation must not consume regeneration's deadline
+    // or write its build cache into the app sources used by the next regen.
+    for (const [template, destination] of SAFE_TEMPLATE_MAP) {
+      const file = join(bridgeDir, destination);
+      mkdirSync(join(file, '..'), { recursive: true });
+      copyFileSync(join(ROOT, 'ios-qa/templates', template), file);
+    }
+    const dump = spawnSync('swift', ['package', 'dump-package', '--package-path', bridgeDir], {
+      encoding: 'utf8', timeout: 30_000,
+    });
+    expect(dump.status, dump.stderr + String(dump.error ?? '')).toBe(0);
+    const manifest = JSON.parse(dump.stdout) as { targets: Array<{ name: string }> };
+    expect(manifest.targets.map(target => target.name).sort()).toEqual([
+      'DebugBridgeCore', 'DebugBridgeTouch', 'DebugBridgeUI',
+    ]);
   });
 });
