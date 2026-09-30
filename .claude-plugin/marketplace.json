@@ -1,0 +1,13 @@
+{
+  "name": "gpact-marketplace",
+  "description": "The gpact compact engineering workflow plugin.",
+  "owner": { "name": "helloimdevman" },
+  "plugins": [
+    {
+      "name": "gpact",
+      "source": "./",
+      "description": "Eleven compact engineering workflow skills.",
+      "category": "productivity"
+    }
+  ]
+}

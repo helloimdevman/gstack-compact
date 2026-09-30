@@ -1,0 +1,6 @@
+interface:
+  display_name: "gpact-browse"
+  short_description: "Drive the browser supplied by the user's agent host: open a page, read it, click through a flow, take screenshots,..."
+  default_prompt: "Use gpact-browse for this task."
+policy:
+  allow_implicit_invocation: true

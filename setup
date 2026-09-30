@@ -26,7 +26,7 @@ Options:
                     Codex otherwise reads its config; Claude uses its host default.
   --skill-profile <core|compat>  Skill catalog. New Claude/Codex installs use core;
                     existing installs keep compat unless already selected.
-  --prefix          Install skills with the gstack- prefix (e.g. /gstack-review).
+  --prefix          Install skills with the gpact- prefix (e.g. /gpact-review).
   --no-prefix       Install skills with short names (e.g. /review). May collide with host commands.
   --team            Switch to team mode (per-repo gstack with auto-update).
   --no-team         Force solo install even if a team-mode repo is detected.
@@ -504,7 +504,7 @@ if [ "$SKILL_PREFIX_FLAG" -eq 0 ]; then
       echo ""
       echo "Skill naming: how should gstack skills appear?"
       echo ""
-      echo "  1) Namespaced: /gstack-qa, /gstack-ship, /gstack-review"
+      echo "  1) Namespaced: /gpact-qa, /gpact-ship, /gpact-review"
       echo "     Recommended. Avoids host command collisions."
       echo ""
       echo "  2) Short names: /qa, /ship, /review"
@@ -842,11 +842,12 @@ link_claude_skill_dirs() {
       # Use frontmatter name: if present (e.g., run-tests/ with name: test → symlink as "test")
       skill_name=$(grep -m1 '^name:' "$skill_dir/SKILL.md" 2>/dev/null | sed 's/^name:[[:space:]]*//' | tr -d '[:space:]')
       [ -z "$skill_name" ] && skill_name="$dir_name"
-      # Apply gstack- prefix unless --no-prefix or already prefixed
+      # Public commands use gpact; runtime helper names remain stable.
       if [ "$SKILL_PREFIX" -eq 1 ]; then
         case "$skill_name" in
-          gstack-*) link_name="$skill_name" ;;
-          *)        link_name="gstack-$skill_name" ;;
+          gpact-*)  link_name="$skill_name" ;;
+          gstack-*) link_name="gpact-${skill_name#gstack-}" ;;
+          *)        link_name="gpact-$skill_name" ;;
         esac
       else
         link_name="$skill_name"
@@ -995,7 +996,7 @@ cleanup_old_claude_symlinks() {
     [ "$skill_name" = "node_modules" ] && continue
     [ "$skill_name" = "gstack" ] && continue
     # Skip already-prefixed dirs (gstack-upgrade) — no old symlink to clean
-    case "$skill_name" in gstack-*) continue ;; esac
+    case "$skill_name" in gstack-*|gpact-*) continue ;; esac
     # Remove directory symlinks pointing into gstack/
     if [ -L "$old_target" ]; then
       link_dest="$(readlink "$old_target" 2>/dev/null || true)"
@@ -1033,7 +1034,7 @@ cleanup_old_claude_symlinks() {
       if [ -f "$skill_dir/SKILL.md" ]; then
         skill_name="$(basename "$skill_dir")"
         [ "$skill_name" = "node_modules" ] && continue
-        case "$skill_name" in gstack-*) continue ;; esac
+        case "$skill_name" in gstack-*|gpact-*) continue ;; esac
         old_target="$skills_dir/$skill_name"
         if [ -d "$old_target" ] && [ ! -L "$old_target" ] \
           && [ -f "$old_target/SKILL.md" ] && [ ! -L "$old_target/SKILL.md" ] \
@@ -1066,8 +1067,8 @@ cleanup_prefixed_claude_symlinks() {
       [ "$skill_name" = "node_modules" ] && continue
       # Only clean up prefixed entries for dirs that AREN'T already prefixed
       # (e.g., remove gstack-qa but NOT gstack-upgrade which is the real dir name)
-      case "$skill_name" in gstack-*) continue ;; esac
-      prefixed_target="$skills_dir/gstack-$skill_name"
+      case "$skill_name" in gstack-*|gpact-*) continue ;; esac
+      for prefixed_target in "$skills_dir/gstack-$skill_name" "$skills_dir/gpact-$skill_name"; do
       # Remove directory symlinks pointing into gstack/ — anchored path
       # segments, same as cleanup_old_claude_symlinks and gstack-uninstall: a
       # bare *gstack* substring would wipe a user skill under ~/tools/gstack-fork/.
@@ -1076,7 +1077,7 @@ cleanup_prefixed_claude_symlinks() {
         case "$link_dest" in
           gstack/*|*/gstack/*|*/.gstack/render/claude/*)
             rm -f "$prefixed_target"
-            removed+=("gstack-$skill_name")
+            removed+=("${prefixed_target##*/}")
             ;;
         esac
       # Remove real directories with symlinked SKILL.md pointing into gstack/
@@ -1085,7 +1086,7 @@ cleanup_prefixed_claude_symlinks() {
         case "$link_dest" in
           gstack/*|*/gstack/*|*/.gstack/render/claude/*)
             _cleanup_linked_dir "$prefixed_target" "$gstack_dir"
-            removed+=("gstack-$skill_name")
+            removed+=("${prefixed_target##*/}")
             ;;
         esac
       # Windows install pattern: real dir with real-file SKILL.md. Provenance
@@ -1096,9 +1097,10 @@ cleanup_prefixed_claude_symlinks() {
         && { [ -f "$prefixed_target/.gstack-owned" ] \
              || cmp -s "$prefixed_target/SKILL.md" "$skill_dir/SKILL.md" \
              || _gstack_generated_header "$prefixed_target/SKILL.md"; }; then
-        if [ -f "$prefixed_target/.gstack-owned" ]; then rm -rf "$prefixed_target"; else _cleanup_weak_dir "$prefixed_target" "$gstack_dir" "$skill_dir/SKILL.md" "gstack-$skill_name"; fi
-        removed+=("gstack-$skill_name")
+        if [ -f "$prefixed_target/.gstack-owned" ]; then rm -rf "$prefixed_target"; else _cleanup_weak_dir "$prefixed_target" "$gstack_dir" "$skill_dir/SKILL.md" "${prefixed_target##*/}"; fi
+        removed+=("${prefixed_target##*/}")
       fi
+      done
     fi
   done
   if [ ${#removed[@]} -gt 0 ]; then
@@ -1905,7 +1907,7 @@ if [ ! -f "$HOME/.gstack/.welcome-seen" ]; then
   log "  gstack is ready. First move:"
   log "    New idea / empty repo?   /office-hours  or  /spec"
   log "    Existing code?           /qa  to see it work, or  /investigate"
-  log "  (Run /gstack-upgrade anytime to stay current)"
+  log "  (Run /gpact-upgrade anytime to stay current)"
   log ""
   # Best-effort onboarding telemetry (respects telemetry!=off; never blocks setup).
   if [ -x "$SOURCE_GSTACK_DIR/bin/gstack-telemetry-log" ]; then

@@ -98,10 +98,10 @@ describe('gstack-relink (#578)', () => {
       GSTACK_SKILLS_DIR: skillsDir,
     });
     // Verify gstack-* symlinks exist
-    expect(fs.existsSync(path.join(skillsDir, 'gstack-qa'))).toBe(true);
-    expect(fs.existsSync(path.join(skillsDir, 'gstack-ship'))).toBe(true);
-    expect(fs.existsSync(path.join(skillsDir, 'gstack-review'))).toBe(true);
-    expect(output).toContain('gstack-');
+    expect(fs.existsSync(path.join(skillsDir, 'gpact-qa'))).toBe(true);
+    expect(fs.existsSync(path.join(skillsDir, 'gpact-ship'))).toBe(true);
+    expect(fs.existsSync(path.join(skillsDir, 'gpact-review'))).toBe(true);
+    expect(output).toContain('gpact-');
   });
 
   // Test 12: flat symlinks when skill_prefix=false
@@ -123,7 +123,7 @@ describe('gstack-relink (#578)', () => {
 
   // REGRESSION: unprefixed skills must be real directories, not symlinks (#761)
   // Claude Code auto-prefixes skills nested under a parent dir symlink.
-  // e.g., `qa -> gstack/qa` gets discovered as "gstack-qa", not "qa".
+  // e.g., `qa -> gstack/qa` gets discovered as "gpact-qa", not "qa".
   // The fix: create real directories with SKILL.md symlinks inside.
   test('unprefixed skills are real directories with SKILL.md symlinks, not dir symlinks', () => {
     setupMockInstall(['qa', 'ship', 'review', 'plan-ceo-review']);
@@ -162,7 +162,7 @@ describe('gstack-relink (#578)', () => {
       GSTACK_INSTALL_DIR: installDir,
       GSTACK_SKILLS_DIR: skillsDir,
     });
-    for (const skill of ['gstack-qa', 'gstack-ship']) {
+    for (const skill of ['gpact-qa', 'gpact-ship']) {
       const skillPath = path.join(skillsDir, skill);
       const skillMdPath = path.join(skillPath, 'SKILL.md');
       expect(fs.lstatSync(skillPath).isDirectory()).toBe(true);
@@ -281,9 +281,9 @@ describe('gstack-relink (#578)', () => {
     // Enumerate everything in skills dir
     const entries = fs.readdirSync(skillsDir);
     // Expected: qa, ship, review, plan-ceo-review, gstack-upgrade (its real name)
-    expect(entries.sort()).toEqual(['gstack-upgrade', 'plan-ceo-review', 'qa', 'review', 'ship']);
-    // No gstack-qa, gstack-ship, gstack-review, gstack-plan-ceo-review
-    const leaked = entries.filter(e => e.startsWith('gstack-') && e !== 'gstack-upgrade');
+    expect(entries.sort()).toEqual(['plan-ceo-review', 'qa', 'review', 'ship', 'upgrade']);
+    // No gpact-qa, gpact-ship, gpact-review, gpact-plan-ceo-review
+    const leaked = entries.filter(e => e.startsWith('gpact-') && e !== 'gpact-upgrade');
     expect(leaked).toEqual([]);
   });
 
@@ -299,12 +299,12 @@ describe('gstack-relink (#578)', () => {
       GSTACK_SKILLS_DIR: skillsDir,
     });
     const entries = fs.readdirSync(skillsDir);
-    // Expected: gstack-qa, gstack-ship, gstack-review, gstack-plan-ceo-review, gstack-upgrade
+    // Expected: gpact-qa, gpact-ship, gpact-review, gpact-plan-ceo-review, gstack-upgrade
     expect(entries.sort()).toEqual([
-      'gstack-plan-ceo-review', 'gstack-qa', 'gstack-review', 'gstack-ship', 'gstack-upgrade',
+      'gpact-plan-ceo-review', 'gpact-qa', 'gpact-review', 'gpact-ship', 'gpact-upgrade',
     ]);
     // No unprefixed qa, ship, review, plan-ceo-review
-    const leaked = entries.filter(e => !e.startsWith('gstack-'));
+    const leaked = entries.filter(e => !e.startsWith('gpact-'));
     expect(leaked).toEqual([]);
   });
 
@@ -318,7 +318,7 @@ describe('gstack-relink (#578)', () => {
       GSTACK_SKILLS_DIR: skillsDir,
     });
     const entries = fs.readdirSync(skillsDir);
-    expect(entries.sort()).toEqual(['gstack-qa', 'gstack-ship']);
+    expect(entries.sort()).toEqual(['gpact-qa', 'gpact-ship']);
   });
 
   // SWITCH: prefix → no-prefix must clean up ALL gstack-* entries
@@ -334,7 +334,7 @@ describe('gstack-relink (#578)', () => {
       GSTACK_SKILLS_DIR: skillsDir,
     });
     let entries = fs.readdirSync(skillsDir);
-    expect(entries.filter(e => !e.startsWith('gstack-'))).toEqual([]);
+    expect(entries.filter(e => !e.startsWith('gpact-'))).toEqual([]);
 
     // Switch to no-prefix
     run(`${path.join(installDir, 'bin', 'gstack-config')} set skill_prefix false`, {
@@ -347,8 +347,8 @@ describe('gstack-relink (#578)', () => {
     });
     entries = fs.readdirSync(skillsDir);
     // Only flat names + gstack-upgrade (its real name)
-    expect(entries.sort()).toEqual(['gstack-upgrade', 'plan-ceo-review', 'qa', 'review', 'ship']);
-    const leaked = entries.filter(e => e.startsWith('gstack-') && e !== 'gstack-upgrade');
+    expect(entries.sort()).toEqual(['plan-ceo-review', 'qa', 'review', 'ship', 'upgrade']);
+    const leaked = entries.filter(e => e.startsWith('gpact-') && e !== 'gpact-upgrade');
     expect(leaked).toEqual([]);
   });
 
@@ -365,7 +365,7 @@ describe('gstack-relink (#578)', () => {
       GSTACK_SKILLS_DIR: skillsDir,
     });
     let entries = fs.readdirSync(skillsDir);
-    expect(entries.filter(e => e.startsWith('gstack-') && e !== 'gstack-upgrade')).toEqual([]);
+    expect(entries.filter(e => e.startsWith('gpact-') && e !== 'gpact-upgrade')).toEqual([]);
 
     // Switch to prefix
     run(`${path.join(installDir, 'bin', 'gstack-config')} set skill_prefix true`, {
@@ -379,9 +379,9 @@ describe('gstack-relink (#578)', () => {
     entries = fs.readdirSync(skillsDir);
     // Only gstack-* names
     expect(entries.sort()).toEqual([
-      'gstack-qa', 'gstack-review', 'gstack-ship', 'gstack-upgrade',
+      'gpact-qa', 'gpact-review', 'gpact-ship', 'gpact-upgrade',
     ]);
-    const leaked = entries.filter(e => !e.startsWith('gstack-'));
+    const leaked = entries.filter(e => !e.startsWith('gpact-'));
     expect(leaked).toEqual([]);
   });
 
@@ -397,7 +397,7 @@ describe('gstack-relink (#578)', () => {
       GSTACK_INSTALL_DIR: installDir,
       GSTACK_SKILLS_DIR: skillsDir,
     });
-    expect(fs.existsSync(path.join(skillsDir, 'gstack-qa'))).toBe(true);
+    expect(fs.existsSync(path.join(skillsDir, 'gpact-qa'))).toBe(true);
 
     // Switch to flat mode
     run(`${path.join(installDir, 'bin', 'gstack-config')} set skill_prefix false`, {
@@ -411,7 +411,7 @@ describe('gstack-relink (#578)', () => {
 
     // Flat symlinks should exist, prefixed should be gone
     expect(fs.existsSync(path.join(skillsDir, 'qa'))).toBe(true);
-    expect(fs.existsSync(path.join(skillsDir, 'gstack-qa'))).toBe(false);
+    expect(fs.existsSync(path.join(skillsDir, 'gpact-qa'))).toBe(false);
   });
 
   // Test 14: error when install dir missing
@@ -435,10 +435,10 @@ describe('gstack-relink (#578)', () => {
       GSTACK_SKILLS_DIR: skillsDir,
     });
     // gstack-upgrade should keep its name, NOT become gstack-gstack-upgrade
-    expect(fs.existsSync(path.join(skillsDir, 'gstack-upgrade'))).toBe(true);
+    expect(fs.existsSync(path.join(skillsDir, 'gpact-upgrade'))).toBe(true);
     expect(fs.existsSync(path.join(skillsDir, 'gstack-gstack-upgrade'))).toBe(false);
     // Regular skills still get prefixed
-    expect(fs.existsSync(path.join(skillsDir, 'gstack-qa'))).toBe(true);
+    expect(fs.existsSync(path.join(skillsDir, 'gpact-qa'))).toBe(true);
   });
 
   // Test 15: gstack-config set skill_prefix triggers relink
@@ -450,8 +450,8 @@ describe('gstack-relink (#578)', () => {
       GSTACK_SKILLS_DIR: skillsDir,
     });
     // If relink was triggered, symlinks should exist
-    expect(fs.existsSync(path.join(skillsDir, 'gstack-qa'))).toBe(true);
-    expect(fs.existsSync(path.join(skillsDir, 'gstack-ship'))).toBe(true);
+    expect(fs.existsSync(path.join(skillsDir, 'gpact-qa'))).toBe(true);
+    expect(fs.existsSync(path.join(skillsDir, 'gpact-ship'))).toBe(true);
   });
 });
 
@@ -536,9 +536,9 @@ describe('gstack-patch-names (#620/#578)', () => {
       GSTACK_SKILLS_DIR: skillsDir,
     });
     // Verify name: field is patched with gstack- prefix
-    expect(readSkillName(path.join(installDir, 'qa'))).toBe('gstack-qa');
-    expect(readSkillName(path.join(installDir, 'ship'))).toBe('gstack-ship');
-    expect(readSkillName(path.join(installDir, 'review'))).toBe('gstack-review');
+    expect(readSkillName(path.join(installDir, 'qa'))).toBe('gpact-qa');
+    expect(readSkillName(path.join(installDir, 'ship'))).toBe('gpact-ship');
+    expect(readSkillName(path.join(installDir, 'review'))).toBe('gpact-review');
   });
 
   test('prefix=false restores name: field in SKILL.md', () => {
@@ -552,7 +552,7 @@ describe('gstack-patch-names (#620/#578)', () => {
       GSTACK_INSTALL_DIR: installDir,
       GSTACK_SKILLS_DIR: skillsDir,
     });
-    expect(readSkillName(path.join(installDir, 'qa'))).toBe('gstack-qa');
+    expect(readSkillName(path.join(installDir, 'qa'))).toBe('gpact-qa');
     // Now switch to flat mode
     run(`${path.join(installDir, 'bin', 'gstack-config')} set skill_prefix false`, {
       GSTACK_INSTALL_DIR: installDir,
@@ -578,9 +578,9 @@ describe('gstack-patch-names (#620/#578)', () => {
       GSTACK_SKILLS_DIR: skillsDir,
     });
     // gstack-upgrade should keep its name, NOT become gstack-gstack-upgrade
-    expect(readSkillName(path.join(installDir, 'gstack-upgrade'))).toBe('gstack-upgrade');
+    expect(readSkillName(path.join(installDir, 'gstack-upgrade'))).toBe('gpact-upgrade');
     // Regular skill should be prefixed
-    expect(readSkillName(path.join(installDir, 'qa'))).toBe('gstack-qa');
+    expect(readSkillName(path.join(installDir, 'qa'))).toBe('gpact-qa');
   });
 
   test('SKILL.md without frontmatter is a no-op', () => {
@@ -650,7 +650,7 @@ describe('gstack-relink ownership gate (#2119)', () => {
     const out = relink();
     expect(fs.existsSync(path.join(skillsDir, 'qa', 'SKILL.md'))).toBe(true);
     expect(fs.readFileSync(path.join(skillsDir, 'qa', 'SKILL.md'), 'utf-8')).toBe(FOREIGN);
-    expect(fs.existsSync(path.join(skillsDir, 'gstack-qa', 'SKILL.md'))).toBe(true);
+    expect(fs.existsSync(path.join(skillsDir, 'gpact-qa', 'SKILL.md'))).toBe(true);
     expect(out).toContain('skipped');
   });
 
@@ -673,12 +673,12 @@ describe('gstack-relink ownership gate (#2119)', () => {
     setPrefix('false');
     const renderDir = path.join(tmpDir, 'render', 'claude');
     fs.mkdirSync(path.join(renderDir, 'qa'), { recursive: true });
-    fs.writeFileSync(path.join(renderDir, 'qa', 'SKILL.md'), '---\nname: gstack-qa\ndescription: rendered\n---\n');
+    fs.writeFileSync(path.join(renderDir, 'qa', 'SKILL.md'), '---\nname: gpact-qa\ndescription: rendered\n---\n');
     // Stale prefixed entry from a prior prefix-mode run, pointing at the render.
-    fs.mkdirSync(path.join(skillsDir, 'gstack-qa'));
-    fs.symlinkSync(path.join(renderDir, 'qa', 'SKILL.md'), path.join(skillsDir, 'gstack-qa', 'SKILL.md'));
+    fs.mkdirSync(path.join(skillsDir, 'gpact-qa'));
+    fs.symlinkSync(path.join(renderDir, 'qa', 'SKILL.md'), path.join(skillsDir, 'gpact-qa', 'SKILL.md'));
     const out = relink({ GSTACK_USER_RENDER_DIR: renderDir });
-    expect(fs.existsSync(path.join(skillsDir, 'gstack-qa'))).toBe(false);
+    expect(fs.existsSync(path.join(skillsDir, 'gpact-qa'))).toBe(false);
     expect(fs.readlinkSync(path.join(skillsDir, 'qa', 'SKILL.md'))).toBe(path.join(installDir, 'qa', 'SKILL.md'));
     expect(out).not.toContain('skipped');
   });
@@ -686,11 +686,11 @@ describe('gstack-relink ownership gate (#2119)', () => {
   test('a real-file copy carrying the .gstack-owned marker (Windows install shape) is ours', () => {
     setupMockInstall(['qa']);
     setPrefix('false');
-    fs.mkdirSync(path.join(skillsDir, 'gstack-qa'));
-    fs.writeFileSync(path.join(skillsDir, 'gstack-qa', 'SKILL.md'), '---\nname: gstack-qa\n---\n');
-    fs.writeFileSync(path.join(skillsDir, 'gstack-qa', '.gstack-owned'), '');
+    fs.mkdirSync(path.join(skillsDir, 'gpact-qa'));
+    fs.writeFileSync(path.join(skillsDir, 'gpact-qa', 'SKILL.md'), '---\nname: gpact-qa\n---\n');
+    fs.writeFileSync(path.join(skillsDir, 'gpact-qa', '.gstack-owned'), '');
     const out = relink();
-    expect(fs.existsSync(path.join(skillsDir, 'gstack-qa'))).toBe(false);
+    expect(fs.existsSync(path.join(skillsDir, 'gpact-qa'))).toBe(false);
     expect(out).not.toContain('skipped');
   });
 
@@ -700,11 +700,11 @@ describe('gstack-relink ownership gate (#2119)', () => {
     // dir named `gstack`, so `gstack/qa/SKILL.md` resolves into INSTALL_DIR.
     const installAlias = path.join(skillsDir, 'gstack');
     fs.symlinkSync(installDir, installAlias);
-    fs.mkdirSync(path.join(skillsDir, 'gstack-qa'));
-    fs.symlinkSync('../gstack/qa/SKILL.md', path.join(skillsDir, 'gstack-qa', 'SKILL.md'));
+    fs.mkdirSync(path.join(skillsDir, 'gpact-qa'));
+    fs.symlinkSync('../gstack/qa/SKILL.md', path.join(skillsDir, 'gpact-qa', 'SKILL.md'));
     setPrefix('false');
     const out = relink();
-    expect(fs.existsSync(path.join(skillsDir, 'gstack-qa'))).toBe(false);
+    expect(fs.existsSync(path.join(skillsDir, 'gpact-qa'))).toBe(false);
     expect(out).not.toContain('skipped');
   });
 
@@ -713,8 +713,8 @@ describe('gstack-relink ownership gate (#2119)', () => {
     const realInstall = fs.realpathSync(installDir);
     const linkInstall = path.join(tmpDir, 'install-link');
     fs.symlinkSync(realInstall, linkInstall);
-    fs.mkdirSync(path.join(skillsDir, 'gstack-qa'));
-    fs.symlinkSync(path.join(realInstall, 'qa', 'SKILL.md'), path.join(skillsDir, 'gstack-qa', 'SKILL.md'));
+    fs.mkdirSync(path.join(skillsDir, 'gpact-qa'));
+    fs.symlinkSync(path.join(realInstall, 'qa', 'SKILL.md'), path.join(skillsDir, 'gpact-qa', 'SKILL.md'));
     // relink detects the install through the symlinked spelling.
     run(`${path.join(installDir, 'bin', 'gstack-config')} set skill_prefix false`, {
       GSTACK_INSTALL_DIR: linkInstall, GSTACK_SKILLS_DIR: skillsDir,
@@ -722,17 +722,17 @@ describe('gstack-relink ownership gate (#2119)', () => {
     const out = run(`${path.join(installDir, 'bin', 'gstack-relink')} 2>&1`, {
       GSTACK_INSTALL_DIR: linkInstall, GSTACK_SKILLS_DIR: skillsDir,
     });
-    expect(fs.existsSync(path.join(skillsDir, 'gstack-qa'))).toBe(false);
+    expect(fs.existsSync(path.join(skillsDir, 'gpact-qa'))).toBe(false);
     expect(out).not.toContain('skipped');
   });
 
   test('a real-file copy WITHOUT the marker is foreign and survives', () => {
     setupMockInstall(['qa']);
     setPrefix('false');
-    fs.mkdirSync(path.join(skillsDir, 'gstack-qa'));
-    fs.writeFileSync(path.join(skillsDir, 'gstack-qa', 'SKILL.md'), FOREIGN);
+    fs.mkdirSync(path.join(skillsDir, 'gpact-qa'));
+    fs.writeFileSync(path.join(skillsDir, 'gpact-qa', 'SKILL.md'), FOREIGN);
     const out = relink();
-    expect(fs.readFileSync(path.join(skillsDir, 'gstack-qa', 'SKILL.md'), 'utf-8')).toBe(FOREIGN);
+    expect(fs.readFileSync(path.join(skillsDir, 'gpact-qa', 'SKILL.md'), 'utf-8')).toBe(FOREIGN);
     expect(out).toContain('skipped');
   });
 
@@ -767,7 +767,7 @@ describe('gstack-relink ownership gate (#2119)', () => {
     setPrefix('true');
     out = relink();
     expect(fs.readlinkSync(path.join(skillsDir, 'qa', 'SKILL.md'))).toBe(path.join(elsewhere, 'SKILL.md'));
-    expect(fs.existsSync(path.join(skillsDir, 'gstack-qa', 'SKILL.md'))).toBe(true);
+    expect(fs.existsSync(path.join(skillsDir, 'gpact-qa', 'SKILL.md'))).toBe(true);
     expect(out).toContain('skipped');
   });
 
@@ -805,11 +805,11 @@ describe('gstack-relink ownership gate (#2119)', () => {
 
   test('an opposite-mode WHOLE-DIR symlink into the install (oldest install shape) is ours and is removed on a flip', () => {
     setupMockInstall(['qa']);
-    fs.symlinkSync(path.join(installDir, 'qa'), path.join(skillsDir, 'gstack-qa'));
+    fs.symlinkSync(path.join(installDir, 'qa'), path.join(skillsDir, 'gpact-qa'));
     setPrefix('false');
     const out = relink();
-    expect(fs.existsSync(path.join(skillsDir, 'gstack-qa'))).toBe(false);
-    expect(fs.lstatSync(path.join(skillsDir, 'gstack-qa'), { throwIfNoEntry: false })).toBeUndefined();
+    expect(fs.existsSync(path.join(skillsDir, 'gpact-qa'))).toBe(false);
+    expect(fs.lstatSync(path.join(skillsDir, 'gpact-qa'), { throwIfNoEntry: false })).toBeUndefined();
     expect(fs.lstatSync(path.join(skillsDir, 'qa', 'SKILL.md')).isSymbolicLink()).toBe(true);
     expect(out).not.toContain('skipped');
   });
@@ -832,20 +832,20 @@ describe('gstack-relink ownership gate parity with setup (#2119 review fixes)', 
   test('a pre-marker legacy COPY carrying the generated header is ours (same rule as setup) and is cleaned on a flip', () => {
     setupMockInstall(['qa']);
     setPrefix('false');
-    fs.mkdirSync(path.join(skillsDir, 'gstack-qa'));
-    fs.writeFileSync(path.join(skillsDir, 'gstack-qa', 'SKILL.md'), '---\nname: gstack-qa\n---\n<!-- AUTO-GENERATED from SKILL.md.tmpl — do not edit directly -->\n<!-- Regenerate: bun run gen:skill-docs -->\n# qa\n');
+    fs.mkdirSync(path.join(skillsDir, 'gpact-qa'));
+    fs.writeFileSync(path.join(skillsDir, 'gpact-qa', 'SKILL.md'), '---\nname: gpact-qa\n---\n<!-- AUTO-GENERATED from SKILL.md.tmpl — do not edit directly -->\n<!-- Regenerate: bun run gen:skill-docs -->\n# qa\n');
     const out = relink();
-    expect(fs.existsSync(path.join(skillsDir, 'gstack-qa'))).toBe(false);
+    expect(fs.existsSync(path.join(skillsDir, 'gpact-qa'))).toBe(false);
     expect(out).not.toContain('skipped');
   });
 
   test('a ONE-line AUTO-GENERATED substring is not provenance (another generator could emit it): entry survives', () => {
     setupMockInstall(['qa']);
     setPrefix('false');
-    fs.mkdirSync(path.join(skillsDir, 'gstack-qa'));
-    fs.writeFileSync(path.join(skillsDir, 'gstack-qa', 'SKILL.md'), '---\nname: gstack-qa\n---\n<!-- AUTO-GENERATED from my-tool -->\n# theirs\n');
+    fs.mkdirSync(path.join(skillsDir, 'gpact-qa'));
+    fs.writeFileSync(path.join(skillsDir, 'gpact-qa', 'SKILL.md'), '---\nname: gpact-qa\n---\n<!-- AUTO-GENERATED from my-tool -->\n# theirs\n');
     const out = relink();
-    expect(fs.existsSync(path.join(skillsDir, 'gstack-qa', 'SKILL.md'))).toBe(true);
+    expect(fs.existsSync(path.join(skillsDir, 'gpact-qa', 'SKILL.md'))).toBe(true);
     expect(out).toContain('skipped');
   });
 
@@ -856,21 +856,21 @@ describe('gstack-relink ownership gate parity with setup (#2119 review fixes)', 
     fs.mkdirSync(decoy, { recursive: true });
     fs.mkdirSync(foreign, { recursive: true });
     fs.writeFileSync(path.join(foreign, 'SKILL.md'), FOREIGN);
-    fs.mkdirSync(path.join(skillsDir, 'gstack-qa'));
-    fs.symlinkSync(path.join(decoy, '..', 'foreign', 'SKILL.md'), path.join(skillsDir, 'gstack-qa', 'SKILL.md'));
+    fs.mkdirSync(path.join(skillsDir, 'gpact-qa'));
+    fs.symlinkSync(path.join(decoy, '..', 'foreign', 'SKILL.md'), path.join(skillsDir, 'gpact-qa', 'SKILL.md'));
     setPrefix('false');
     const out = relink();
-    expect(fs.existsSync(path.join(skillsDir, 'gstack-qa', 'SKILL.md'))).toBe(true);
+    expect(fs.existsSync(path.join(skillsDir, 'gpact-qa', 'SKILL.md'))).toBe(true);
     expect(out).toContain('skipped');
   });
 
   test('a byte-identical copy of our source SKILL.md is ours even without marker or header', () => {
     setupMockInstall(['qa']);
     setPrefix('false');
-    fs.mkdirSync(path.join(skillsDir, 'gstack-qa'));
-    fs.copyFileSync(path.join(installDir, 'qa', 'SKILL.md'), path.join(skillsDir, 'gstack-qa', 'SKILL.md'));
+    fs.mkdirSync(path.join(skillsDir, 'gpact-qa'));
+    fs.copyFileSync(path.join(installDir, 'qa', 'SKILL.md'), path.join(skillsDir, 'gpact-qa', 'SKILL.md'));
     const out = relink();
-    expect(fs.existsSync(path.join(skillsDir, 'gstack-qa'))).toBe(false);
+    expect(fs.existsSync(path.join(skillsDir, 'gpact-qa'))).toBe(false);
     expect(out).not.toContain('skipped');
   });
 
@@ -880,10 +880,10 @@ describe('gstack-relink ownership gate parity with setup (#2119 review fixes)', 
     const sibling = path.join(tmpDir, 'worktrees', 'gstack', 'qa');
     fs.mkdirSync(sibling, { recursive: true });
     fs.writeFileSync(path.join(sibling, 'SKILL.md'), '---\nname: qa\n---\n');
-    fs.mkdirSync(path.join(skillsDir, 'gstack-qa'));
-    fs.symlinkSync(path.join(sibling, 'SKILL.md'), path.join(skillsDir, 'gstack-qa', 'SKILL.md'));
+    fs.mkdirSync(path.join(skillsDir, 'gpact-qa'));
+    fs.symlinkSync(path.join(sibling, 'SKILL.md'), path.join(skillsDir, 'gpact-qa', 'SKILL.md'));
     const out = relink();
-    expect(fs.existsSync(path.join(skillsDir, 'gstack-qa'))).toBe(false);
+    expect(fs.existsSync(path.join(skillsDir, 'gpact-qa'))).toBe(false);
     expect(out).not.toContain('skipped');
   });
 
@@ -964,25 +964,25 @@ describe('gstack-relink weak proof is file-scoped; differing files are moved asi
 
   test('flip cleanup on a banner-only copy removes SKILL.md and keeps the user\'s other files and the directory', () => {
     setupMockInstall(['qa']);
-    fs.mkdirSync(path.join(skillsDir, 'gstack-qa', 'my-templates'), { recursive: true });
-    fs.writeFileSync(path.join(skillsDir, 'gstack-qa', 'SKILL.md'), `---\nname: gstack-qa\n---\n${BANNER}\n# started from gstack\n`);
-    fs.writeFileSync(path.join(skillsDir, 'gstack-qa', 'my-templates', 'checklist.md'), '- mine\n');
+    fs.mkdirSync(path.join(skillsDir, 'gpact-qa', 'my-templates'), { recursive: true });
+    fs.writeFileSync(path.join(skillsDir, 'gpact-qa', 'SKILL.md'), `---\nname: gpact-qa\n---\n${BANNER}\n# started from gstack\n`);
+    fs.writeFileSync(path.join(skillsDir, 'gpact-qa', 'my-templates', 'checklist.md'), '- mine\n');
     setPrefix('false');
     const out = relink();
-    expect(fs.existsSync(path.join(skillsDir, 'gstack-qa', 'SKILL.md'))).toBe(false);
-    expect(fs.readFileSync(path.join(skillsDir, 'gstack-qa', 'my-templates', 'checklist.md'), 'utf-8')).toBe('- mine\n');
+    expect(fs.existsSync(path.join(skillsDir, 'gpact-qa', 'SKILL.md'))).toBe(false);
+    expect(fs.readFileSync(path.join(skillsDir, 'gpact-qa', 'my-templates', 'checklist.md'), 'utf-8')).toBe('- mine\n');
     expect(out).not.toContain('skipped');
   });
 
   test('a marker-proven directory (we created it) is still removed whole on a flip', () => {
     setupMockInstall(['qa']);
-    fs.mkdirSync(path.join(skillsDir, 'gstack-qa', 'sections'), { recursive: true });
-    fs.writeFileSync(path.join(skillsDir, 'gstack-qa', 'SKILL.md'), '# stale copy\n');
-    fs.writeFileSync(path.join(skillsDir, 'gstack-qa', 'sections', 'a.md'), 'a\n');
-    fs.writeFileSync(path.join(skillsDir, 'gstack-qa', '.gstack-owned'), installDir + '\n');
+    fs.mkdirSync(path.join(skillsDir, 'gpact-qa', 'sections'), { recursive: true });
+    fs.writeFileSync(path.join(skillsDir, 'gpact-qa', 'SKILL.md'), '# stale copy\n');
+    fs.writeFileSync(path.join(skillsDir, 'gpact-qa', 'sections', 'a.md'), 'a\n');
+    fs.writeFileSync(path.join(skillsDir, 'gpact-qa', '.gstack-owned'), installDir + '\n');
     setPrefix('false');
     relink();
-    expect(fs.existsSync(path.join(skillsDir, 'gstack-qa'))).toBe(false);
+    expect(fs.existsSync(path.join(skillsDir, 'gpact-qa'))).toBe(false);
   });
 
   test('linking over a CUSTOMIZED banner copy moves it to the backup root first; the link then lands', () => {
@@ -1063,19 +1063,19 @@ describe('gstack-relink: checkout naming, legacy linked dirs, markers (#2119 rev
   test('flip on a legacy linked dir (no marker): all-links dir is removed whole; a dir with a user file keeps the file and drops our links', () => {
     setupMockInstall(['qa', 'ship']);
     fs.mkdirSync(path.join(installDir, 'qa', 'sections'));
-    for (const name of ['gstack-qa', 'gstack-ship']) {
+    for (const name of ['gpact-qa', 'gpact-ship']) {
       fs.mkdirSync(path.join(skillsDir, name));
       fs.symlinkSync(path.join(installDir, 'qa', 'SKILL.md'), path.join(skillsDir, name, 'SKILL.md'));
       fs.symlinkSync(path.join(installDir, 'qa', 'sections'), path.join(skillsDir, name, 'sections'));
     }
-    fs.writeFileSync(path.join(skillsDir, 'gstack-ship', 'my-notes.md'), 'keep\n');
+    fs.writeFileSync(path.join(skillsDir, 'gpact-ship', 'my-notes.md'), 'keep\n');
     // gstack-config `set` auto-relinks, so the flip cleanup runs there; capture both outputs.
     const out = setPrefix('false') + relink();
-    expect(fs.existsSync(path.join(skillsDir, 'gstack-qa'))).toBe(false);
-    expect(fs.existsSync(path.join(skillsDir, 'gstack-ship', 'SKILL.md'))).toBe(false);
-    expect(fs.existsSync(path.join(skillsDir, 'gstack-ship', 'sections'))).toBe(false);
-    expect(fs.readFileSync(path.join(skillsDir, 'gstack-ship', 'my-notes.md'), 'utf-8')).toBe('keep\n');
-    expect(out).toContain('cleaned gstack-ship/SKILL.md');
+    expect(fs.existsSync(path.join(skillsDir, 'gpact-qa'))).toBe(false);
+    expect(fs.existsSync(path.join(skillsDir, 'gpact-ship', 'SKILL.md'))).toBe(false);
+    expect(fs.existsSync(path.join(skillsDir, 'gpact-ship', 'sections'))).toBe(false);
+    expect(fs.readFileSync(path.join(skillsDir, 'gpact-ship', 'my-notes.md'), 'utf-8')).toBe('keep\n');
+    expect(out).toContain('cleaned gpact-ship/SKILL.md');
     expect(out).not.toContain('skipped');
   });
 });
@@ -1109,12 +1109,12 @@ describe('gstack-relink cycle-3 hardening: foreign dir links, failed backups, fl
 
   test('flip cleanup moves a CUSTOMIZED banner copy to the backup root instead of deleting it', () => {
     setupMockInstall(['qa']);
-    const custom = `---\nname: gstack-qa\n---\n${BANNER}\n# customized\n`;
-    fs.mkdirSync(path.join(skillsDir, 'gstack-qa'));
-    fs.writeFileSync(path.join(skillsDir, 'gstack-qa', 'SKILL.md'), custom);
+    const custom = `---\nname: gpact-qa\n---\n${BANNER}\n# customized\n`;
+    fs.mkdirSync(path.join(skillsDir, 'gpact-qa'));
+    fs.writeFileSync(path.join(skillsDir, 'gpact-qa', 'SKILL.md'), custom);
     setPrefix('false');
     relink();
-    expect(fs.existsSync(path.join(skillsDir, 'gstack-qa'))).toBe(false);
+    expect(fs.existsSync(path.join(skillsDir, 'gpact-qa'))).toBe(false);
     const saved = backups();
     expect(saved.length).toBe(1);
     expect(fs.readFileSync(saved[0], 'utf-8')).toBe(custom);
@@ -1137,16 +1137,16 @@ describe('gstack-relink cycle-3 hardening: foreign dir links, failed backups, fl
   test('a legacy linked dir holding the user\'s OWN symlink is mixed: our links go, theirs stays', () => {
     setupMockInstall(['qa']);
     fs.mkdirSync(path.join(installDir, 'qa', 'sections'));
-    fs.mkdirSync(path.join(skillsDir, 'gstack-qa'));
-    fs.symlinkSync(path.join(installDir, 'qa', 'SKILL.md'), path.join(skillsDir, 'gstack-qa', 'SKILL.md'));
-    fs.symlinkSync(path.join(installDir, 'qa', 'sections'), path.join(skillsDir, 'gstack-qa', 'sections'));
+    fs.mkdirSync(path.join(skillsDir, 'gpact-qa'));
+    fs.symlinkSync(path.join(installDir, 'qa', 'SKILL.md'), path.join(skillsDir, 'gpact-qa', 'SKILL.md'));
+    fs.symlinkSync(path.join(installDir, 'qa', 'sections'), path.join(skillsDir, 'gpact-qa', 'sections'));
     fs.writeFileSync(path.join(tmpDir, 'my-notes.md'), 'mine\n');
-    fs.symlinkSync(path.join(tmpDir, 'my-notes.md'), path.join(skillsDir, 'gstack-qa', 'notes.md'));
+    fs.symlinkSync(path.join(tmpDir, 'my-notes.md'), path.join(skillsDir, 'gpact-qa', 'notes.md'));
     setPrefix('false');
     relink();
-    expect(fs.existsSync(path.join(skillsDir, 'gstack-qa', 'SKILL.md'))).toBe(false);
-    expect(fs.existsSync(path.join(skillsDir, 'gstack-qa', 'sections'))).toBe(false);
-    expect(fs.readlinkSync(path.join(skillsDir, 'gstack-qa', 'notes.md'))).toBe(path.join(tmpDir, 'my-notes.md'));
+    expect(fs.existsSync(path.join(skillsDir, 'gpact-qa', 'SKILL.md'))).toBe(false);
+    expect(fs.existsSync(path.join(skillsDir, 'gpact-qa', 'sections'))).toBe(false);
+    expect(fs.readlinkSync(path.join(skillsDir, 'gpact-qa', 'notes.md'))).toBe(path.join(tmpDir, 'my-notes.md'));
   });
 
   test('the root alias marker is written only for a directory relink creates', () => {

@@ -11,7 +11,7 @@ for (const host of ['claude', 'codex'] as const) {
     const temp = fs.mkdtempSync(path.join(os.tmpdir(), 'gstack-core-install-'));
     const skillsDir = path.join(temp, 'host skills');
     const stateRoot = path.join(temp, 'state', `${host}-core`);
-    const plan = host === 'claude' ? 'plan' : 'gstack-plan';
+    const plan = host === 'claude' ? 'plan' : 'gpact-plan';
     try {
       const opts = { host, sourceRoot, skillsDir, stateRoot, model: host === 'claude' ? 'claude' as const : 'gpt' as const };
       const installed = await installCoreProfile(opts);
@@ -22,7 +22,7 @@ for (const host of ['claude', 'codex'] as const) {
       expect(fs.existsSync(path.join(skillsDir, 'gstack', 'plan', 'SKILL.md'))).toBe(false);
       const record = JSON.parse(fs.readFileSync(path.join(skillsDir, 'gstack', '.gstack-install.json'), 'utf8'));
       expect(record.skillProfile).toBe('core');
-      const foreign = path.join(skillsDir, host === 'claude' ? 'review' : 'gstack-review');
+      const foreign = path.join(skillsDir, host === 'claude' ? 'review' : 'gpact-review');
       fs.rmSync(foreign, { recursive: true });
       fs.mkdirSync(foreign);
       fs.writeFileSync(path.join(foreign, 'SKILL.md'), 'user skill\n');
@@ -89,8 +89,8 @@ test('Claude core prefix changes both the sibling directory and frontmatter name
   try {
     const skillsDir = path.join(temp, 'skills');
     await installCoreProfile({ host: 'claude', sourceRoot, skillsDir, stateRoot: path.join(temp, 'state'), model: 'claude', prefix: true });
-    const entry = fs.readFileSync(path.join(skillsDir, 'gstack-plan', 'SKILL.md'), 'utf8');
-    expect(entry).toMatch(/^name: gstack-plan$/m);
+    const entry = fs.readFileSync(path.join(skillsDir, 'gpact-plan', 'SKILL.md'), 'utf8');
+    expect(entry).toMatch(/^name: gpact-plan$/m);
     expect(fs.existsSync(path.join(skillsDir, 'plan'))).toBe(false);
     expect(fs.readdirSync(skillsDir).filter(name => fs.existsSync(path.join(skillsDir, name, 'SKILL.md')))).toHaveLength(11);
   } finally {

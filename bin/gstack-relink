@@ -307,22 +307,23 @@ for skill_dir in "$INSTALL_DIR"/*/; do
   # Skip non-skill directories
   case "$skill" in bin|browse|design|docs|extension|lib|node_modules|scripts|test|.git|.github) continue ;; esac
   [ -f "$skill_dir/SKILL.md" ] || continue
+  short_skill="${skill#gstack-}"
+  short_skill="${short_skill#gpact-}"
 
   if [ "$PREFIX" = "true" ]; then
     # Don't double-prefix directories already named gstack-*
     case "$skill" in
-      gstack-*) link_name="$skill" ;;
-      *)        link_name="gstack-$skill" ;;
+      gpact-*)  link_name="$skill" ;;
+      gstack-*) link_name="gpact-${skill#gstack-}" ;;
+      *)        link_name="gpact-$skill" ;;
     esac
     # Remove old flat entry if it exists (and isn't the same as the new link)
-    [ "$link_name" != "$skill" ] && _cleanup_skill_entry "$SKILLS_DIR/$skill" "$skill"
+    [ "$link_name" != "$short_skill" ] && _cleanup_skill_entry "$SKILLS_DIR/$short_skill" "$skill"
+    [ "$link_name" = "gstack-$short_skill" ] || _cleanup_skill_entry "$SKILLS_DIR/gstack-$short_skill" "$skill"
   else
-    link_name="$skill"
-    # Don't remove gstack-* dirs that are their real name (e.g., gstack-upgrade)
-    case "$skill" in
-      gstack-*) ;; # Already the real name, no old prefixed link to clean
-      *)        _cleanup_skill_entry "$SKILLS_DIR/gstack-$skill" "$skill" ;;
-    esac
+    link_name="$short_skill"
+    _cleanup_skill_entry "$SKILLS_DIR/gstack-$short_skill" "$skill"
+    _cleanup_skill_entry "$SKILLS_DIR/gpact-$short_skill" "$skill"
   fi
   target="$SKILLS_DIR/$link_name"
   # A destination that already exists and is NOT ours is a foreign skill that
@@ -368,7 +369,7 @@ done
 "$INSTALL_DIR/bin/gstack-patch-names" "$INSTALL_DIR" "$PREFIX"
 
 if [ "$PREFIX" = "true" ]; then
-  echo "Relinked $SKILL_COUNT skills as gstack-*"
+  echo "Relinked $SKILL_COUNT skills as gpact-*"
 else
   echo "Relinked $SKILL_COUNT skills as flat names"
 fi

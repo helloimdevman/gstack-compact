@@ -1,0 +1,6 @@
+interface:
+  display_name: "gpact-sprint"
+  short_description: "Carry one authorized task from scope through plan, implementation, verification, review, and optionally a pull..."
+  default_prompt: "Use gpact-sprint for this task."
+policy:
+  allow_implicit_invocation: true

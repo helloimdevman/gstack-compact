@@ -1,0 +1,5 @@
+<!-- AUTO-GENERATED from plan-completion.md.tmpl — do not edit directly -->
+<!-- Regenerate: bun run gen:skill-docs -->
+# Plan completion
+
+When a plan exists, compare each accepted requirement and validation item with the current diff, tests, and docs. Record complete, incomplete, unverified, and intentionally deferred items with evidence. A plan sentence or test name alone is not proof of implementation. Do not enlarge the accepted scope to chase adjacent opportunities. An omitted accepted requirement is a finding; an unapproved new idea is advice.

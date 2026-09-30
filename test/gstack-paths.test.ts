@@ -59,13 +59,15 @@ describe('gstack-paths', () => {
     expect(wrongRoot.GSTACK_STATE_ROOT).toBe('/tmp/home/.gstack');
   });
 
-  test('CLAUDE_PLUGIN_DATA respected when CLAUDE_PLUGIN_ROOT identifies gstack', () => {
-    const got = run({
+  test('CLAUDE_PLUGIN_DATA respected when CLAUDE_PLUGIN_ROOT identifies gstack or gpact', () => {
+    for (const root of ['/tmp/gstack-garrytan', '/plugins/gpact/1.91.1', 'C:\\plugins\\gpact\\1.91.1']) {
+      const got = run({
       CLAUDE_PLUGIN_DATA: '/tmp/gstack-plugin-data',
-      CLAUDE_PLUGIN_ROOT: '/tmp/gstack-garrytan',
+      CLAUDE_PLUGIN_ROOT: root,
       HOME: '/tmp/home',
-    });
-    expect(got.GSTACK_STATE_ROOT).toBe('/tmp/gstack-plugin-data');
+      });
+      expect(got.GSTACK_STATE_ROOT).toBe('/tmp/gstack-plugin-data');
+    }
   });
 
   test('HOME-derived state root when GSTACK_HOME and CLAUDE_PLUGIN_DATA unset', () => {

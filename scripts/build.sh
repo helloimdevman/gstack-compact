@@ -11,7 +11,7 @@ BUILD_STAMP_TMP="$BUILD_STAMP.tmp.$$"
 # Developer build; setup executes the runtime source directly.
 [ "$#" -le 1 ] || { echo "Usage: scripts/build.sh [--runtime-only]" >&2; exit 2; }
 case "${1:-}" in
-  '') "$BUN_CMD" run gen:skill-docs --host all ;;
+  '') "$BUN_CMD" run gen:skill-docs --host all; "$BUN_CMD" run gen:plugin ;;
   --runtime-only) ;;
   *) echo "Usage: scripts/build.sh [--runtime-only]" >&2; exit 2 ;;
 esac

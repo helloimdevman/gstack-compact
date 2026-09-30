@@ -1,0 +1,5 @@
+<!-- AUTO-GENERATED from learn.md.tmpl — do not edit directly -->
+<!-- Regenerate: bun run gen:skill-docs -->
+# Manage learnings
+
+Use existing `gstack-learnings-search` and the project's stored learning records. Show source and date with each result, and check whether changed files have made it stale. For pruning or export, identify exact records and output location before changing them; do not delete a learning the user did not name. Do not enable remote gbrain synchronization as a side effect of reading or saving context.

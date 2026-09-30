@@ -1,0 +1,12 @@
+{
+  "name": "gpact-marketplace",
+  "interface": { "displayName": "gpact" },
+  "plugins": [
+    {
+      "name": "gpact",
+      "source": { "source": "local", "path": "./" },
+      "policy": { "installation": "AVAILABLE", "authentication": "ON_INSTALL" },
+      "category": "Productivity"
+    }
+  ]
+}

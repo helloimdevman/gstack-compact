@@ -1,0 +1,6 @@
+interface:
+  display_name: "gpact-plan"
+  short_description: "Frame a product idea, plan implementation, review an existing plan, or write an executable spec. Choose only the..."
+  default_prompt: "Use gpact-plan for this task."
+policy:
+  allow_implicit_invocation: true

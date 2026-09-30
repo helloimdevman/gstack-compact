@@ -9,6 +9,7 @@
     "dev:design": "bun run design/src/cli.ts",
     "build:diagram-render": "cd lib/diagram-render && bun install && bun run scripts/build.ts",
     "gen:skill-docs": "bun run scripts/gen-skill-docs.ts",
+    "gen:plugin": "bun run scripts/gen-plugin.ts",
     "test": "bun run scripts/test-free-shards.ts",
     "test:free": "bun run scripts/test-free-shards.ts",
     "test:windows": "bun run scripts/test-free-shards.ts --windows-only",

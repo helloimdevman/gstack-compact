@@ -27,7 +27,7 @@ set -u
 # State root: where gstack writes projects/, sessions/, analytics/.
 if [ -n "${GSTACK_HOME:-}" ]; then
   _state_root="$GSTACK_HOME"
-elif [ -n "${CLAUDE_PLUGIN_DATA:-}" ] && echo "${CLAUDE_PLUGIN_ROOT:-}" | grep -qi "gstack"; then
+elif [ -n "${CLAUDE_PLUGIN_DATA:-}" ] && echo "${CLAUDE_PLUGIN_ROOT:-}" | grep -qiE 'gstack|(^|[/\\])gpact([/\\]|$)'; then
   # Guard: only trust CLAUDE_PLUGIN_DATA when CLAUDE_PLUGIN_ROOT confirms we are
   # running as the gstack plugin. Without this, a CLAUDE_PLUGIN_DATA from another
   # plugin (e.g. codex) that leaked into the session env via CLAUDE_ENV_FILE would

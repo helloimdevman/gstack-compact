@@ -55,10 +55,10 @@ describe.skipIf(process.platform === 'win32')('Bun-free runtime', () => {
         if (profile === 'core') expect(names.length).toBe(11);
         else {
           expect(names.length).toBeGreaterThan(11);
-          expect(names).toContain('gstack-plan-eng-review');
+          expect(names).toContain('gpact-plan-eng-review');
         }
         expect(fs.readFileSync(path.join(skills, 'personal/SKILL.md'), 'utf8')).toBe('my own skill');
-        expect(fs.readFileSync(path.join(skills, 'gstack-plan/SKILL.md'), 'utf8')).toContain('gstack-skill-start');
+        expect(fs.readFileSync(path.join(skills, 'gpact-plan/SKILL.md'), 'utf8')).toContain('gstack-skill-start');
         const started = spawnSync(path.join(skills, 'gstack/bin/gstack-skill-start'), ['--skill', 'plan'], {
           cwd: temp, env, encoding: 'utf8', timeout: 30_000,
         });

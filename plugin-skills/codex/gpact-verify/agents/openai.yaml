@@ -1,0 +1,6 @@
+interface:
+  display_name: "gpact-verify"
+  short_description: "Verify the changed interface with executable evidence. Report by default; fix only in an authorized fix mode. (gstack)"
+  default_prompt: "Use gpact-verify for this task."
+policy:
+  allow_implicit_invocation: true

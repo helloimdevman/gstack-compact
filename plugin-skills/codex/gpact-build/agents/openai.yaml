@@ -1,0 +1,6 @@
+interface:
+  display_name: "gpact-build"
+  short_description: "Implement an approved change, including focused regression checks and a reviewable diff. Start directly when the..."
+  default_prompt: "Use gpact-build for this task."
+policy:
+  allow_implicit_invocation: true

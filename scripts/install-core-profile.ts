@@ -8,6 +8,7 @@ import { getHostConfig } from '../hosts';
 import { loadRouterMap } from './resolvers/router-map';
 import type { InstallSelection, SkillProfile } from './host-config';
 import { ALL_MODEL_NAMES, type Model } from './models';
+import { namespaceSkill, publicSkillName } from './skill-namespace';
 
 export type CoreInstallOptions = {
   host: 'claude' | 'codex';
@@ -119,7 +120,8 @@ export async function installCoreProfile(opts: CoreInstallOptions): Promise<stri
   const backup = path.join(stage, 'backup');
   const root = path.join(skills, 'gstack');
   const sourceSkills = opts.host === 'claude' ? render : path.join(render, '.agents', 'skills');
-  const entryName = (id: string) => (opts.host === 'codex' || opts.prefix) && !id.startsWith('gstack-') ? `gstack-${id}` : id;
+  const prefixed = opts.host === 'codex' || opts.prefix === true;
+  const entryName = (id: string) => publicSkillName(id, prefixed);
   const selection: InstallSelection = { version: 1, host: opts.host, skillProfile: profile, generationModel: opts.model, sourceRoot: source };
   const placed: string[] = [];
   const moved: Array<[string, string]> = [];
@@ -130,7 +132,7 @@ export async function installCoreProfile(opts: CoreInstallOptions): Promise<stri
     fs.mkdirSync(runtime, { recursive: true });
     fs.mkdirSync(entries, { recursive: true });
     const rootSkill = opts.host === 'claude' ? path.join(sourceSkills, 'SKILL.md') : path.join(sourceSkills, 'gstack', 'SKILL.md');
-    fs.copyFileSync(rootSkill, path.join(runtime, 'SKILL.md'));
+    fs.writeFileSync(path.join(runtime, 'SKILL.md'), namespaceSkill(fs.readFileSync(rootSkill, 'utf8'), prefixed));
     const generatedNames = profile === 'core' ? map.core.filter(id => id !== 'gstack') : fs.readdirSync(sourceSkills, { withFileTypes: true })
       .filter(entry => entry.isDirectory() && entry.name !== 'gstack' && fs.existsSync(path.join(sourceSkills, entry.name, 'SKILL.md')))
       .map(entry => opts.host === 'codex' ? entry.name.replace(/^gstack-/, '') : entry.name);
@@ -147,8 +149,7 @@ export async function installCoreProfile(opts: CoreInstallOptions): Promise<stri
         const target = path.join(sourceSkills, alias[1], 'SKILL.md');
         if (!fs.existsSync(target)) throw new Error(`missing canonical target: ${id} -> ${alias[1]}`);
       }
-      if (opts.host === 'claude' && opts.prefix) body = body.replace(/^name: .+$/m, `name: ${entryName(id)}`);
-      fs.writeFileSync(path.join(to, 'SKILL.md'), body);
+      fs.writeFileSync(path.join(to, 'SKILL.md'), namespaceSkill(body, prefixed));
       for (const child of fs.readdirSync(from)) {
         if (child === 'SKILL.md') continue;
         linkOrCopy(path.join(state, opts.host === 'claude' ? id : `.agents/skills/gstack-${id}`, child), path.join(to, child), path.join(from, child));
@@ -167,6 +168,12 @@ export async function installCoreProfile(opts: CoreInstallOptions): Promise<stri
         const src = path.join(source, dir, file);
         if (fs.existsSync(src)) linkOrCopy(src, path.join(runtime, dir, file));
       }
+    }
+    // Sections and metadata are consumed beside the installed entry too.
+    for (const artifact of generated.artifacts) {
+      if (!['section', 'metadata'].includes(artifact.kind)) continue;
+      const file = path.join(render, artifact.relativePath);
+      fs.writeFileSync(file, namespaceSkill(fs.readFileSync(file, 'utf8'), prefixed));
     }
     fs.writeFileSync(path.join(runtime, '.gstack-install.json'), JSON.stringify(selection, null, 2) + '\n', { mode: 0o600 });
     fs.writeFileSync(path.join(runtime, '.gstack-owned'), source + '\n');

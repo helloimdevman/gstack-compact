@@ -83,7 +83,9 @@ export function buildRatchetBill(root: string = REPO_ROOT): Bill {
       ...s,
       name: s.dir === bill.root ? ROOT_SKILL_KEY : toPosixName(s.name),
     }))
-    .filter((s) => !isFixtureSkill(s.name));
+    // These are separate host deployments, not additional source skills.
+    // gpact-plugin.test.ts budgets every deployment against canonical generation.
+    .filter((s) => !isFixtureSkill(s.name) && !s.name.startsWith('plugin-skills/'));
   // One ceiling per PHYSICAL skill: group by realpath, prefer the entry whose
   // dir IS the realpath (the real dir) over symlink aliases.
   const byReal = new Map<string, (typeof candidates)[number]>();

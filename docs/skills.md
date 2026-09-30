@@ -1,26 +1,26 @@
 # Skill Deep Dives
 
-New Claude/Codex installations expose `/plan`, `/build`, `/review`, `/verify`,
-`/ship`, `/investigate`, `/design`, `/context`, `/gstack`, `/browse`, and
-`/sprint`. Run `./setup --skill-profile compat` for the specialist commands
-below. Converted names such as `/autoplan` and `/qa-only` enter a canonical
+New Claude/Codex installations expose `/gpact-plan`, `/gpact-build`, `/gpact-review`, `/gpact-verify`,
+`/gpact-ship`, `/gpact-investigate`, `/gpact-design`, `/gpact-context`, `/gpact`, `/gpact-browse`, and
+`/gpact-sprint`. Codex direct installs use `$gpact-…`; plugin installs use `$gpact:gpact-…`; the repository can also be installed as the `gpact` plugin (see [installation](../README.md#플러그인-설치)). Run `./setup --skill-profile compat` for the specialist commands
+below. Converted names such as `/gpact-autoplan` and `/gpact-qa-only` enter a canonical
 mode; their current executable contracts live in the installed `SKILL.md`
 and selected sections. The older deep dives below are background and examples,
 not the current command contract.
 
 | Core skill | Current behavior |
 |------------|------------------|
-| `/plan` | Frame, write, or review plans and specs; stop before implementation. |
-| `/build` | Implement the authorized change and run relevant checks. |
-| `/review` | Review a current diff; fix only when authorized. |
-| `/verify` | Check the changed interface; report by default. |
-| `/ship` | Prepare, verify, review, and publish an authorized PR. |
-| `/investigate` | Reproduce, fix the cause, and verify a defect. |
-| `/design` | Design system, variants, or HTML mode. |
-| `/context` | Save, restore, or manage learnings. |
-| `/gstack` | Route to one installed skill. |
-| `/browse` | Drive the user's browser through the agent host. |
-| `/sprint` | Run one task through planning, build, verification, review, and authorized publication. |
+| `/gpact-plan` | Frame, write, or review plans and specs; stop before implementation. |
+| `/gpact-build` | Implement the authorized change and run relevant checks. |
+| `/gpact-review` | Review a current diff; fix only when authorized. |
+| `/gpact-verify` | Check the changed interface; report by default. |
+| `/gpact-ship` | Prepare, verify, review, and publish an authorized PR. |
+| `/gpact-investigate` | Reproduce, fix the cause, and verify a defect. |
+| `/gpact-design` | Design system, variants, or HTML mode. |
+| `/gpact-context` | Save, restore, or manage learnings. |
+| `/gpact` | Route to one installed skill. |
+| `/gpact-browse` | Drive the user's browser through the agent host. |
+| `/gpact-sprint` | Run one task through planning, build, verification, review, and authorized publication. |
 
 Historical guides for the compat specialist catalog follow.
 

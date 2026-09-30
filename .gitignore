@@ -27,6 +27,12 @@ lib/cso/images/gstack-cso-preparation
 .claude/scheduled_tasks.lock
 .claude/*.lock
 .agents/
+!.agents/
+.agents/*
+!.agents/plugins/
+.agents/plugins/*
+!.agents/plugins/marketplace.json
+.gpact-runtime-install.lock/
 .factory/
 .kiro/
 .opencode/

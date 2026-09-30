@@ -1,0 +1,18 @@
+{
+  "name": "gpact",
+  "version": "1.91.1",
+  "description": "Compact engineering workflows: plan, build, verify, review, and ship.",
+  "author": { "name": "helloimdevman", "url": "https://github.com/helloimdevman" },
+  "repository": "https://github.com/helloimdevman/gstack-compact",
+  "homepage": "https://github.com/helloimdevman/gstack-compact#readme",
+  "license": "MIT",
+  "skills": "./plugin-skills/codex",
+  "interface": {
+    "displayName": "gpact",
+    "shortDescription": "Compact engineering workflows",
+    "developerName": "helloimdevman",
+    "category": "Productivity",
+    "capabilities": ["Read", "Write"],
+    "defaultPrompt": ["Use gpact to plan this change.", "Review this diff with gpact."]
+  }
+}

@@ -17,14 +17,14 @@ for skill_dir in "$GSTACK_DIR"/*/; do
   cur=$(grep -m1 '^name:' "$skill_dir/SKILL.md" 2>/dev/null | sed 's/^name:[[:space:]]*//' | tr -d '[:space:]' || true)
   [ -z "$cur" ] && continue
   [ "$cur" = "gstack" ] && continue  # never prefix root skill
+  short="${cur#gstack-}"
+  short="${short#gpact-}"
   if [ "$DO_PREFIX" -eq 1 ]; then
-    case "$cur" in gstack-*) continue ;; esac
-    new="gstack-$cur"
+    new="gpact-$short"
   else
-    case "$cur" in gstack-*) ;; *) continue ;; esac
-    [ "$dir_name" = "$cur" ] && continue  # inherently prefixed (gstack-upgrade)
-    new="${cur#gstack-}"
+    new="$short"
   fi
+  [ "$new" = "$cur" ] && continue
   tmp="$(mktemp "${skill_dir}/SKILL.md.XXXXXX")"
   sed "1,/^---$/s/^name:[[:space:]]*${cur}/name: ${new}/" "$skill_dir/SKILL.md" > "$tmp" && mv "$tmp" "$skill_dir/SKILL.md"
   PATCHED=$((PATCHED + 1))

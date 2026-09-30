@@ -34,7 +34,7 @@ describe('setup: cleanup_old_claude_symlinks — static (#2204)', () => {
     expect(body).toContain('[ "$skill_name" = "gstack" ] && continue');
     expect(body).toContain('readlink');
     expect(body).toContain('gstack/*');
-    expect(body).toContain('gstack-*) continue');
+    expect(body).toContain('gstack-*|gpact-*) continue');
     expect(body).toContain('-d "$old_target"');
     expect(body).toContain('-L "$old_target/SKILL.md"');
     expect(body).toContain('rm -rf "$old_target"');

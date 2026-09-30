@@ -1,0 +1,5 @@
+<!-- AUTO-GENERATED from tests.md.tmpl — do not edit directly -->
+<!-- Regenerate: bun run gen:skill-docs -->
+# Test evidence for ship
+
+Read AGENTS.md, package scripts, CI workflow, and the diff to select required project checks. Run independent checks independently and preserve each exit status. For a changed prompt, run cheap generation/parity, size, fixture, source and credential checks before any selected quality judge; this project does not launch paid model evaluations. Record absent required coverage as `not_run` or `unavailable`, not pass. Diagnose a failed test before editing a test expectation; preserve the original log and rerun only after a concrete repair. Complete release metadata and build before final acceptance. After code freeze, run the required full suite once. If it fails unexpectedly, retain the failure and report the changed validation plan before another full run.

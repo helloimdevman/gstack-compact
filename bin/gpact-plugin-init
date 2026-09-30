@@ -1,0 +1,15 @@
+#!/usr/bin/env bash
+# Prepare only runtime dependencies in this installed plugin, once per version.
+set -euo pipefail
+ROOT="$(cd "$(dirname "$0")/.." && pwd -P)"
+"$ROOT/bin/gstack-js" -e ''
+if "$ROOT/bin/gstack-js" -e 'for (const name of ["marked", "yaml", "semver/functions/compare.js", "smol-toml"]) await import(name)' >/dev/null 2>&1; then
+  exit 0
+fi
+command -v npm >/dev/null 2>&1 || { echo 'gpact requires npm (included with Node.js).' >&2; exit 1; }
+LOCK="$ROOT/.gpact-runtime-install.lock"
+mkdir "$LOCK" 2>/dev/null || { echo 'gpact runtime installation is already in progress. Try again after it finishes.' >&2; exit 1; }
+trap 'rmdir "$LOCK"' EXIT
+cd "$ROOT"
+npm ci --omit=dev --ignore-scripts --no-audit --no-fund
+"$ROOT/bin/gstack-js" -e 'for (const name of ["marked", "yaml", "semver/functions/compare.js", "smol-toml"]) await import(name)'

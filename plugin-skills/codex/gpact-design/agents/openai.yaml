@@ -1,0 +1,6 @@
+interface:
+  display_name: "gpact-design"
+  short_description: "Create a design system, compare visual variants, or produce Pretext-native HTML and CSS. Choose one requested mode...."
+  default_prompt: "Use gpact-design for this task."
+policy:
+  allow_implicit_invocation: true

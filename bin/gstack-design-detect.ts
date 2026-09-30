@@ -790,7 +790,7 @@ function designsRoot(): string {
   // Match the artifact producer's bin/gstack-paths precedence without changing
   // config or analytics roots. Plugin data belongs to gstack only with its marker.
   const stateRoot = ENV.GSTACK_HOME
-    || (ENV.CLAUDE_PLUGIN_DATA && /gstack/i.test(ENV.CLAUDE_PLUGIN_ROOT || '') ? ENV.CLAUDE_PLUGIN_DATA : '')
+    || (ENV.CLAUDE_PLUGIN_DATA && /gstack|(?:^|[\\/])gpact(?:[\\/]|$)/i.test(ENV.CLAUDE_PLUGIN_ROOT || '') ? ENV.CLAUDE_PLUGIN_DATA : '')
     || (ENV.HOME ? path.join(ENV.HOME, '.gstack') : '.gstack');
   return path.join(stateRoot, 'projects');
 }

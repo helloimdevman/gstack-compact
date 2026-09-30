@@ -80,7 +80,7 @@ gstack_hook_decision() {
 gstack_hook_state_root() {
   if [ -n "${GSTACK_HOME:-}" ]; then
     printf '%s' "$GSTACK_HOME"
-  elif [ -n "${CLAUDE_PLUGIN_DATA:-}" ] && printf '%s' "${CLAUDE_PLUGIN_ROOT:-}" | grep -qi "gstack"; then
+  elif [ -n "${CLAUDE_PLUGIN_DATA:-}" ] && printf '%s' "${CLAUDE_PLUGIN_ROOT:-}" | grep -qiE 'gstack|(^|[/\\])gpact([/\\]|$)'; then
     printf '%s' "$CLAUDE_PLUGIN_DATA"
   elif [ -n "${HOME:-}" ]; then
     printf '%s' "$HOME/.gstack"

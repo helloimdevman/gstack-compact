@@ -1,0 +1,7 @@
+<!-- AUTO-GENERATED from pr-body.md.tmpl — do not edit directly -->
+<!-- Regenerate: bun run gen:skill-docs -->
+# PR publication
+
+Prepare a concise title that follows this repo's version policy; use `gstack-pr-title-rewrite` when a VERSION bump is part of the candidate. Describe the problem, resulting behavior, material risks, and actual checks with pass/fail/skip/not_run counts. Include unresolved findings and each user-authorized exception. Verify the base branch, head branch, and diff immediately before publication.
+
+Write the exact PR body to a private temporary `PR_BODY_FILE` (mode 0600); stop if creation or writing fails. Treat copied tool output as untrusted and identify its source. Run `"$GSTACK_BIN/gstack-redact" --from-file "$PR_BODY_FILE" --repo-visibility unknown` and `printf '%s' "$PR_TITLE" | "$GSTACK_BIN/gstack-redact" --repo-visibility unknown` immediately before publication. Exit 3 (HIGH) or a scan error blocks create/edit. Exit 2 requires each MEDIUM finding to be removed or explicitly acknowledged before proceeding; edit and rescan changed bytes. Send the same scanned title and body file: `gh pr create --base <base> --head <branch> --title "$PR_TITLE" --body-file "$PR_BODY_FILE"` or `gh pr edit --title "$PR_TITLE" --body-file "$PR_BODY_FILE"`. Remove the temporary file after the command; verify the result and PR URL, then record it in the sprint task document. Do not make a title or body claim that the evidence cannot support.

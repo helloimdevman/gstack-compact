@@ -41,6 +41,8 @@ jobs:
       # output (the Claude SKILL.md files), which the two steps below cover.
       - name: Generate all host skill docs
         run: bun run gen:skill-docs --host all
+      - name: Generate plugin skill docs
+        run: bun run gen:plugin
       - name: Verify tracked skill docs are fresh
         run: |
           git diff --exit-code || {
