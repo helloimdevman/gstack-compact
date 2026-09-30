@@ -1,11 +1,11 @@
-#!/usr/bin/env bun
+#!/usr/bin/env node
 /** Prepare print HTML; the agent host's user browser handles PDF export. */
 import { readFileSync, writeFileSync } from 'node:fs';
 import { render } from './render';
 
 const [input, output] = process.argv.slice(2);
 if (!input || !output) {
-  console.error('usage: bun run make-pdf/src/html.ts <input.md> <output.html>');
+  console.error('usage: bin/gstack-markdown-html <input.md> <output.html>');
   process.exit(1);
 }
 

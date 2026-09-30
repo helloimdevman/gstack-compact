@@ -20,7 +20,7 @@ function parseYamlText(text: string): unknown {
   return parseYaml(text);
 }
 
-const ROOT = path.resolve(import.meta.dir, '..');
+const ROOT = path.resolve(import.meta.dirname, '..');
 
 export interface CheckDiagnostic {
   kind: 'error' | 'invalid' | 'stale' | 'untracked';

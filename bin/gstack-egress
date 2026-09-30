@@ -1,4 +1,5 @@
-#!/usr/bin/env bun
+#!/bin/sh
+':' //; exec "$(dirname "$0")/gstack-js" "$0" "$@"
 /**
  * gstack-egress — the auditor's view of the receipts ledger.
  *
@@ -32,11 +33,11 @@ import {
   verifyLedger,
 } from '../lib/egress-receipt';
 
-// import.meta.dir is Windows-safe; new URL(import.meta.url).pathname yields
+// import.meta.dirname is Windows-safe; new URL(import.meta.url).pathname yields
 // '/C:/...' with percent-encoded spaces there, which would make the
 // gstack-config spawn silently fail and grants report every default. Matches
 // the sibling bin/*.ts convention.
-const BIN_DIR = import.meta.dir;
+const BIN_DIR = import.meta.dirname;
 
 /**
  * Strip control characters (incl. ANSI escapes) from ledger-derived strings

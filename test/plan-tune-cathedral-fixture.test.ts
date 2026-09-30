@@ -4,6 +4,7 @@ import * as path from 'node:path';
 import * as os from 'node:os';
 import { spawnSync } from 'node:child_process';
 import { E2E_TOUCHFILES } from './helpers/touchfiles';
+import { copyNodeRuntimeFixture } from './helpers/node-runtime-fixture';
 
 const ROOT = path.resolve(import.meta.dir, '..');
 const source = fs.readFileSync(path.join(import.meta.dir, 'skill-e2e-plan-tune-cathedral.test.ts'), 'utf8');
@@ -21,6 +22,7 @@ async function exercise(selected = names, fault?: 'missing-log-lib' | 'missing-h
   fs.mkdirSync(env.HOME);
   const args: Record<string, any> = {
     ROOT, path, os: {tmpdir:()=>scratch}, process: {env}, expect,
+    copyNodeRuntimeFixture: (root: string) => { owned(root); copyNodeRuntimeFixture(root); },
     beforeAll: (fn: any) => current.setups.push(fn),
     afterAll: (fn: any) => current ? current.teardowns.push(fn) : finalizers.push(fn),
     describeIfSelected: (_title: string, keys: string[], fn: any) => {
@@ -107,23 +109,27 @@ test('A partial fixture setup failure is recorded once and cleans only its owned
 });
 
 test('Cathedral fixture controls and copied libraries select all four existing owners only', () => {
-  for(const file of ['test/plan-tune-cathedral-fixture.test.ts','lib/jsonl-store.ts','lib/is-conductor.ts']) {
+  for(const file of ['test/plan-tune-cathedral-fixture.test.ts','lib/jsonl-store.ts','lib/is-conductor.ts','test/helpers/node-runtime-fixture.ts']) {
     const owners=Object.entries(E2E_TOUCHFILES).filter(([name,paths])=>names.includes(name)&&paths.includes(file)).map(([name])=>name);
     expect(owners).toEqual(names);
   }
   expect(Object.entries(E2E_TOUCHFILES).filter(([,paths])=>paths.includes('test/plan-tune-cathedral-fixture.test.ts')).map(([name])=>name)).toEqual(names);
+  expect(() => copyNodeRuntimeFixture(ROOT)).toThrow('outside the checkout');
+  const scratch = fs.mkdtempSync(path.join(os.tmpdir(), 'runtime-link-control-'));
+  try {
+    fs.symlinkSync(path.join(ROOT, 'bin'), path.join(scratch, 'bin'), 'dir');
+    expect(() => copyNodeRuntimeFixture(scratch)).toThrow('escapes its temporary root');
+  } finally { fs.rmSync(scratch, { recursive: true, force: true }); }
 });
 
 
-test('Plain Claude cathedral contracts stay isolated from either inherited Conductor marker', async () => {
-  for (const hostEnv of [
+for (const hostEnv of [
     { CONDUCTOR_WORKSPACE_PATH: '/synthetic/conductor/workspace' },
     { CONDUCTOR_PORT: '55070', GSTACK_SESSION_KIND: 'spawned', OPENCLAW_SESSION: 'synthetic-session' },
-  ]) {
+  ]) test(`Plain Claude cathedral contracts stay isolated from ${Object.keys(hostEnv).join(',')}`, async () => {
     const x = await exercise(['plan-tune-annotation', 'plan-tune-dream-cycle'], undefined, hostEnv);
     expect(x.attempts).toHaveLength(4);
     expect(x.rows.map(row => row.passed)).toEqual([true, true, true, true]);
     for (const attempt of x.attempts) expect(attempt.error).toBeUndefined();
     expect(x.allRemoved).toBe(true);
-  }
 });

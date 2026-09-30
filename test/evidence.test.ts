@@ -313,6 +313,31 @@ describe('gstack-evidence check', () => {
   });
 });
 
+describe('gstack-evidence Node environment', () => {
+  test('the installed launcher never loads repository dotenv files', () => {
+    fs.writeFileSync(path.join(repoDir, '.env'), 'ZZ_NODE_PROBE=from_file\n');
+    fs.writeFileSync(path.join(repoDir, '.env.local'), 'ZZ_NODE_LOCAL_PROBE=from_local\n');
+    const r = spawnSync(EVIDENCE, ['run', '--label', 'node-env', '--', 'echo "${ZZ_NODE_PROBE:-absent}:${ZZ_NODE_LOCAL_PROBE:-absent}"'], {
+      cwd: repoDir, env: { ...process.env, GSTACK_HOME: gstackHome, ZZ_NODE_PROBE: undefined, ZZ_NODE_LOCAL_PROBE: undefined },
+      encoding: 'utf8', timeout: 60_000,
+    });
+    expect(r.status, r.stderr).toBe(0);
+    expect(r.stdout).toContain('absent:absent');
+    expect(r.stderr).not.toContain('scrubbed');
+  });
+
+  test('a value explicitly exported by the caller survives even when it matches a dotenv file', () => {
+    fs.writeFileSync(path.join(repoDir, '.env'), 'ZZ_NODE_KEEP_PROBE=from_shell\n');
+    const r = spawnSync(EVIDENCE, ['run', '--label', 'node-env', '--', 'echo "${ZZ_NODE_KEEP_PROBE:-absent}"'], {
+      cwd: repoDir, env: { ...process.env, GSTACK_HOME: gstackHome, ZZ_NODE_KEEP_PROBE: 'from_shell' },
+      encoding: 'utf8', timeout: 60_000,
+    });
+    expect(r.status, r.stderr).toBe(0);
+    expect(r.stdout).toContain('from_shell');
+    expect(r.stderr).not.toContain('scrubbed');
+  });
+});
+
 describe('gstack-evidence run — bun dotenv autoload must not reach the child', () => {
   // bun auto-loads .env / .env.<NODE_ENV> / .env.local from the cwd into
   // process.env, and this binary has a bun shebang, so without scrubbing every
@@ -329,7 +354,8 @@ describe('gstack-evidence run — bun dotenv autoload must not reach the child',
   // fixture bun never loaded fails instead of passing silently.
 
   function runWith(env: Record<string, string | undefined>, cmd: string) {
-    return spawnSync(EVIDENCE, ['run', '--label', 'envprobe', '--', cmd], {
+    // Explicit developer invocation preserves the historical Bun leak regression.
+    return spawnSync(process.execPath, ['run', EVIDENCE, 'run', '--label', 'envprobe', '--', cmd], {
       cwd: repoDir,
       env: { ...process.env, GSTACK_HOME: gstackHome, ...env },
       encoding: 'utf-8',
@@ -339,7 +365,7 @@ describe('gstack-evidence run — bun dotenv autoload must not reach the child',
 
   test('a .env value is scrubbed, and the warning names the key but never the value', () => {
     fs.writeFileSync(path.join(repoDir, '.env'), 'ZZ_TOKEN_PROBE="s3cret-value"\n');
-    const r = run(['run', '--label', 'envprobe', '--', 'echo "saw=[${ZZ_TOKEN_PROBE:-absent}]"']);
+    const r = runWith({}, 'echo "saw=[${ZZ_TOKEN_PROBE:-absent}]"');
     expect(r.status).toBe(0);
     expect(r.stderr).toContain('ZZ_TOKEN_PROBE');   // positive control: the scrub ran
     expect(r.stdout).toContain('saw=[absent]');

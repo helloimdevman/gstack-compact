@@ -82,9 +82,12 @@ export function defineHost<const N extends string>(overrides: HostOverrides<N>):
     toolRewrites,
     suppressedResolvers = [],
     runtimeRoot = {
-      globalSymlinks: ['bin', 'lib', 'gstack-upgrade', 'ETHOS.md', 'CONTRACT.md'],
+      globalSymlinks: ['bin', 'lib', 'scripts', 'VERSION', 'gstack-upgrade', 'ETHOS.md', 'CONTRACT.md'],
       globalFiles: {
         'review': ['checklist.md', 'TODOS-format.md'],
+        'design': ['design', 'src'],
+        'make-pdf': ['src'],
+        'node_modules': ['marked', 'yaml', 'semver', 'smol-toml'],
       },
     },
     install = {

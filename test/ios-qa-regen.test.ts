@@ -15,6 +15,7 @@ import {
 } from 'fs';
 import { tmpdir } from 'os';
 import { join, relative } from 'path';
+import { copyNodeRuntimeFixture } from './helpers/node-runtime-fixture';
 
 const ROOT = join(import.meta.dir, '..');
 const SAFE_TEMPLATE_MAP = [
@@ -43,6 +44,7 @@ function copyIntoFakeInstall(workDir: string): { root: string; launcher: string 
   mkdirSync(binDir, { recursive: true });
   mkdirSync(scriptsDir, { recursive: true });
   mkdirSync(templatesDir, { recursive: true });
+  copyNodeRuntimeFixture(root);
 
   const launcher = join(binDir, 'gstack-ios-qa-regen');
   copyFileSync(join(ROOT, 'bin', 'gstack-ios-qa-regen'), launcher);
@@ -123,7 +125,7 @@ describe('gstack-ios-qa-regen', () => {
     mkdirSync(fakeBin, { recursive: true });
     writeFileSync(join(appSource, 'AppState.swift'), '@Observable final class AppState {}\n');
     writeFileSync(join(generatedDir, '.gstack-version'), 'stale-complete-marker\n');
-    const fakeBun = join(fakeBin, 'bun');
+    const fakeBun = join(fakeBin, 'node');
     writeFileSync(fakeBun, '#!/bin/sh\nexit 17\n');
     chmodSync(fakeBun, 0o755);
 

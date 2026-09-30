@@ -15,7 +15,7 @@ test('setup renders each selected legacy host once and leaves isolated profiles 
     return setup.slice(start, end);
   };
   const profiles = slice('CLAUDE_ISOLATED_PROFILE=0', '\nif [ "$MODEL_OVERRIDE_SET"');
-  const model = slice('# Resolve the model overlay', '# 1. Install runtime dependencies');
+  const model = slice('# Resolve the model overlay', '# Isolated core/compat installs');
   const render = slice('# Isolated core/compat installs', '# 3. Ensure');
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'gstack-render-'));
   try {
@@ -26,7 +26,7 @@ test('setup renders each selected legacy host once and leaves isolated profiles 
 log() { :; }
 _prune_stale_generated() { :; }
 _install_field() { printf '%s' "$SAVED_MODEL"; }
-bun_cmd() {
+js_cmd() {
   printf '%s\\t' "$@" >> "$TRACE"
   printf '\\n' >> "$TRACE"
   [ "$FAIL_BUN" != "$2" ] || return 17
@@ -108,7 +108,7 @@ describe('setup Codex model activation', () => {
     const linkEnd = setup.indexOf('create_agents_sidecar()', linkStart);
     const block = setup.slice(linkStart, linkEnd);
     expect(block).toContain('gen:skill-docs --host codex --model "$CODEX_GENERATION_MODEL"');
-    expect(block).toContain('gen:skill-docs --host codex --model $CODEX_GENERATION_MODEL');
+    expect(block).toContain('scripts/gen-skill-docs.ts --host codex --model $CODEX_GENERATION_MODEL');
     expect(setup).toContain('model changes: rerun ./setup --host codex');
     expect(setup).toContain('model profile: $CODEX_GENERATION_MODEL');
   });

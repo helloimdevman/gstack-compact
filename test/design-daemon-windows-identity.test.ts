@@ -12,12 +12,15 @@ for (const { name, pwsh } of [
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'design-windows-identity-'));
   try {
     const script = path.join(dir, 'identity.test.ts');
+    const whichModule = pathToFileURL(path.resolve(import.meta.dir, '../lib/which.ts')).href;
     const stateModule = pathToFileURL(path.resolve(import.meta.dir, '../design/src/daemon-state.ts')).href;
     fs.writeFileSync(script, `
-import { expect, mock, spyOn, test } from 'bun:test';
+import { expect, mock, test } from 'bun:test';
 let commandLine = '"C:\\\\Program Files\\\\bun.exe" daemon.ts --gstack-design-daemon';
 let queryFails = false;
 const calls = [];
+const which = mock(() => ${JSON.stringify(pwsh)});
+mock.module(${JSON.stringify(whichModule)}, () => ({ which }));
 mock.module('child_process', () => ({ execFileSync(command, args, options) {
   calls.push({ command, args, options });
   if (queryFails) throw new Error('query failed');
@@ -26,13 +29,12 @@ mock.module('child_process', () => ({ execFileSync(command, args, options) {
 const { verifyIdentity, readCmdline, CMDLINE_MARKER } = await import(${JSON.stringify(stateModule)});
 test('actual identity gate consumes the native query and rejects negative controls', () => {
   const nativePlatform = Object.getOwnPropertyDescriptor(process, 'platform');
-  const which = spyOn(Bun, 'which').mockReturnValue(${JSON.stringify(pwsh)});
   Object.defineProperty(process, 'platform', { value: 'win32' });
   try {
     expect(verifyIdentity(process.pid, CMDLINE_MARKER)).toBe(true);
     expect(calls).toHaveLength(1);
     expect(which).toHaveBeenCalledTimes(1);
-    expect(which.mock.calls[0]).toEqual(['pwsh.exe', { PATH: process.env.PATH ?? '' }]);
+    expect(which.mock.calls[0]).toEqual(['pwsh.exe']);
     expect(calls[0].command).toBe(${JSON.stringify(pwsh ?? 'powershell.exe')});
     expect(calls[0].args).toContain('-NoProfile');
     expect(calls[0].args).toContain('-NonInteractive');
@@ -63,7 +65,6 @@ test('actual identity gate consumes the native query and rejects negative contro
     expect(calls).toHaveLength(count);
     expect(which).toHaveBeenCalledTimes(count);
   } finally {
-    which.mockRestore();
     Object.defineProperty(process, 'platform', nativePlatform);
   }
 });

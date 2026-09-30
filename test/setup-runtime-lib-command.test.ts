@@ -70,7 +70,7 @@ function buildRootAndRunCommand(
 
     const { script, rootDir } = buildScript(sandbox);
     const build = runCapturedCommand(
-      'bash', ['-c', `IS_WINDOWS=${isWindows}\n${extractFunction('_link_or_copy')}\n${script}`],
+      'bash', ['-c', `IS_WINDOWS=${isWindows}\n${extractFunction('_link_or_copy')}\n${extractFunction('_link_node_runtime_assets')}\n${script}`],
       { timeout: 30000 },
     );
 
@@ -213,7 +213,7 @@ describe.skipIf(process.platform === 'win32')('setup: bin commands resolve sibli
     }));
     expect(r.buildStatus).toBe(0);
     expect(r.runStatus).not.toBe(0);
-    expect(r.runStderr).toContain('lib/jsonl-store.ts');
+    expect(r.runStderr).toContain('lib/node-runtime.mjs');
     expect(r.learningsWritten).toBe(false);
     expect(r.reviewStatus).not.toBe(0);
   });

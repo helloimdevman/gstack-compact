@@ -42,8 +42,11 @@ describe("REDACT_INVOCATION_BLOCK", () => {
     expect(block).toContain("glab repo view");
   });
 
-  test("includes a which-bun probe", () => {
-    expect(generateRedactInvocationBlock(ctx, ["pre-issue"])).toContain("command -v bun");
+  test("blocks when the Node scanner runtime is unavailable", () => {
+    const block = generateRedactInvocationBlock(ctx, ["pre-issue"]);
+    expect(block).toContain("command -v node");
+    expect(block).toContain("redaction blocked — Node.js not on PATH");
+    expect(block).toContain("exit 1;");
   });
 
   test("HIGH has no skip flag; framed as guardrail not enforcement", () => {

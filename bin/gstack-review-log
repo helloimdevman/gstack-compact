@@ -45,8 +45,8 @@ fi
 
 export GSTACK_STAMP_COMMIT_FULL="$COMMIT_FULL" GSTACK_STAMP_TREE="$TREE" GSTACK_STAMP_WTREE="$WTREE" GSTACK_STAMP_DIRTY="$DIRTY"
 if [ "$INPUT" = --start ]; then
-  GSTACK_REVIEW_SKILL="${2:-}" bun -e '
-    const { captureReviewStart } = await import(process.env.GSTACK_REVIEW_LIB);
+  GSTACK_REVIEW_SKILL="${2:-}" "$SCRIPT_DIR/gstack-js" -e '
+    const { captureReviewStart } = await import(require("node:url").pathToFileURL(process.env.GSTACK_REVIEW_LIB).href);
     console.log(captureReviewStart(process.env.GSTACK_REVIEW_SKILL));
   '
   exit $?
@@ -58,9 +58,9 @@ fi
 
 # Validate (reject malformed or injection attempts) AND stamp in one pass.
 # Caller values for the binding keys are dropped before stamping.
-STAMPED=$(printf '%s' "$INPUT" | GSTACK_REVIEW_TOKEN="${3:-}" bun -e "
-const { bindReview } = await import(process.env.GSTACK_REVIEW_LIB);
-const rec = JSON.parse(await Bun.stdin.text());
+STAMPED=$(printf '%s' "$INPUT" | GSTACK_REVIEW_TOKEN="${3:-}" "$SCRIPT_DIR/gstack-js" -e "
+const { bindReview } = await import(require('node:url').pathToFileURL(process.env.GSTACK_REVIEW_LIB).href);
+const rec = JSON.parse(readStdin());
 if (!rec || Array.isArray(rec) || typeof rec !== 'object') throw new Error('expected object');
 console.log(JSON.stringify(bindReview(rec, process.env.GSTACK_REVIEW_TOKEN)));
 " 2>/dev/null) || {

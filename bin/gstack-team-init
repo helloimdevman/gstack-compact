@@ -18,6 +18,7 @@
 BASH_COMPAT=50
 
 set -euo pipefail
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 
 MODE="${1:-}"
 
@@ -162,8 +163,8 @@ HOOK_EOF
   echo "  + .claude/hooks/check-gstack.sh — enforcement hook"
 
   # Add hook to project-level settings.json
-  if command -v bun >/dev/null 2>&1; then
-    GSTACK_SETTINGS_PATH="$SETTINGS" bun -e "
+  if command -v "${GSTACK_NODE_BIN:-node}" >/dev/null 2>&1; then
+    GSTACK_SETTINGS_PATH="$SETTINGS" "$SCRIPT_DIR/gstack-js" -e "
       const fs = require('fs');
       const settingsPath = process.env.GSTACK_SETTINGS_PATH;
 
@@ -196,7 +197,7 @@ HOOK_EOF
     GENERATED+=(".claude/settings.json")
     echo "  + .claude/settings.json — PreToolUse hook registered"
   else
-    echo "  ! bun not found — manually add the PreToolUse hook to .claude/settings.json"
+    echo "  ! Node.js not found — manually add the PreToolUse hook to .claude/settings.json"
   fi
 fi
 

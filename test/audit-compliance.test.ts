@@ -56,10 +56,10 @@ describe('Audit compliance', () => {
   });
 
   // Round 2 Fix 1: W012 — Bun install uses checksum verification
-  test('bun install uses checksum-verified method', () => {
+  test('runtime dependencies use the committed lockfile without install scripts', () => {
     const setup = readFileSync(join(ROOT, 'setup'), 'utf-8');
-    expect(setup).toContain('Verify checksum before running:');
-    expect(setup).toContain('shasum -a 256');
+    expect(setup).toContain('npm ci --omit=dev --ignore-scripts --no-audit --no-fund');
+    expect(setup).not.toContain('bun.sh/install');
     // Setup error message should not have unverified curl|bash
     const lines = setup.split('\n');
     for (const line of lines) {

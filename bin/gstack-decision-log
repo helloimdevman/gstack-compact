@@ -1,4 +1,5 @@
-#!/usr/bin/env bun
+#!/bin/sh
+':' //; exec "$(dirname "$0")/gstack-js" "$0" "$@"
 /**
  * gstack-decision-log — append a durable decision (or supersede/redact/compact it).
  *
@@ -30,7 +31,7 @@ import {
 } from "../lib/gstack-decision";
 import { resolveSlug, gitBranch, flagValue } from "../lib/bin-context";
 
-const HERE = import.meta.dir;
+const HERE = import.meta.dirname;
 
 const args = process.argv.slice(2);
 const usage = `Usage:

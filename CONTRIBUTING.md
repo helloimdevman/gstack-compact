@@ -8,6 +8,8 @@ gstack skills are Markdown files that Claude Code discovers from a `skills/` dir
 
 That's what dev mode does. It symlinks your repo into the local `.claude/skills/` directory so Claude Code reads skills straight from your checkout.
 
+Install Node.js 24.2 or newer for runtime helpers. Bun 1.4.0 is used for development, building, and tests; ordinary installation uses npm and does not build.
+
 ```bash
 git clone https://github.com/garrytan/gstack.git && cd gstack
 bun install                    # install dependencies

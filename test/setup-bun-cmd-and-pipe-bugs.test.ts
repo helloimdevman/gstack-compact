@@ -1,5 +1,6 @@
 import { describe, test, expect } from 'bun:test';
 import { runBashScript } from './helpers/bash-script';
+import { spawnSync } from 'node:child_process';
 import * as fs from 'fs';
 import * as path from 'path';
 import * as os from 'os';
@@ -19,27 +20,27 @@ describe('setup: gen:skill-docs:user exit-code propagation (pipe-masking fix)', 
   // the pipe. These tests RUN the pattern (not grep source) to prove the
   // exit-code semantics actually change.
 
-  test('without pipe: failing bun_cmd triggers the || warning clause', () => {
+  test('without pipe: failing js_cmd triggers the || warning clause', () => {
     const r = runBash(`
       set +e
-      bun_cmd() { return 1; }      # stub: gen:skill-docs:user failed
+      js_cmd() { return 1; }      # stub: gen:skill-docs:user failed
       log() { echo "LOG:$*"; }
       (
         cd /tmp
-        bun_cmd run gen:skill-docs:user --host claude
+        js_cmd run gen:skill-docs:user --host claude
       ) || log "  warning: gen:skill-docs:user failed"
     `);
     expect(r.stdout).toContain('LOG:  warning: gen:skill-docs:user failed');
   });
 
-  test('with pipe (the bug shape): failing bun_cmd does NOT trigger the warning', () => {
+  test('with pipe (the bug shape): failing js_cmd does NOT trigger the warning', () => {
     const r = runBash(`
       set +e
-      bun_cmd() { return 1; }      # stub: gen:skill-docs:user failed
+      js_cmd() { return 1; }      # stub: gen:skill-docs:user failed
       log() { echo "LOG:$*"; }
       (
         cd /tmp
-        bun_cmd run gen:skill-docs:user --host claude 2>&1 | tail -3
+        js_cmd run gen:skill-docs:user --host claude 2>&1 | tail -3
       ) || log "  warning: gen:skill-docs:user failed"
     `);
     expect(r.stdout).not.toContain('LOG:  warning');
@@ -48,35 +49,25 @@ describe('setup: gen:skill-docs:user exit-code propagation (pipe-masking fix)', 
 
 });
 
-describe('setup: bun_cmd routing in link_*_skill_dirs (Windows non-ASCII path fix)', () => {
-  // The bug: `bun run ...` bypasses the BUN_CMD wrapper installed by
-  // prepare_bun_for_windows_compile. On a non-ASCII Windows username,
-  // BUN_CMD points to an ASCII-path copy of bun and the literal `bun`
-  // on PATH may not work. Test by stubbing BUN_CMD to a sentinel that
-  // writes a marker file, and proving the wrapper path actually invokes it.
-
-  test('bun_cmd wrapper invokes $BUN_CMD (not literal bun on PATH)', () => {
-    const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'gstack-buncmd-'));
-    const marker = path.join(tmp, 'invoked');
-    const sentinel = path.join(tmp, 'fake-bun');
-    fs.writeFileSync(sentinel, `#!/usr/bin/env bash\necho "ARGS:$*" > "${marker}"\n`);
-    fs.chmodSync(sentinel, 0o755);
-
-    const r = runBash(`
-      set -e
-      BUN_CMD="${sentinel}"
-      bun_cmd() { "$BUN_CMD" "$@"; }
-      ( cd /tmp && bun_cmd run gen:skill-docs --host codex )
-    `);
-
-    expect(r.status).toBe(0);
-    expect(fs.existsSync(marker)).toBe(true);
-    expect(fs.readFileSync(marker, 'utf-8').trim()).toBe('ARGS:run gen:skill-docs --host codex');
-
-    fs.rmSync(tmp, { recursive: true, force: true });
+describe('setup: js_cmd routing in link_*_skill_dirs (Windows non-ASCII path fix)', () => {
+  test('the actual Node launcher honors a quoted executable path and literal argv', () => {
+    const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'gstack-nodecmd-'));
+    try {
+      const marker = path.join(tmp, 'args');
+      const sentinel = path.join(tmp, 'node with spaces');
+      fs.writeFileSync(sentinel, '#!/bin/sh\nprintf "%s\\n" "$@" > "$TRACE"\n', { mode: 0o755 });
+      const literal = 'literal $(not-a-command)';
+      const result = spawnSync('bash', [path.join(ROOT, 'bin/gstack-js'), '-e', 'await Promise.resolve()', literal], {
+        env: { ...process.env, GSTACK_NODE_BIN: sentinel, TRACE: marker }, encoding: 'utf8', timeout: 10_000,
+      });
+      expect(result.status, result.stderr).toBe(0);
+      const args = fs.readFileSync(marker, 'utf8').trim().split('\n');
+      expect(path.resolve(args[args.indexOf('--import') + 1])).toBe(path.join(ROOT, 'lib/node-runtime.mjs'));
+      expect(args.slice(-2)).toEqual(['await Promise.resolve()', literal]);
+    } finally { fs.rmSync(tmp, { recursive: true, force: true }); }
   });
 
-  test('setup: the three link_*_skill_dirs helpers all use bun_cmd, not literal bun', () => {
+  test('setup: the three link_*_skill_dirs helpers all use js_cmd, not literal bun', () => {
     // Extract each helper body and check the gen:skill-docs invocation
     // inside it. Source-anchored (not line-number) and not a global grep,
     // so we only assert about the actual code path the bug fix touches.
@@ -91,7 +82,7 @@ describe('setup: bun_cmd routing in link_*_skill_dirs (Windows non-ASCII path fi
       expect(end).toBeGreaterThan(start);
       const body = SETUP_SRC.slice(start, end);
       // Must call through the wrapper.
-      expect(body).toMatch(/bun_cmd run gen:skill-docs/);
+      expect(body).toMatch(/js_cmd run gen:skill-docs/);
       // Bug shape: a literal `bun run gen:skill-docs` in executable position
       // (skipping any comment / warning-string mentions that aren't being run).
       const lines = body.split('\n').filter((l) => {
@@ -102,8 +93,8 @@ describe('setup: bun_cmd routing in link_*_skill_dirs (Windows non-ASCII path fi
         return true;
       });
       for (const l of lines) {
-        // `bun_cmd run ...` is fine; a bare `bun run ...` is the bug.
-        const stripped = l.replace(/bun_cmd run/g, '');
+        // `js_cmd run ...` is fine; a bare `bun run ...` is the bug.
+        const stripped = l.replace(/js_cmd run/g, '');
         expect(stripped).not.toMatch(/\bbun run gen:skill-docs/);
       }
     }

@@ -17,9 +17,9 @@ eval "$("$SCRIPT_DIR/gstack-slug" 2>/dev/null)"
 GSTACK_HOME="${GSTACK_HOME:-$HOME/.gstack}"
 WTREE=$("$SCRIPT_DIR/gstack-wtree" 2>/dev/null || echo "unknown")
 if [ -f "$GSTACK_HOME/projects/$SLUG/$BRANCH-reviews.jsonl" ]; then
-  GSTACK_REVIEW_LIB="$SCRIPT_DIR/../lib/review-evidence.ts" GSTACK_REVIEW_WTREE="$WTREE" bun -e '
-    const { reviewFreshness } = await import(process.env.GSTACK_REVIEW_LIB);
-    for (const line of (await Bun.stdin.text()).split("\n").filter(Boolean)) {
+  GSTACK_REVIEW_LIB="$SCRIPT_DIR/../lib/review-evidence.ts" GSTACK_REVIEW_WTREE="$WTREE" "$SCRIPT_DIR/gstack-js" -e '
+    const { reviewFreshness } = await import(require("node:url").pathToFileURL(process.env.GSTACK_REVIEW_LIB).href);
+    for (const line of (readStdin()).split("\n").filter(Boolean)) {
       try {
         const rec = JSON.parse(line);
         delete rec.review_freshness;

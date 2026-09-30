@@ -1,4 +1,5 @@
-#!/usr/bin/env bun
+#!/bin/sh
+':' //; exec "$(dirname "$0")/gstack-js" "$0" "$@"
 /**
  * gstack-evidence — verification-evidence ledger: the mechanical arm of /ship's
  * IRON LAW ("no completion claims without fresh verification evidence").
@@ -37,11 +38,14 @@
 import { openSync, writeSync, closeSync, readdirSync, statSync, unlinkSync, chmodSync, readFileSync } from "fs";
 import { mkdirpSync } from "../lib/fs-utils";
 import { join, dirname } from "path";
-import { spawnSync } from "child_process";
+import { spawn, spawnSync } from "child_process";
+import { fileURLToPath } from "node:url";
+import { createHash } from "node:crypto";
+import { constants } from "node:os";
 import { appendJsonl, readJsonl } from "../lib/jsonl-store";
 import { scan, applyRedactions } from "../lib/redact-engine";
 
-const BIN_DIR = dirname(Bun.fileURLToPath(import.meta.url));
+const BIN_DIR = dirname(fileURLToPath(import.meta.url));
 const LOG_MAX_BYTES = 2 * 1024 * 1024;
 const LOG_PRUNE_DAYS = 30;
 
@@ -65,9 +69,7 @@ function warn(msg: string): void {
 }
 
 function sha256(text: string): string {
-  const h = new Bun.CryptoHasher("sha256");
-  h.update(text);
-  return h.digest("hex");
+  return createHash('sha256').update(text).digest('hex');
 }
 
 function git(args: string[]): string | undefined {
@@ -157,8 +159,8 @@ function openLog(logsDir: string, label: string, cmdSha: string): { fd: number; 
 
 /**
  * Bun AUTO-LOADS `.env`, `.env.<NODE_ENV>` and `.env.local` from the working
- * directory into `process.env`. This file has a `#!/usr/bin/env bun` shebang, so
- * every command it spawns inherits those variables — and a repo `.env.local`
+ * directory into `process.env` when developers invoke this source with Bun.
+ * The installed Node launcher does not load them. A repo `.env.local`
  * routinely holds PRODUCTION credentials.
  *
  * Two things go wrong, and the second one is worse than the leak:
@@ -223,7 +225,7 @@ function parseDotenv(text: string): Map<string, string> {
 function childEnv(cwd: string): { env: Record<string, string>, scrubbed: string[] } {
   const env: Record<string, string> = {};
   for (const [k, v] of Object.entries(process.env)) if (v !== undefined) env[k] = v;
-  if (process.env.GSTACK_EVIDENCE_KEEP_DOTENV === "1") return { env, scrubbed: [] };
+  if (!process.versions.bun || process.env.GSTACK_EVIDENCE_KEEP_DOTENV === "1") return { env, scrubbed: [] };
 
   const scrubbed: string[] = [];
   for (const file of BUN_DOTENV_FILES()) {
@@ -279,7 +281,8 @@ async function cmdRun(argv: string[]): Promise<number> {
 
   const started = Date.now();
   let exitCode: number;
-  let proc: ReturnType<typeof Bun.spawn> | undefined;
+  let proc: ReturnType<typeof spawn>;
+  let exited: Promise<number>;
   try {
     const { env: spawnEnv, scrubbed } = childEnv(process.cwd());
     if (scrubbed.length > 0) {
@@ -287,7 +290,11 @@ async function cmdRun(argv: string[]): Promise<number> {
       warn(`scrubbed ${scrubbed.length} bun-injected dotenv var(s) from the child env: ${scrubbed.join(", ")} `
         + `(GSTACK_EVIDENCE_KEEP_DOTENV=1 to keep them)`);
     }
-    proc = Bun.spawn(spawnArgv, { stdin: "inherit", stdout: "pipe", stderr: "pipe", env: spawnEnv });
+    proc = spawn(spawnArgv[0], spawnArgv.slice(1), { stdio: ["inherit", "pipe", "pipe"], env: spawnEnv });
+    exited = new Promise(resolve => {
+      proc.once('error', error => { warn(`spawn failed: ${error.message}`); resolve(127); });
+      proc.once('close', (code, signal) => resolve(code ?? (128 + (signal ? constants.signals[signal] : 0))));
+    });
   } catch (e: any) {
     // Spawn failure (ENOENT on argv-direct form): record exit 127, propagate 127.
     exitCode = 127;
@@ -342,12 +349,12 @@ async function cmdRun(argv: string[]): Promise<number> {
   };
   try {
     await Promise.all([pump(proc.stdout as any, process.stdout), pump(proc.stderr as any, process.stderr)]);
-    exitCode = await proc.exited;
+    exitCode = await exited;
     if (exitCode === null || exitCode === undefined) exitCode = 1;
   } catch (e: any) {
     warn(`stream error: ${e?.message ?? e}`);
     try {
-      exitCode = await proc.exited;
+      exitCode = await exited;
     } catch {
       exitCode = 1;
     }

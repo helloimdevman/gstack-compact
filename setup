@@ -46,7 +46,7 @@ EOF
 }
 
 # Short-circuit on -h/--help before any environment checks so users can
-# discover flags even without bun installed.
+# discover flags even without Node installed.
 for _arg in "$@"; do
   case "$_arg" in
     -h|--help) usage; exit 0 ;;
@@ -130,7 +130,7 @@ case "$HOST" in
     echo ""
     echo "To integrate gstack with OpenClaw:"
     echo "  1. Tell your OpenClaw agent: 'install gstack for openclaw'"
-    echo "  2. Or generate artifacts: bun run gen:skill-docs --host openclaw"
+    echo "  2. Or generate artifacts: ./bin/gstack-js scripts/gen-skill-docs.ts --host openclaw"
     echo "  3. See docs/OPENCLAW.md for the full architecture"
     print_instruction_tier
     exit 0 ;;
@@ -141,25 +141,20 @@ case "$HOST" in
     echo ""
     echo "To integrate gstack with Hermes:"
     echo "  1. Tell your Hermes agent: 'install gstack for hermes'"
-    echo "  2. Or generate artifacts: bun run gen:skill-docs --host hermes"
+    echo "  2. Or generate artifacts: ./bin/gstack-js scripts/gen-skill-docs.ts --host hermes"
     print_instruction_tier
     exit 0 ;;
   *) echo "Unknown --host value: $HOST (expected claude, codex, kiro, factory, opencode, cursor, slate, openclaw, hermes, or auto)" >&2; exit 1 ;;
 esac
 
-if ! command -v bun >/dev/null 2>&1; then
-  echo "Error: bun is required but not installed." >&2
-  echo "Install with checksum verification:" >&2
-  echo '  BUN_VERSION="1.3.10"' >&2
-  echo '  tmpfile=$(mktemp)' >&2
-  echo '  curl -fsSL "https://bun.sh/install" -o "$tmpfile"' >&2
-  echo '  echo "Verify checksum before running: sha256sum $tmpfile   # or: shasum -a 256 $tmpfile"' >&2
-  echo '  BUN_VERSION="$BUN_VERSION" bash "$tmpfile" && rm "$tmpfile"' >&2
+if ! command -v "${GSTACK_NODE_BIN:-node}" >/dev/null 2>&1 || ! command -v npm >/dev/null 2>&1; then
+  echo "Error: Node.js 24.2+ and npm are required. Install Node.js from https://nodejs.org/." >&2
   exit 1
 fi
 
 INSTALL_GSTACK_DIR="$(cd "$(dirname "$0")" && pwd)"
 SOURCE_GSTACK_DIR="$(cd "$(dirname "$0")" && pwd -P)"
+"$SOURCE_GSTACK_DIR/bin/gstack-js" -e ''
 INSTALL_SKILLS_DIR="$(dirname "$INSTALL_GSTACK_DIR")"
 CODEX_SKILLS="${CODEX_HOME:-$HOME/.codex}/skills"
 CODEX_GSTACK="$CODEX_SKILLS/gstack"
@@ -655,10 +650,19 @@ if [ "$INSTALL_CODEX" -eq 1 ]; then
   migrate_direct_codex_install "$SOURCE_GSTACK_DIR" "$CODEX_GSTACK"
 fi
 
-BUN_CMD="${BUN_CMD:-bun}"
-bun_cmd() {
-  "$BUN_CMD" "$@"
+js_cmd() {
+  case "${1:-}" in
+    run)
+      shift
+      if [ "${1:-}" = gen:skill-docs ]; then shift; set -- scripts/gen-skill-docs.ts "$@"; fi
+      ;;
+  esac
+  "$SOURCE_GSTACK_DIR/bin/gstack-js" "$@"
 }
+
+# 1. Install only runtime dependencies. Node executes source CLIs directly;
+# installation needs neither Bun nor compiled bundles.
+( cd "$SOURCE_GSTACK_DIR" && npm ci --omit=dev --ignore-scripts --no-audit --no-fund )
 
 # Resolve the model overlay used for generated Codex skills. Setup auto-detects
 # only Codex because it has one canonical TOML config surface; direct generator
@@ -674,7 +678,7 @@ if [ "$INSTALL_CODEX" -eq 1 ]; then
     _SAVED_CODEX_MODEL="$(_install_field "$CODEX_GSTACK/.gstack-install.json" generationModel)"
     [ -z "$_SAVED_CODEX_MODEL" ] || _CODEX_MODEL_ARGS+=(--explicit "$_SAVED_CODEX_MODEL")
   fi
-  _CODEX_MODEL_OUTPUT="$(cd "$SOURCE_GSTACK_DIR" && bun_cmd "${_CODEX_MODEL_ARGS[@]}")"
+  _CODEX_MODEL_OUTPUT="$(cd "$SOURCE_GSTACK_DIR" && js_cmd "${_CODEX_MODEL_ARGS[@]}")"
   IFS=$'\t' read -r CODEX_GENERATION_MODEL CODEX_GENERATION_MODEL_SOURCE <<< "$_CODEX_MODEL_OUTPUT"
   if [ -z "$CODEX_GENERATION_MODEL" ]; then
     echo "gstack setup failed: Codex model resolver returned no model" >&2
@@ -686,7 +690,7 @@ fi
 
 CLAUDE_GENERATION_MODEL=""
 if [ "$MODEL_OVERRIDE_SET" -eq 1 ] && [ "$INSTALL_CLAUDE" -eq 1 ]; then
-  _CLAUDE_MODEL_OUTPUT="$(cd "$SOURCE_GSTACK_DIR" && bun_cmd run scripts/resolve-codex-generation-model.ts --explicit "$MODEL_OVERRIDE")"
+  _CLAUDE_MODEL_OUTPUT="$(cd "$SOURCE_GSTACK_DIR" && js_cmd run scripts/resolve-codex-generation-model.ts --explicit "$MODEL_OVERRIDE")"
   IFS=$'\t' read -r CLAUDE_GENERATION_MODEL _CLAUDE_MODEL_SOURCE <<< "$_CLAUDE_MODEL_OUTPUT"
   if [ -z "$CLAUDE_GENERATION_MODEL" ]; then
     echo "gstack setup failed: Claude model resolver returned no model" >&2
@@ -697,32 +701,10 @@ fi
 CLAUDE_CORE_MODEL="${CLAUDE_GENERATION_MODEL:-$(_install_field "$CLAUDE_REGISTER_DIR/gstack/.gstack-install.json" generationModel)}"
 [ -n "$CLAUDE_CORE_MODEL" ] || CLAUDE_CORE_MODEL=claude
 
-# 1. Install runtime dependencies once, then build source bundles if stale.
-( cd "$SOURCE_GSTACK_DIR" && bun_cmd install --production --frozen-lockfile )
-BUILD_STAMP="$SOURCE_GSTACK_DIR/design/dist/.build-complete"
-NEEDS_BUILD=0
-if [ "$(cat "$BUILD_STAMP" 2>/dev/null)" != bun-source-v1 ] || [ ! -x "$SOURCE_GSTACK_DIR/design/dist/design" ] || [ ! -f "$SOURCE_GSTACK_DIR/design/dist/daemon.ts" ] || [ ! -x "$SOURCE_GSTACK_DIR/bin/gstack-global-discover" ] || [ ! -f "$SOURCE_GSTACK_DIR/lib/gstack-markdown-html.js" ]; then
-  NEEDS_BUILD=1
-fi
-if [ "$NEEDS_BUILD" -eq 0 ]; then
-  if [ -n "$(find "$SOURCE_GSTACK_DIR/design/src" "$SOURCE_GSTACK_DIR/make-pdf/src" "$SOURCE_GSTACK_DIR/lib" -type f -newer "$BUILD_STAMP" -print -quit 2>/dev/null)" ]; then
-    NEEDS_BUILD=1
-  elif [ "$SOURCE_GSTACK_DIR/bin/gstack-global-discover.ts" -nt "$BUILD_STAMP" ] || [ "$SOURCE_GSTACK_DIR/package.json" -nt "$BUILD_STAMP" ] || [ "$SOURCE_GSTACK_DIR/bun.lock" -nt "$BUILD_STAMP" ] || [ "$SOURCE_GSTACK_DIR/scripts/build.sh" -nt "$BUILD_STAMP" ]; then
-    NEEDS_BUILD=1
-  fi
-fi
-if [ "$NEEDS_BUILD" -eq 1 ]; then
-  log "Building local CLI tools..."
-  (
-    cd "$SOURCE_GSTACK_DIR"
-    bun_cmd run build --runtime-only
-  )
-fi
-
 # Isolated core/compat installs render once in install-core-profile.ts.
 # Legacy registrations still need their source-tree render refreshed.
 if [ "$INSTALL_CLAUDE" -eq 1 ] && [ "$CLAUDE_ISOLATED_PROFILE" -eq 0 ]; then
-  ( cd "$SOURCE_GSTACK_DIR" && bun_cmd run gen:skill-docs --host claude --model "$CLAUDE_CORE_MODEL" )
+  ( cd "$SOURCE_GSTACK_DIR" && js_cmd run gen:skill-docs --host claude --model "$CLAUDE_CORE_MODEL" )
 fi
 
 # 1b. Refresh only selected legacy Codex registrations, regardless of build age.
@@ -731,7 +713,7 @@ if [ "$INSTALL_CODEX" -eq 1 ] && [ "$CODEX_ISOLATED_PROFILE" -eq 0 ]; then
   log "Generating .agents/ skill docs..."
   (
     cd "$SOURCE_GSTACK_DIR"
-    bun_cmd run gen:skill-docs --host codex --model "$CODEX_GENERATION_MODEL"
+    js_cmd run gen:skill-docs --host codex --model "$CODEX_GENERATION_MODEL"
   )
   _prune_stale_generated "$SOURCE_GSTACK_DIR" "$AGENTS_DIR" "$CODEX_SKILLS"
 fi
@@ -741,7 +723,7 @@ if [ "$INSTALL_FACTORY" -eq 1 ]; then
   log "Generating .factory/ skill docs..."
   (
     cd "$SOURCE_GSTACK_DIR"
-    bun_cmd run gen:skill-docs --host factory
+    js_cmd run gen:skill-docs --host factory
   )
 fi
 
@@ -750,7 +732,7 @@ if [ "$INSTALL_OPENCODE" -eq 1 ]; then
   log "Generating .opencode/ skill docs..."
   (
     cd "$SOURCE_GSTACK_DIR"
-    bun_cmd run gen:skill-docs --host opencode
+    js_cmd run gen:skill-docs --host opencode
   )
 fi
 
@@ -759,7 +741,7 @@ if [ "$INSTALL_CURSOR" -eq 1 ]; then
   log "Generating .cursor/ skill docs..."
   (
     cd "$SOURCE_GSTACK_DIR"
-    bun_cmd run gen:skill-docs --host cursor
+    js_cmd run gen:skill-docs --host cursor
   )
 fi
 
@@ -1135,11 +1117,11 @@ link_codex_skill_dirs() {
 
   if [ ! -d "$agents_dir" ]; then
     echo "  Generating .agents/ skill docs..."
-    ( cd "$gstack_dir" && bun_cmd run gen:skill-docs --host codex --model "$CODEX_GENERATION_MODEL" )
+    ( cd "$gstack_dir" && js_cmd run gen:skill-docs --host codex --model "$CODEX_GENERATION_MODEL" )
   fi
 
   if [ ! -d "$agents_dir" ]; then
-    echo "  warning: .agents/skills/ generation failed — run 'bun run gen:skill-docs --host codex --model $CODEX_GENERATION_MODEL' manually" >&2
+    echo "  warning: .agents/skills/ generation failed — run './bin/gstack-js scripts/gen-skill-docs.ts --host codex --model $CODEX_GENERATION_MODEL' manually" >&2
     return 1
   fi
 
@@ -1177,6 +1159,19 @@ link_codex_skill_dirs() {
 # Codex/Gemini/Cursor read skills from .agents/skills/. We link runtime
 # assets (bin/, review/, qa/, etc.) so skill templates can
 # resolve paths like $SKILL_ROOT/review/design-checklist.md.
+# Source runtimes also need their small production dependency set in copy installs.
+_link_node_runtime_assets() {
+  local source="$1" target="$2" asset
+  for asset in scripts VERSION design/design design/src make-pdf/src node_modules/marked node_modules/yaml node_modules/semver node_modules/smol-toml; do
+    if [ -e "$source/$asset" ]; then
+      mkdir -p "$(dirname "$target/$asset")"
+      if [ "$IS_WINDOWS" -eq 1 ] || [ -L "$target/$asset" ] || [ ! -e "$target/$asset" ]; then
+        _link_or_copy "$source/$asset" "$target/$asset"
+      fi
+    fi
+  done
+}
+
 create_agents_sidecar() {
   local repo_root="$1"
   local agents_gstack="$repo_root/.agents/skills/gstack"
@@ -1218,6 +1213,7 @@ create_agents_sidecar() {
 
   # Public telemetry endpoint configuration.
   # (file-level on purpose: migrations/ and functions/ are dev-only)
+  _link_node_runtime_assets "$SOURCE_GSTACK_DIR" "$agents_gstack"
 }
 
 # ─── Helper: create a minimal ~/.codex/skills/gstack runtime root ───────────
@@ -1271,6 +1267,7 @@ create_codex_runtime_root() {
     fi
   done
   # Public telemetry endpoint configuration.
+  _link_node_runtime_assets "$gstack_dir" "$codex_gstack"
 }
 
 create_factory_runtime_root() {
@@ -1316,6 +1313,7 @@ create_factory_runtime_root() {
     fi
   done
   # Public telemetry endpoint configuration.
+  _link_node_runtime_assets "$gstack_dir" "$factory_gstack"
 }
 
 create_opencode_runtime_root() {
@@ -1339,9 +1337,6 @@ create_opencode_runtime_root() {
   fi
   if [ -d "$gstack_dir/lib" ]; then
     _link_or_copy "$gstack_dir/lib" "$opencode_gstack/lib"
-  fi
-  if [ -d "$gstack_dir/design/dist" ]; then
-    _link_or_copy "$gstack_dir/design/dist" "$opencode_gstack/design/dist"
   fi
   if [ -f "$opencode_dir/gstack-upgrade/SKILL.md" ]; then
     _link_or_copy "$opencode_dir/gstack-upgrade/SKILL.md" "$opencode_gstack/gstack-upgrade/SKILL.md"
@@ -1376,6 +1371,7 @@ create_opencode_runtime_root() {
     fi
   done
   # Public telemetry endpoint configuration.
+  _link_node_runtime_assets "$gstack_dir" "$opencode_gstack"
 }
 
 link_factory_skill_dirs() {
@@ -1386,11 +1382,11 @@ link_factory_skill_dirs() {
 
   if [ ! -d "$factory_dir" ]; then
     echo "  Generating .factory/ skill docs..."
-    ( cd "$gstack_dir" && bun_cmd run gen:skill-docs --host factory )
+    ( cd "$gstack_dir" && js_cmd run gen:skill-docs --host factory )
   fi
 
   if [ ! -d "$factory_dir" ]; then
-    echo "  warning: .factory/skills/ generation failed — run 'bun run gen:skill-docs --host factory' manually" >&2
+    echo "  warning: .factory/skills/ generation failed — run './bin/gstack-js scripts/gen-skill-docs.ts --host factory' manually" >&2
     return 1
   fi
 
@@ -1428,11 +1424,11 @@ link_opencode_skill_dirs() {
 
   if [ ! -d "$opencode_dir" ]; then
     echo "  Generating .opencode/ skill docs..."
-    ( cd "$gstack_dir" && bun_cmd run gen:skill-docs --host opencode )
+    ( cd "$gstack_dir" && js_cmd run gen:skill-docs --host opencode )
   fi
 
   if [ ! -d "$opencode_dir" ]; then
-    echo "  warning: .opencode/skills/ generation failed — run 'bun run gen:skill-docs --host opencode' manually" >&2
+    echo "  warning: .opencode/skills/ generation failed — run './bin/gstack-js scripts/gen-skill-docs.ts --host opencode' manually" >&2
     return 1
   fi
 
@@ -1510,6 +1506,7 @@ create_cursor_runtime_root() {
     fi
   done
   # Public telemetry endpoint configuration.
+  _link_node_runtime_assets "$gstack_dir" "$cursor_gstack"
 }
 
 # Plant runtime assets into the repo-local generated skill dir so in-repo
@@ -1559,6 +1556,7 @@ create_cursor_sidecar() {
       fi
     fi
   done
+  _link_node_runtime_assets "$repo_root" "$cursor_gstack"
 }
 
 link_cursor_skill_dirs() {
@@ -1569,11 +1567,11 @@ link_cursor_skill_dirs() {
 
   if [ ! -d "$cursor_dir" ]; then
     echo "  Generating .cursor/ skill docs..."
-    ( cd "$gstack_dir" && bun_cmd run gen:skill-docs --host cursor )
+    ( cd "$gstack_dir" && js_cmd run gen:skill-docs --host cursor )
   fi
 
   if [ ! -d "$cursor_dir" ]; then
-    echo "  warning: .cursor/skills/ generation failed — run 'bun run gen:skill-docs --host cursor' manually" >&2
+    echo "  warning: .cursor/skills/ generation failed — run './bin/gstack-js scripts/gen-skill-docs.ts --host cursor' manually" >&2
     return 1
   fi
 
@@ -1709,7 +1707,7 @@ if [ "$INSTALL_CODEX" -eq 1 ]; then
   if [ "$CODEX_ISOLATED_PROFILE" -eq 1 ]; then
     _CODEX_CORE_SKILLS="$CODEX_SKILLS"
     if [ "$CODEX_REPO_LOCAL" -eq 1 ]; then _CODEX_CORE_SKILLS="$INSTALL_SKILLS_DIR"; fi
-    bun_cmd "$SOURCE_GSTACK_DIR/scripts/install-core-profile.ts" --host codex \
+    js_cmd "$SOURCE_GSTACK_DIR/scripts/install-core-profile.ts" --host codex \
       --source-root "$SOURCE_GSTACK_DIR" --skills-dir "$_CODEX_CORE_SKILLS" \
       --state-root "${GSTACK_HOME:-$HOME/.gstack}/render/$CODEX_SKILL_PROFILE/codex" --model "$CODEX_GENERATION_MODEL" --profile "$CODEX_SKILL_PROFILE"
     log "gstack ready (codex $CODEX_SKILL_PROFILE)."
@@ -1747,7 +1745,7 @@ if [ "$INSTALL_KIRO" -eq 1 ]; then
   KIRO_GSTACK="$KIRO_SKILLS/gstack"
   # Host identity controls outside-review routing as well as skill availability.
   # Never borrow .agents or temporarily replace a live Codex model profile.
-  ( cd "$SOURCE_GSTACK_DIR" && bun_cmd run gen:skill-docs --host kiro )
+  ( cd "$SOURCE_GSTACK_DIR" && js_cmd run gen:skill-docs --host kiro )
   mkdir -p "$KIRO_SKILLS"
   if _sidecar_root_user_owned "$KIRO_GSTACK"; then
     echo "  left in place (existing Kiro runtime root is not gstack-managed): $KIRO_GSTACK" >&2
@@ -1756,6 +1754,7 @@ if [ "$INSTALL_KIRO" -eq 1 ]; then
     mkdir -p "$KIRO_GSTACK" "$KIRO_GSTACK/gstack-upgrade" "$KIRO_GSTACK/review"
     _link_or_copy "$SOURCE_GSTACK_DIR/bin" "$KIRO_GSTACK/bin"
     _link_or_copy "$SOURCE_GSTACK_DIR/lib" "$KIRO_GSTACK/lib"
+    _link_node_runtime_assets "$SOURCE_GSTACK_DIR" "$KIRO_GSTACK"
     for file in ETHOS.md CONTRACT.md; do
       if [ -f "$SOURCE_GSTACK_DIR/$file" ]; then
         _link_or_copy "$SOURCE_GSTACK_DIR/$file" "$KIRO_GSTACK/$file"
@@ -2048,7 +2047,7 @@ if [ -n "${_CLAUDE_PROFILE_PENDING:-}" ]; then
     --source-root "$SOURCE_GSTACK_DIR" --skills-dir "$CLAUDE_REGISTER_DIR"
     --state-root "${GSTACK_HOME:-$HOME/.gstack}/render/$_CLAUDE_PROFILE_PENDING/claude" --model "$CLAUDE_CORE_MODEL" --profile "$_CLAUDE_PROFILE_PENDING")
   [ "$SKILL_PREFIX" -eq 0 ] || _CLAUDE_CORE_ARGS+=(--prefix)
-  bun_cmd "${_CLAUDE_CORE_ARGS[@]}"
+  js_cmd "${_CLAUDE_CORE_ARGS[@]}"
   log "gstack ready (claude $_CLAUDE_PROFILE_PENDING)."
 fi
 

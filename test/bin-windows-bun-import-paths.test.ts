@@ -28,8 +28,8 @@ const ROOT = join(import.meta.dir, "..");
 const BIN_DIR = join(ROOT, "bin");
 
 const CYGPATH_GUARD = /cygpath/;
-// A bun -e payload that imports through the interpolated $SCRIPT_DIR.
-const BUN_IMPORT_INTERPOLATION = /bun -e "[^]*?from '\$SCRIPT_DIR\//;
+// Inline helpers receive native filesystem paths through GSTACK_LIB_DIR.
+const JS_IMPORT_INTERPOLATION = /await import\([^\n]*process\.env\.GSTACK_LIB_DIR/;
 
 function bashBins(): string[] {
   return readdirSync(BIN_DIR).filter((name) => {
@@ -40,20 +40,23 @@ function bashBins(): string[] {
   });
 }
 
-describe("bin/ — Windows bun-import path guard (#1950)", () => {
-  it("every bash bin that interpolates $SCRIPT_DIR into a bun -e import has the cygpath guard", () => {
+describe("bin/ — Windows Node import path guard (#1950)", () => {
+  it("every inline library import normalizes its native filesystem path", () => {
     const offenders: string[] = [];
+    let checked = 0;
     for (const name of bashBins()) {
       const content = readFileSync(join(BIN_DIR, name), "utf-8");
-      if (BUN_IMPORT_INTERPOLATION.test(content) && !CYGPATH_GUARD.test(content)) {
-        offenders.push(name);
+      if (JS_IMPORT_INTERPOLATION.test(content)) {
+        checked++;
+        if (!CYGPATH_GUARD.test(content) || !content.includes('pathToFileURL(process.env.GSTACK_LIB_DIR')) offenders.push(name);
       }
     }
     expect(
       offenders,
-      `bins interpolate $SCRIPT_DIR into a bun -e import without a cygpath guard ` +
+      `bins import GSTACK_LIB_DIR without cygpath and file URL conversion ` +
         `(breaks on Windows git-bash, #1950): ${offenders.join(", ")}`,
     ).toEqual([]);
+    expect(checked).toBeGreaterThanOrEqual(3);
   });
 
   it("known-affected bins carry the guard explicitly", () => {

@@ -1,4 +1,5 @@
-#!/usr/bin/env bun
+#!/bin/sh
+':' //; exec "$(dirname "$0")/gstack-js" "$0" "$@"
 /**
  * gstack-redact-prepush — git pre-push hook that scans the diff being pushed for
  * HIGH-severity credentials and blocks the push on a hit.

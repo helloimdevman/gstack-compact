@@ -13,7 +13,7 @@ Source instructions live in `*/SKILL.md.tmpl` and optional
 files for Claude Code, Codex, and the other supported hosts. Edit templates,
 then run `bun run gen:skill-docs`; generated files are output, not the source.
 
-`./setup` installs dependencies, builds local CLIs, renders host-specific
+`./setup` installs runtime dependencies with npm, renders host-specific
 skills, and registers the selected profile. `core` installs the 11 routine
 workflow commands; `compat` adds specialist skills. The setup path does not
 install a browser, native CSO helper, remote tunnel, or model-provider CLI.
@@ -21,12 +21,14 @@ install a browser, native CSO helper, remote tunnel, or model-provider CLI.
 
 ## Local tools
 
-`scripts/build.sh` bundles `design/dist/design`, its daemon, and
-`bin/gstack-global-discover` as JavaScript using the installed Bun runtime.
-Setup builds with `--runtime-only` and renders each selected host/profile once;
-`bun run build` also generates every host for development and CI.
-Most `bin/` scripts run through Bun or the shell
-and use shared helpers in `lib/`. `bun.lock` pins JavaScript dependencies.
+`bin/gstack-js` runs the TypeScript source with Node.js 24.2 or newer.
+Setup installs only production packages from `package-lock.json`, skips builds,
+and renders each selected host/profile once. Shell helpers use the same Node
+launcher and shared modules in `lib/`.
+
+For development, `bun run build` generates every host and bundles the design,
+discovery, and Markdown CLIs for Node. `bun.lock` pins developer dependencies;
+Bun is required for building and testing, not installation or ordinary use.
 
 `/browse`, browser QA, visual design checks, PDF printing, and diagram
 rendering use the user's browser through the agent host's browser capability.

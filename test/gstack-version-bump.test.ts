@@ -773,7 +773,7 @@ describe('write --regen-digest regenerates the gstack agents digest (explicit op
     fs.writeFileSync(path.join(dir, 'scripts', 'gen-agents-digest.ts'), [
       "import * as fs from 'fs';",
       "import * as path from 'path';",
-      "const root = path.resolve(import.meta.dir, '..');",
+      "const root = path.resolve(import.meta.dirname, '..');",
       "const v = fs.readFileSync(path.join(root, 'VERSION'), 'utf-8').trim();",
       "fs.writeFileSync(path.join(root, 'agents-digest', 'gstack-AGENTS.md'), `# gstack digest v${v}\\n`);",
     ].join('\n'));

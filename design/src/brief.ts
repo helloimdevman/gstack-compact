@@ -56,8 +56,6 @@ export function parseBrief(input: string, isFile: boolean): string {
   }
 
   // JSON file — parse and convert to prompt
-  const raw = Bun.file(input);
-  // We'll read it synchronously via fs since Bun.file is async
   const fs = require("fs");
   const content = fs.readFileSync(input, "utf-8");
   const brief: DesignBrief = JSON.parse(content);

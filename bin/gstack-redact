@@ -1,4 +1,5 @@
-#!/usr/bin/env bun
+#!/bin/sh
+':' //; exec "$(dirname "$0")/gstack-js" "$0" "$@"
 /**
  * gstack-redact — scan text for secrets/PII/legal content via the shared engine.
  *
@@ -60,7 +61,7 @@ function installPrepushHook(): void {
   // recursive mkdir when .git/hooks already exists (#2635).
   mkdirpSync(dir);
   const hookPath = path.join(dir, "pre-push");
-  const prepushBin = path.join(import.meta.dir, "gstack-redact-prepush");
+  const prepushBin = path.join(import.meta.dirname, "gstack-redact-prepush");
 
   // stdin is single-consume: capture it once, feed both the chained hook and ours.
   // The `printf x` sentinel preserves the trailing newline that `$(cat)` strips.
@@ -76,7 +77,7 @@ _local="$(git rev-parse --git-path hooks/pre-push.local)"
 if [ -x "$_local" ]; then
   printf '%s' "$_input" | "$_local" "$@" || exit $?
 fi
-printf '%s' "$_input" | bun "${prepushBin}" "$@"
+printf '%s' "$_input" | '${prepushBin.replace(/'/g, "'\\''")}' "$@"
 `;
 
   // If a non-managed hook exists, preserve it as pre-push.local and chain it.

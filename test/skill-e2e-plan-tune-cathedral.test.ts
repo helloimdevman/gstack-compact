@@ -1,3 +1,4 @@
+import { copyNodeRuntimeFixture } from './helpers/node-runtime-fixture';
 /**
  * /plan-tune cathedral E2E (T16) — 5 scenarios, all gate tier per D12.
  *
@@ -38,6 +39,7 @@ afterAll(() => {
 
 /** Scaffold a fixture project with the bins + scripts the cathedral needs. */
 function scaffoldFixture(workDir: string): { workDir: string; stateRoot: string; slug: string; env: NodeJS.ProcessEnv } {
+  copyNodeRuntimeFixture(workDir);
   const stateRoot = path.join(workDir, '.gstack-state');
   fs.mkdirSync(stateRoot, { recursive: true });
 

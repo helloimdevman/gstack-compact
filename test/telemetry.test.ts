@@ -267,17 +267,22 @@ describe('gstack-telemetry-log', () => {
   test('fails closed: error_message becomes null when the redactor is unavailable (#1947)', () => {
     setConfig('telemetry', 'anonymous');
     const token = 'ghp_' + 'A1b2C3d4E5f6G7h8I9j0K1l2M3n4O5p6Q7r8';
-    // Shadow bun with a failing stub on a prepended PATH (deterministic on
+    // Shadow Node with a failing redactor stub on a prepended PATH (deterministic on
     // any host layout — pre-landing review flagged the bare '/usr/bin:/bin'
     // variant as environment-dependent): the redaction snippet cannot run,
     // so the whole message must drop — never raw passthrough.
-    const stubBin = fs.mkdtempSync(path.join(os.tmpdir(), 'gstack-tel-nobun-'));
+    const stubBin = fs.mkdtempSync(path.join(os.tmpdir(), 'gstack-tel-nonode-'));
     try {
-      fs.writeFileSync(path.join(stubBin, 'bun'), '#!/bin/sh\nexit 127\n');
-      fs.chmodSync(path.join(stubBin, 'bun'), 0o755);
+      const node = Bun.which('node');
+      if (!node) throw new Error('Node is required for telemetry regressions');
+      fs.writeFileSync(path.join(stubBin, 'node'), `#!/bin/sh
+for arg in "$@"; do case "$arg" in *redactFindingSpans*) exit 127 ;; esac; done
+exec '${node.replace(/'/g, "'\\''")}' "$@"
+`);
+      fs.chmodSync(path.join(stubBin, 'node'), 0o755);
       run(
         `${BIN}/gstack-telemetry-log --skill qa --duration 10 --outcome error --error-message 'auth ${token} rejected' --session-id red-2`,
-        { PATH: `${stubBin}:${process.env.PATH}` },
+        { PATH: `${stubBin}:${process.env.PATH}`, GSTACK_NODE_BIN: path.join(stubBin, 'node') },
       );
     } finally {
       fs.rmSync(stubBin, { recursive: true, force: true });

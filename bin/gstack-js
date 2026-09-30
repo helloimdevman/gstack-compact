@@ -1,0 +1,17 @@
+#!/usr/bin/env bash
+# Node runtime for the existing TypeScript CLIs and inline async JS helpers.
+set -euo pipefail
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+NODE_CMD="${GSTACK_NODE_BIN:-node}"
+if ! command -v "$NODE_CMD" >/dev/null 2>&1; then
+  echo "gstack: Node.js 24.2+ is required (Bun is only used for development)." >&2
+  exit 1
+fi
+if [ "${1:-}" = --cwd ]; then cd "$2"; shift 2; fi
+if [ "${1:-}" = --no-env-file ]; then shift; fi
+if [ "${1:-}" = run ]; then shift; fi
+if [ "${1:-}" = -e ]; then
+  shift
+  exec "$NODE_CMD" --disable-warning=ExperimentalWarning --import "$SCRIPT_DIR/../lib/node-runtime.mjs" "$SCRIPT_DIR/../lib/node-eval.mjs" "$@"
+fi
+exec "$NODE_CMD" --disable-warning=ExperimentalWarning --import "$SCRIPT_DIR/../lib/node-runtime.mjs" "$@"

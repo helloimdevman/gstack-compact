@@ -1,4 +1,5 @@
-#!/usr/bin/env bun
+#!/bin/sh
+':' //; exec "$(dirname "$0")/gstack-js" "$0" "$@"
 // gstack-egress-receipt — bun script that BRIDGES shell callers (the bash
 // egress sinks: gstack-update-check and sourced helpers in gstack-egress-lib.sh) into lib/egress-receipt.ts.
 //

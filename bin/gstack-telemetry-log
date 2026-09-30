@@ -25,7 +25,7 @@ set -uo pipefail
 GSTACK_DIR="${GSTACK_DIR:-$(cd "$(dirname "$0")/.." && pwd)}"
 SCRIPT_DIR="$GSTACK_DIR/bin"
 # Windows git-bash (#1950): pwd yields a POSIX path (/c/Users/...), which Bun
-# on Windows cannot resolve as an ES module specifier in bun -e imports.
+# on Windows cannot resolve as an ES module specifier in "$SCRIPT_DIR/gstack-js" -e imports.
 case "$(uname -s)" in
   MINGW*|MSYS*|CYGWIN*) command -v cygpath >/dev/null 2>&1 && SCRIPT_DIR="$(cygpath -m "$SCRIPT_DIR")" ;;
 esac
@@ -203,9 +203,9 @@ ERR_FIELD="null"
 # look like a JSON string, the whole message becomes null — never raw.
 ERR_MSG_FIELD="null"
 if [ -n "$ERROR_MESSAGE" ]; then
-  ERR_MSG_FIELD="$(printf '%s' "$ERROR_MESSAGE" | GSTACK_LIB_DIR="$SCRIPT_DIR/../lib" bun -e "
-const { redactFindingSpans } = await import(process.env.GSTACK_LIB_DIR + '/redact-engine.ts');
-const input = await Bun.stdin.text();
+  ERR_MSG_FIELD="$(printf '%s' "$ERROR_MESSAGE" | GSTACK_LIB_DIR="$SCRIPT_DIR/../lib" "$SCRIPT_DIR/gstack-js" -e "
+const { redactFindingSpans } = await import(require('node:url').pathToFileURL(process.env.GSTACK_LIB_DIR + '/redact-engine.ts').href);
+const input = readStdin();
 const out = redactFindingSpans(input, { repoVisibility: 'private' });
 if (out === null) process.exit(1);
 console.log(JSON.stringify(out.slice(0, 200)));

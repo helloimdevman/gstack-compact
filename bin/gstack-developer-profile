@@ -65,8 +65,8 @@ do_migrate() {
   TMPOUT=$(mktemp "$GSTACK_HOME/developer-profile.json.tmp.XXXXXX")
   trap 'rm -f "$TMPOUT"' EXIT
 
-  cat "$LEGACY_FILE" | bun -e "
-    const lines = (await Bun.stdin.text()).trim().split('\n').filter(Boolean);
+  cat "$LEGACY_FILE" | "$SCRIPT_DIR/gstack-js" -e "
+    const lines = (readStdin()).trim().split('\n').filter(Boolean);
     const sessions = [];
     const signalsAcc = {};
     const resources = new Set();
@@ -120,7 +120,7 @@ do_migrate() {
   mv "$LEGACY_FILE" "$LEGACY_FILE.migrated-$TS"
 
   local COUNT
-  COUNT=$(PROFILE_FILE_PATH="$PROFILE_FILE" bun -e "console.log(JSON.parse(require('fs').readFileSync(process.env.PROFILE_FILE_PATH,'utf-8')).sessions.length)" 2>/dev/null || echo "?")
+  COUNT=$(PROFILE_FILE_PATH="$PROFILE_FILE" "$SCRIPT_DIR/gstack-js" -e "console.log(JSON.parse(require('fs').readFileSync(process.env.PROFILE_FILE_PATH,'utf-8')).sessions.length)" 2>/dev/null || echo "?")
   echo "MIGRATE: ok — migrated $COUNT sessions from builder-profile.jsonl"
 }
 
@@ -177,8 +177,8 @@ do_log_session() {
   fi
 
   # Validate: input must be parseable JSON with required fields (date, mode).
-  if ! printf '%s' "$INPUT" | bun -e "
-    const j = JSON.parse(await Bun.stdin.text());
+  if ! printf '%s' "$INPUT" | "$SCRIPT_DIR/gstack-js" -e "
+    const j = JSON.parse(readStdin());
     if (!j.date || !j.mode) process.exit(1);
   " 2>/dev/null; then
     return 0
@@ -190,7 +190,7 @@ do_log_session() {
   TMPOUT=$(mktemp "$GSTACK_HOME/developer-profile.json.tmp.XXXXXX")
   trap 'rm -f "$TMPOUT"' EXIT
 
-  PROFILE_FILE_PATH="$PROFILE_FILE" RECORD_INPUT="$INPUT" TMPOUT_PATH="$TMPOUT" bun -e "
+  PROFILE_FILE_PATH="$PROFILE_FILE" RECORD_INPUT="$INPUT" TMPOUT_PATH="$TMPOUT" "$SCRIPT_DIR/gstack-js" -e "
     const fs = require('fs');
     const entry = JSON.parse(process.env.RECORD_INPUT);
     if (!entry.ts) entry.ts = new Date().toISOString();
@@ -226,8 +226,8 @@ do_log_session() {
 # -----------------------------------------------------------------------
 do_read() {
   ensure_profile
-  cat "$PROFILE_FILE" | bun -e "
-    const p = JSON.parse(await Bun.stdin.text());
+  cat "$PROFILE_FILE" | "$SCRIPT_DIR/gstack-js" -e "
+    const p = JSON.parse(readStdin());
     const sessions = p.sessions || [];
 
     // SESSION_COUNT / TIER / CROSS_PROJECT / NUDGE must reflect real sessions, not
@@ -298,8 +298,8 @@ do_profile() {
 # -----------------------------------------------------------------------
 do_gap() {
   ensure_profile
-  cat "$PROFILE_FILE" | bun -e "
-    const p = JSON.parse(await Bun.stdin.text());
+  cat "$PROFILE_FILE" | "$SCRIPT_DIR/gstack-js" -e "
+    const p = JSON.parse(readStdin());
     const declared = p.declared || {};
     const inferred = (p.inferred && p.inferred.values) || {};
     const dims = ['scope_appetite','risk_tolerance','detail_preference','autonomy','architecture_care'];
@@ -327,7 +327,7 @@ do_derive() {
   fi
 
   cd "$ROOT_DIR"
-  PROFILE_FILE_PATH="$PROFILE_FILE" EVENTS_PATH="$EVENTS" bun -e "
+  PROFILE_FILE_PATH="$PROFILE_FILE" EVENTS_PATH="$EVENTS" "$SCRIPT_DIR/gstack-js" -e "
     import('./scripts/question-registry.ts').then(async (regmod) => {
       const sigmod = await import('./scripts/psychographic-signals.ts');
       const fs = require('fs');
@@ -410,7 +410,7 @@ do_trace() {
     return 0
   fi
   cd "$ROOT_DIR"
-  EVENTS_PATH="$EVENTS" TRACE_DIM="$DIM" bun -e "
+  EVENTS_PATH="$EVENTS" TRACE_DIM="$DIM" "$SCRIPT_DIR/gstack-js" -e "
     import('./scripts/question-registry.ts').then(async (regmod) => {
       const sigmod = await import('./scripts/psychographic-signals.ts');
       const fs = require('fs');
@@ -448,8 +448,8 @@ do_trace() {
 # -----------------------------------------------------------------------
 do_check_mismatch() {
   ensure_profile
-  cat "$PROFILE_FILE" | bun -e "
-    const p = JSON.parse(await Bun.stdin.text());
+  cat "$PROFILE_FILE" | "$SCRIPT_DIR/gstack-js" -e "
+    const p = JSON.parse(readStdin());
     const declared = p.declared || {};
     const inferred = (p.inferred && p.inferred.values) || {};
     const sampleSize = (p.inferred && p.inferred.sample_size) || 0;
@@ -492,7 +492,7 @@ do_narrative() {
 do_vibe() {
   ensure_profile
   cd "$ROOT_DIR"
-  cat "$PROFILE_FILE" | PROFILE_DATA="$(cat "$PROFILE_FILE")" bun -e "
+  cat "$PROFILE_FILE" | PROFILE_DATA="$(cat "$PROFILE_FILE")" "$SCRIPT_DIR/gstack-js" -e "
     import('./scripts/archetypes.ts').then(async (mod) => {
       const p = JSON.parse(process.env.PROFILE_DATA);
       const dims = (p.inferred && p.inferred.values) || {

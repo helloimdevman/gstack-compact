@@ -3,7 +3,7 @@ import * as path from 'path';
 import type { ResolverFn } from './types';
 import type { SkillProfile } from '../host-config';
 
-const MAP_PATH = path.resolve(import.meta.dir, '../../gstack/router-map.json');
+const MAP_PATH = path.resolve(import.meta.dirname, '../../gstack/router-map.json');
 const ID = /^[a-z][a-z0-9-]*$/;
 const COMMAND = /^\/[a-z][a-z0-9-]*$/;
 

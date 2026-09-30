@@ -1,4 +1,5 @@
-#!/usr/bin/env bun
+#!/bin/sh
+':' //; exec "$(dirname "$0")/gstack-js" "$0" "$@"
 /**
  * gstack-issue-guard — fetch tracker text and emit it inside the untrusted
  * trust envelope (lib/tracker-guard.ts). The ONLY sanctioned path for reading
@@ -20,6 +21,7 @@
  */
 
 import { spawnSync } from "child_process";
+import { readFileSync } from "node:fs";
 import { wrapUntrustedTrackerContent } from "../lib/tracker-guard";
 import { flagValue } from "../lib/bin-context";
 
@@ -41,7 +43,7 @@ const [, , mode, ...rest] = process.argv;
 
 if (mode === "--stdin") {
   const source = flagValue(rest, "--source");
-  const text = await Bun.stdin.text();
+  const text = readFileSync(0, 'utf8');
   console.log(wrapUntrustedTrackerContent(text, source ?? "stdin"));
   process.exit(0);
 }

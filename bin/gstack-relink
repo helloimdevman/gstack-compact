@@ -39,15 +39,15 @@ PREFIX=$("$GSTACK_CONFIG" get skill_prefix 2>/dev/null || echo "false")
 # Keep the old render path only for ownership checks during upgrades.
 RENDER_DIR="${GSTACK_USER_RENDER_DIR:-${GSTACK_HOME:-$HOME/.gstack}/render/claude}"
 
-if [ -f "$INSTALL_DIR/.gstack-install.json" ] && command -v bun >/dev/null 2>&1; then
-  CORE_INFO="$(bun -e 'const d=JSON.parse(await Bun.file(process.argv[1]).text()); if(d.version===1 && d.host==="claude" && ["core","compat"].includes(d.skillProfile)) process.stdout.write([d.sourceRoot,d.generationModel,d.skillProfile].join("\t"))' "$INSTALL_DIR/.gstack-install.json")"
+if [ -f "$INSTALL_DIR/.gstack-install.json" ] && command -v "${GSTACK_NODE_BIN:-node}" >/dev/null 2>&1; then
+  CORE_INFO="$("$SCRIPT_DIR/gstack-js" -e 'const d=JSON.parse(require("node:fs").readFileSync(process.argv[1], "utf8")); if(d.version===1 && d.host==="claude" && ["core","compat"].includes(d.skillProfile)) process.stdout.write([d.sourceRoot,d.generationModel,d.skillProfile].join("\t"))' "$INSTALL_DIR/.gstack-install.json")"
   if [ -n "$CORE_INFO" ]; then
     IFS=$'\t' read -r CORE_SOURCE CORE_MODEL CORE_PROFILE <<< "$CORE_INFO"
     CORE_ARGS=("$CORE_SOURCE/scripts/install-core-profile.ts" --host claude
       --source-root "$CORE_SOURCE" --skills-dir "$SKILLS_DIR"
       --state-root "${GSTACK_HOME:-$HOME/.gstack}/render/$CORE_PROFILE/claude" --model "$CORE_MODEL" --profile "$CORE_PROFILE")
     if [ "$PREFIX" = true ]; then CORE_ARGS+=(--prefix); fi
-    bun "${CORE_ARGS[@]}"
+    "$SCRIPT_DIR/gstack-js" "${CORE_ARGS[@]}"
     exit 0
   fi
 fi

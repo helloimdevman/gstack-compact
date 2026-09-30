@@ -22,7 +22,7 @@ import * as path from 'path';
 import type { ResolverFn, TemplateContext } from './types';
 import { getHostConfig } from '../../hosts';
 
-const ROOT = path.resolve(import.meta.dir, '..', '..');
+const ROOT = path.resolve(import.meta.dirname, '..', '..');
 
 interface SectionEntry {
   id: string;

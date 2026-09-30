@@ -176,15 +176,15 @@ fi
   if [ "$OLD_HEAD" != "$NEW_HEAD" ]; then
     log_entry "UPDATING old=$OLD_HEAD new=$NEW_HEAD"
 
-    # bun must be available for setup
-    if command -v bun >/dev/null 2>&1; then
+    # Node.js must be available for setup
+    if command -v "${GSTACK_NODE_BIN:-node}" >/dev/null 2>&1; then
       ( cd "$GSTACK_DIR" && ./setup -q ) >/dev/null 2>&1 || {
         log_entry "SETUP_FAILED"
       }
       # Heartbeat: setup done (either way) — refresh the TTL clock.
       touch "$LOCK_DIR/pid" 2>/dev/null
     else
-      log_entry "SETUP_SKIPPED bun_missing"
+      log_entry "SETUP_SKIPPED node_missing"
     fi
 
     # Write marker so next skill preamble shows "just upgraded"

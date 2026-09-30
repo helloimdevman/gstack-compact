@@ -38,7 +38,7 @@ function run(args: string[], file = settings) {
 
 function runWithRealpathFailure(args: string[], code: string, afterTemp = false) {
   const fakeBin = path.join(root, 'bin');
-  const preload = path.join(root, 'realpath-permission.ts');
+  const preload = path.join(root, 'realpath-permission.cjs');
   fs.mkdirSync(fakeBin);
   fs.writeFileSync(preload, `const fs = require('fs');
 const original = fs.realpathSync;
@@ -49,9 +49,12 @@ fs.realpathSync = (file, ...args) => {
   return original(file, ...args);
 };
 `);
-  fs.writeFileSync(path.join(fakeBin, 'bun'), '#!/bin/sh\nexec "$ACTUAL_BUN" --preload "$FS_PROBE" "$@"\n', { mode: 0o755 });
+  const actualNode = Bun.which(process.env.GSTACK_NODE_BIN ?? 'node');
+  if (!actualNode) throw new Error('Node.js is required for the permission fixture');
+  const fakeNode = path.join(fakeBin, 'node');
+  fs.writeFileSync(fakeNode, '#!/bin/sh\nexec "$ACTUAL_NODE" --require "$FS_PROBE" "$@"\n', { mode: 0o755 });
   return spawnSync('bash', [hook, ...args], {
-    env: { ...env(), PATH: fakeBin + path.delimiter + process.env.PATH, ACTUAL_BUN: process.execPath, FS_PROBE: preload },
+    env: { ...env(), GSTACK_NODE_BIN: fakeNode, ACTUAL_NODE: actualNode, FS_PROBE: preload },
     encoding: 'utf8', timeout: 10_000,
   });
 }

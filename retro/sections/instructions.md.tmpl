@@ -395,16 +395,18 @@ Locate and run the discovery script using this fallback chain:
 DISCOVER_BIN=""
 [ -x ~/.claude/skills/gstack/bin/gstack-global-discover ] && DISCOVER_BIN=~/.claude/skills/gstack/bin/gstack-global-discover
 [ -z "$DISCOVER_BIN" ] && [ -x .claude/skills/gstack/bin/gstack-global-discover ] && DISCOVER_BIN=.claude/skills/gstack/bin/gstack-global-discover
+[ -z "$DISCOVER_BIN" ] && [ -x ~/.claude/skills/gstack/bin/gstack-global-discover.ts ] && DISCOVER_BIN=~/.claude/skills/gstack/bin/gstack-global-discover.ts
+[ -z "$DISCOVER_BIN" ] && [ -x .claude/skills/gstack/bin/gstack-global-discover.ts ] && DISCOVER_BIN=.claude/skills/gstack/bin/gstack-global-discover.ts
 [ -z "$DISCOVER_BIN" ] && which gstack-global-discover >/dev/null 2>&1 && DISCOVER_BIN=$(which gstack-global-discover)
-[ -z "$DISCOVER_BIN" ] && [ -f bin/gstack-global-discover.ts ] && DISCOVER_BIN="bun run bin/gstack-global-discover.ts"
+[ -z "$DISCOVER_BIN" ] && [ -f bin/gstack-global-discover.ts ] && DISCOVER_BIN="bin/gstack-global-discover.ts"
 echo "DISCOVER_BIN: $DISCOVER_BIN"
 ```
 
-If no binary is found, tell the user: "Discovery script not found. Run `bun run build` in the gstack directory to compile it." and stop.
+If no binary is found, tell the user: "Discovery script not found. Rerun `./setup` in the gstack directory to restore it." and stop.
 
 Run the discovery:
 ```bash
-$DISCOVER_BIN --since "<window>" --format json 2>/tmp/gstack-discover-stderr
+"$DISCOVER_BIN" --since "<window>" --format json 2>/tmp/gstack-discover-stderr
 ```
 
 Read the stderr output from `/tmp/gstack-discover-stderr` for diagnostic info. Parse the JSON output from stdout.

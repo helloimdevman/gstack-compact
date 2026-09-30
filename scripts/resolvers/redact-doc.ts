@@ -56,7 +56,7 @@ Scan-at-sink on the EXACT bytes that will be sent: write to a temp file, scan th
 file, pass the SAME file downstream. Never scan a string then re-render it.
 
 \`\`\`bash
-command -v bun >/dev/null 2>&1 || echo "redaction scan skipped — bun not on PATH"
+command -v node >/dev/null 2>&1 || { echo "redaction blocked — Node.js not on PATH" >&2; exit 1; }
 # Resolve visibility once; cache + reuse. Order: local config (~/.gstack, never
 # committed) → gh → glab → unknown(=public-strict).
 REDACT_VIS=$(~/.claude/skills/gstack/bin/gstack-config get redact_repo_visibility 2>/dev/null)

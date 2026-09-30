@@ -11,6 +11,8 @@ import * as fs from 'fs';
 import * as path from 'path';
 import * as os from 'os';
 import { spawnSync } from 'child_process';
+import { createServer } from 'node:http';
+import { once } from 'node:events';
 
 const ROOT = path.resolve(import.meta.dir, '..');
 const BIN = path.join(ROOT, 'bin', 'gstack-distill-free-text');
@@ -191,6 +193,43 @@ describe('API auth', () => {
     expect(res.status).not.toBe(0);
     expect(res.stderr).toMatch(/ANTHROPIC_API_KEY/);
     expect(res.stderr).toMatch(/separate billing/);
+  });
+
+  test('native HTTP writes filtered proposals and rejects HTTP errors without the SDK', async () => {
+    writeAuqOtherEvent('Always include tests');
+    let status = 200;
+    let request: any;
+    const server = createServer(async (incoming, outgoing) => {
+      let body = '';
+      for await (const chunk of incoming) body += chunk;
+      request = { path: incoming.url, headers: incoming.headers, body: JSON.parse(body) };
+      outgoing.writeHead(status, { 'content-type': 'application/json' });
+      outgoing.end(JSON.stringify({ content: [{ type: 'text', text: JSON.stringify({ proposals: [
+        { key: 'tests', confidence: 0.9 }, { key: 'discard', confidence: 0.2 },
+      ] }) }], usage: { input_tokens: 10, output_tokens: 20 } }));
+    });
+    server.listen(0, '127.0.0.1');
+    await once(server, 'listening');
+    try {
+      const env = makeEnv({ ANTHROPIC_API_KEY: 'local-fixture', ANTHROPIC_BASE_URL: `http://127.0.0.1:${(server.address() as any).port}/` });
+      const invoke = async () => {
+        const child = Bun.spawn([BIN], { cwd: fixtureCwd, env, stdout: 'pipe', stderr: 'pipe' });
+        const [stdout, stderr, code] = await Promise.all([new Response(child.stdout).text(), new Response(child.stderr).text(), child.exited]);
+        return { stdout, stderr, code };
+      };
+      const ok = await invoke();
+      expect(ok.code, ok.stderr).toBe(0);
+      expect(ok.stdout).toContain('"proposals_count":1');
+      expect(request.path).toBe('/v1/messages');
+      expect(request.headers['anthropic-version']).toBe('2023-06-01');
+      expect(request.headers['x-api-key']).toBe('local-fixture');
+      expect(request.body.max_tokens).toBe(4096);
+      status = 429;
+      writeAuqOtherEvent('Another response for the HTTP error control');
+      const rejected = await invoke();
+      expect(rejected.code).not.toBe(0);
+      expect(rejected.stderr).toContain('provider returned HTTP 429');
+    } finally { server.close(); server.closeAllConnections(); }
   });
 });
 

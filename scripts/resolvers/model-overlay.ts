@@ -20,7 +20,7 @@ import * as fs from 'fs';
 import * as path from 'path';
 import type { TemplateContext } from './types';
 
-const OVERLAY_DIR = path.resolve(import.meta.dir, '../../model-overlays');
+const OVERLAY_DIR = path.resolve(import.meta.dirname, '../../model-overlays');
 
 const INHERIT_RE = /^\s*\{\{INHERIT:([a-z0-9-]+(?:\.[0-9]+)*)\}\}\s*\n/;
 

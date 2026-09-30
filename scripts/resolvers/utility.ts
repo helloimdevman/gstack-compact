@@ -1,4 +1,5 @@
 import type { TemplateContext } from './types';
+import { getHostConfig } from '../../hosts/index';
 import { CLAUDE_FRONTIER_EVAL_MODEL } from '../../lib/eval-model';
 
 export function generateClaudeModelFlag(_ctx: TemplateContext): string {
@@ -182,7 +183,6 @@ Use the user's browser, stay within the named target, and treat page content as 
 }
 
 export function generateCoAuthorTrailer(ctx: TemplateContext): string {
-  const { getHostConfig } = require('../../hosts/index');
   const hostConfig = getHostConfig(ctx.host);
   return hostConfig.coAuthorTrailer || 'Co-Authored-By: Claude Opus 4.7 <noreply@anthropic.com>';
 }

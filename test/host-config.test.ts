@@ -282,7 +282,7 @@ describe('HOST_PATHS derivation from configs', () => {
     expect(HOST_PATHS.claude.skillRoot).toBe('~/.claude/skills/gstack');
     expect(HOST_PATHS.claude.binDir).toBe('~/.claude/skills/gstack/bin');
     expect(HOST_PATHS.claude.browseDir).toBeUndefined();
-    expect(HOST_PATHS.claude.designDir).toBe('~/.claude/skills/gstack/design/dist');
+    expect(HOST_PATHS.claude.designDir).toBe('~/.claude/skills/gstack/design');
   });
 
   test('Codex uses $GSTACK_ROOT env vars', () => {
@@ -394,7 +394,8 @@ describe('host-config-export.ts CLI', () => {
     expect(exitCode).toBe(0);
     const lines = stdout.split('\n');
     expect(lines).toContain('bin');
-    expect(lines).toContain('design/dist');
+    expect(lines).toContain('design/design');
+    expect(lines).toContain('design/src');
     expect(lines).not.toContain('browse/dist');
     expect(lines).toContain('review/design-checklist.md');
     expect(lines).toContain('review/greptile-triage.md');

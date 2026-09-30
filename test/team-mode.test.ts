@@ -378,19 +378,21 @@ describe('setup --team / --no-team / -q', () => {
       // Only installation/generation prerequisites are stubbed. The model
       // resolver, flag parser, logging, skill registration and completion run
       // unchanged. Unexpected commands (including a build) fail the test.
-      fs.writeFileSync(path.join(commands, 'bun'), `#!/usr/bin/env bash
+      fs.mkdirSync(path.join(cwd, 'node_modules'), { recursive: true });
+      fs.cpSync(path.join(ROOT, 'node_modules/smol-toml'), path.join(cwd, 'node_modules/smol-toml'), { recursive: true });
+      write('bin/gstack-js', `#!/usr/bin/env bash
 case "$*" in
-  'install --frozen-lockfile'|'install --production --frozen-lockfile') exit 0 ;;
-  'build --help') echo 'Fixture Bun has no CSO compile flags'; exit 0 ;;
+  '-e ') exit 0 ;;
   *'/bin/gstack-migrate-claude-code --install-dir '*)
     [[ "$#" -eq 5 && "$2" = --install-dir && "$4" = --skills-dir ]] || exit 90
     exit 0 ;;
-  'run gen:skill-docs --host codex --model gpt-6-astra') mkdir -p .agents/skills; exit 0 ;;
-  'run gen:skill-docs --host claude --model claude') exit 0 ;;
-  'run scripts/resolve-codex-generation-model.ts') exec ${quote(process.execPath)} "$@" ;;
+  'scripts/gen-skill-docs.ts --host codex --model gpt-6-astra') mkdir -p .agents/skills; exit 0 ;;
+  'scripts/gen-skill-docs.ts --host claude --model claude') exit 0 ;;
+  'scripts/resolve-codex-generation-model.ts') exec ${quote(process.execPath)} "$@" ;;
   *) echo "Unexpected setup prerequisite: $*" >&2; exit 90 ;;
 esac
-`, { mode: 0o755 });
+`);
+      fs.writeFileSync(path.join(commands, 'npm'), '#!/bin/sh\n[ "$*" = "ci --omit=dev --ignore-scripts --no-audit --no-fund" ]\n', { mode: 0o755 });
       // setup's legacy cache cleanup uses this absolute path even with a
       // private HOME/TMPDIR. Leave the shared cache untouched in this fixture.
       const realRm = Bun.which('rm');

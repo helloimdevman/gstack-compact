@@ -15,7 +15,7 @@
 
 ## 설치
 
-Git과 [Bun](https://bun.sh/)을 준비하고, 이 저장소를 AI 도구의 스킬 디렉터리 밖에 체크아웃한 뒤 저장소 루트에서 실행합니다.
+Git과 [Node.js](https://nodejs.org/) 24.2 이상(npm 포함)을 준비하고, 이 저장소를 AI 도구의 스킬 디렉터리 밖에 체크아웃한 뒤 저장소 루트에서 실행합니다.
 
 ```bash
 # Claude Code: /gstack-plan, /gstack-build, /gstack-verify 등
@@ -24,6 +24,8 @@ Git과 [Bun](https://bun.sh/)을 준비하고, 이 저장소를 AI 도구의 스
 # Codex: $gstack-plan, $gstack-build, $gstack-verify 등
 ./setup --host codex --skill-profile core
 ```
+
+Bun은 설치·사용에 필요하지 않습니다. 설치 시 npm으로 실행용 의존성만 받으며 별도 빌드는 하지 않습니다. 저장소 개발과 테스트에는 Bun을 사용합니다.
 
 설치 후 새 세션을 시작하세요. 기존 gstack과 설치 이름·상태 경로를 공유하므로 함께 설치할 때는 등록 위치와 이름을 확인해야 합니다. Claude Code에서 짧은 이름을 원하면 `--no-prefix`를 지정할 수 있지만 `/plan`과 `/context`가 내장 명령과 겹칩니다.
 
@@ -49,7 +51,7 @@ Codex에서는 `$gstack-` 접두사를 사용합니다. 예를 들어 Claude의 
 
 ## 검증
 
-2026-09-29 기준 전체 무료 테스트(`bun run test`)는 **18,180 통과 / 0 실패 / 1 건너뜀**입니다. 빌드와 생성 문서 검사, 자격증명 검사도 통과했습니다.
+2026-09-30 기준 전체 무료 테스트(`bun run test`)는 **18,192 통과 / 0 실패 / 1 건너뜀**입니다. 빌드와 생성 문서 검사, 자격증명 검사도 통과했습니다. Bun 없는 Node.js 24.2 환경에서 Claude Code/Codex 설치와 로컬 도우미 실행도 확인했습니다.
 
 이 포크의 “가벼움”은 기본 설치에서 등록하는 명령과 처음 읽는 지침의 범위를 뜻합니다. 원본 대비 토큰 사용량·실행 속도·성공률의 정량적 개선을 주장하지 않습니다.
 

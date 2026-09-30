@@ -16,7 +16,7 @@ describe('setup: --help flag (#1133)', () => {
   test('setup script short-circuits on -h/--help before env checks', () => {
     const content = fs.readFileSync(SETUP_SCRIPT, 'utf-8');
     const helpIdx = content.search(/-h\|--help\)\s*usage;\s*exit 0/);
-    const bunCheckIdx = content.indexOf('command -v bun');
+    const bunCheckIdx = content.indexOf('command -v "${GSTACK_NODE_BIN:-node}"');
     expect(helpIdx).toBeGreaterThan(-1);
     expect(bunCheckIdx).toBeGreaterThan(-1);
     // --help must be handled before the bun availability check so the flag
@@ -157,7 +157,7 @@ date() { echo 'unexpected backup timestamp' >&2; return 97; }
       expect(res.error).toBeUndefined();
       expect(res.status).toBe(1);
       expect(fs.readFileSync(observed, 'utf8')).toBe('preflight:codex:1:0:1:second:1\n');
-      expect(res.stderr).toContain('Error: bun is required but not installed.');
+      expect(res.stderr).toContain('Error: Node.js 24.2+ and npm are required.');
     } finally { fs.rmSync(temporary, { recursive: true, force: true }); }
   });
 

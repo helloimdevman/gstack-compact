@@ -8,8 +8,8 @@ The Markdown-to-print-HTML helper is included with gstack. It does not launch a 
 \`\`\`bash
 _ROOT=$(git rev-parse --show-toplevel 2>/dev/null)
 P=""
-[ -n "$_ROOT" ] && [ -f "$_ROOT/${ctx.paths.localSkillRoot}/lib/gstack-markdown-html.js" ] && P="$_ROOT/${ctx.paths.localSkillRoot}/lib/gstack-markdown-html.js"
-[ -z "$P" ] && P="${toShellPath(ctx.paths.skillRoot)}/lib/gstack-markdown-html.js"
+[ -n "$_ROOT" ] && [ -f "$_ROOT/${ctx.paths.localSkillRoot}/bin/gstack-markdown-html" ] && P="$_ROOT/${ctx.paths.localSkillRoot}/bin/gstack-markdown-html"
+[ -z "$P" ] && P="${toShellPath(ctx.paths.skillRoot)}/bin/gstack-markdown-html"
 [ -f "$P" ] && echo "PRINT_HTML_READY: $P" || echo "PRINT_HTML_UNAVAILABLE"
 \`\`\`
 

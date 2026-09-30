@@ -101,7 +101,7 @@ export function generateAutoplanReviewFile(ctx: TemplateContext, args?: string[]
   // supply one complete source file; Claude supplies main plus its carved section.
   if (withSections) {
     const phase = skill === 'plan-devex-review' ? 'dx' : skill.split('-')[1]!;
-    return `\`methodologyPath\` from \`bun "<SNAPSHOT_TOOL>" methodology ${phase} "<REVIEW_SKILL>" "<RESTORE_PATH>"\``;
+    return `\`methodologyPath\` from \`"<SNAPSHOT_TOOL>" methodology ${phase} "<REVIEW_SKILL>" "<RESTORE_PATH>"\``;
   }
   if (ctx.host === 'claude') return `\`${ctx.paths.skillRoot}/${skill}/SKILL.md\``;
 
@@ -119,6 +119,6 @@ export function generateAutoplanReviewFile(ctx: TemplateContext, args?: string[]
 /** Resolve once to a literal path; later phase commands run in fresh shells. */
 export function generateAutoplanSnapshotTool(ctx: TemplateContext): string {
   return `\`\`\`bash
-bun -e 'console.log(require("fs").realpathSync(process.argv[1]))' "${toShellPath(ctx.paths.binDir)}/gstack-autoplan-snapshot.ts"
+${toShellPath(ctx.paths.binDir)}/gstack-js -e 'console.log(require("fs").realpathSync(process.argv[1]))' "${toShellPath(ctx.paths.binDir)}/gstack-autoplan-snapshot.ts"
 \`\`\``;
 }

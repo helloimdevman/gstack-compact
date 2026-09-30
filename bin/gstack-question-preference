@@ -73,7 +73,7 @@ do_check() {
   fi
   ensure_file
   cd "$ROOT_DIR"
-  PREF_FILE_PATH="$PREF_FILE" QID="$QID" QSUMMARY="$QSUMMARY" bun -e "
+  PREF_FILE_PATH="$PREF_FILE" QID="$QID" QSUMMARY="$QSUMMARY" "$SCRIPT_DIR/gstack-js" -e "
     import('./scripts/one-way-doors.ts').then((oneway) => {
       const fs = require('fs');
       const qid = process.env.QID;
@@ -148,9 +148,9 @@ do_write() {
 
   set +e
   local RESULT
-  RESULT=$(cd "$ROOT_DIR" && printf '%s' "$INPUT" | PREF_FILE_PATH="$PREF_FILE" EVENT_FILE_PATH="$EVENT_FILE" bun -e "
+  RESULT=$(cd "$ROOT_DIR" && printf '%s' "$INPUT" | PREF_FILE_PATH="$PREF_FILE" EVENT_FILE_PATH="$EVENT_FILE" "$SCRIPT_DIR/gstack-js" -e "
     const fs = require('fs');
-    const raw = await Bun.stdin.text();
+    const raw = readStdin();
     let j;
     try { j = JSON.parse(raw); } catch { process.stderr.write('gstack-question-preference: invalid JSON\n'); process.exit(1); }
 
@@ -264,7 +264,7 @@ do_clear() {
     echo '{}' > "$PREF_FILE"
     echo "OK: cleared all preferences"
   else
-    PREF_FILE_PATH="$PREF_FILE" QID="$QID" bun -e "
+    PREF_FILE_PATH="$PREF_FILE" QID="$QID" "$SCRIPT_DIR/gstack-js" -e "
       const fs = require('fs');
       const prefs = JSON.parse(fs.readFileSync(process.env.PREF_FILE_PATH, 'utf-8'));
       if (prefs[process.env.QID] !== undefined) {
@@ -283,7 +283,7 @@ do_clear() {
 # -----------------------------------------------------------------------
 do_stats() {
   ensure_file
-  (cd "$ROOT_DIR" && PREF_FILE_PATH="$PREF_FILE" bun -e "
+  (cd "$ROOT_DIR" && PREF_FILE_PATH="$PREF_FILE" "$SCRIPT_DIR/gstack-js" -e "
     import('./scripts/one-way-doors.ts').then((oneway) => {
       const fs = require('fs');
       const prefs = JSON.parse(fs.readFileSync(process.env.PREF_FILE_PATH, 'utf-8'));

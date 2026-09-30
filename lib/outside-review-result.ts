@@ -32,7 +32,7 @@ if (import.meta.main) {
   const [gate, path] = process.argv.slice(2);
   if (!['review', 'structured', 'spec'].includes(gate) || !path) { console.error('Usage: outside-review-result.ts review|structured|spec <response-file>'); process.exit(2); }
   try {
-    const result = validateOutsideReview(await Bun.file(path).text(), gate as OutsideGate);
+    const result = validateOutsideReview((await import('node:fs')).readFileSync(path, 'utf8'), gate as OutsideGate);
     if (!result.completed) { console.error(`Outside review unavailable: ${result.reason}; missing coverage.`); process.exit(1); }
   } catch (error) { console.error(`Outside review unavailable: ${error}`); process.exit(1); }
 }

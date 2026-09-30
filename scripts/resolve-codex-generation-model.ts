@@ -3,6 +3,7 @@
 import * as fs from 'fs';
 import * as os from 'os';
 import * as path from 'path';
+import { parse as parseToml } from 'smol-toml';
 import { ALL_MODEL_NAMES, resolveModel, type Model } from './models';
 
 export interface CodexGenerationModelResolution {
@@ -76,7 +77,7 @@ export function resolveCodexGenerationModel(opts: {
 
   let parsed: Record<string, unknown>;
   try {
-    parsed = Bun.TOML.parse(raw) as Record<string, unknown>;
+    parsed = parseToml(raw) as Record<string, unknown>;
   } catch {
     return fallback(`Could not parse ${sanitize(configPath)}; using Codex default ${CODEX_DEFAULT_MODEL}.`);
   }

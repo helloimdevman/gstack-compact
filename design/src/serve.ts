@@ -42,6 +42,7 @@ import fs from "fs";
 import os from "os";
 import path from "path";
 import { spawn } from "child_process";
+import { serveHttp } from '../../lib/http-server';
 
 export interface ServeOptions {
   html: string;
@@ -69,7 +70,7 @@ export async function serve(options: ServeOptions): Promise<void> {
   let state: ServerState = "serving";
   let timeoutTimer: ReturnType<typeof setTimeout> | null = null;
 
-  const server = Bun.serve({
+  const server = await serveHttp({
     port,
     hostname,
     fetch(req) {

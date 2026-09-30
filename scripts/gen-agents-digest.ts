@@ -26,7 +26,7 @@
 import * as fs from 'fs';
 import * as path from 'path';
 
-const ROOT = path.resolve(import.meta.dir, '..');
+const ROOT = path.resolve(import.meta.dirname, '..');
 // Repo-relative with FORWARD slashes on every platform: this constant is
 // compared against literals in shell scripts, host configs, and docs (the
 // wiring test), where a Windows path.join backslash form would never match.

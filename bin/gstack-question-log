@@ -28,7 +28,7 @@
 set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 # Windows git-bash (#1950): pwd yields a POSIX path (/c/Users/...), which Bun
-# on Windows cannot resolve as an ES module specifier in bun -e imports.
+# on Windows cannot resolve as an ES module specifier in "$SCRIPT_DIR/gstack-js" -e imports.
 # cygpath -m converts to C:/Users/... which Bun accepts.
 case "$(uname -s)" in
   MINGW*|MSYS*|CYGWIN*) command -v cygpath >/dev/null 2>&1 && SCRIPT_DIR="$(cygpath -m "$SCRIPT_DIR")" ;;
@@ -44,10 +44,10 @@ INPUT="$1"
 TMPERR=$(mktemp)
 trap 'rm -f "$TMPERR"' EXIT
 set +e
-VALIDATED=$(printf '%s' "$INPUT" | GSTACK_LIB_DIR="$SCRIPT_DIR/../lib" bun -e "
-const { hasInjection } = await import(process.env.GSTACK_LIB_DIR + '/jsonl-store.ts');
+VALIDATED=$(printf '%s' "$INPUT" | GSTACK_LIB_DIR="$SCRIPT_DIR/../lib" "$SCRIPT_DIR/gstack-js" -e "
+const { hasInjection } = await import(require('node:url').pathToFileURL(process.env.GSTACK_LIB_DIR + '/jsonl-store.ts').href);
 const path = require('path');
-const raw = await Bun.stdin.text();
+const raw = readStdin();
 let j;
 try { j = JSON.parse(raw); } catch { process.stderr.write('gstack-question-log: invalid JSON\n'); process.exit(1); }
 
@@ -178,7 +178,7 @@ if (j.recommended !== undefined) {
 // recommended usually arrives pre-stripped while user_choice is the raw
 // option label, so a user who picked the recommended option was scored as
 // NOT following it (#2400). NB: this JS lives inside a double-quoted
-// bun -e string — never use double quotes in it.
+// "$SCRIPT_DIR/gstack-js" -e string — never use double quotes in it.
 if (j.recommended !== undefined && j.user_choice !== undefined && j.user_choice !== '__unknown__') {
   const stripRec = (s) => String(s).replace(/\s*\(recommended\)\s*$/i, '').trim();
   j.followed_recommendation = stripRec(j.user_choice) === stripRec(j.recommended);
@@ -216,7 +216,7 @@ LOG_FILE="$GSTACK_HOME/projects/$SLUG/question-log.jsonl"
 # Lookup is bounded so the bin stays cheap on hot paths.
 DEDUP_SKIP=""
 if [ -f "$LOG_FILE" ]; then
-  DEDUP_SKIP=$(VALIDATED_JSON="$VALIDATED" LOG_FILE_PATH="$LOG_FILE" bun -e '
+  DEDUP_SKIP=$(VALIDATED_JSON="$VALIDATED" LOG_FILE_PATH="$LOG_FILE" "$SCRIPT_DIR/gstack-js" -e '
     const fs = require("fs");
     const j = JSON.parse(process.env.VALIDATED_JSON);
     if (!j.tool_use_id) { console.log(""); process.exit(0); }
@@ -236,7 +236,7 @@ if [ -f "$LOG_FILE" ]; then
 fi
 
 if [ "$DEDUP_SKIP" = "dup" ]; then
-  echo "DEDUP: skipped (source=$(echo "$VALIDATED" | bun -e 'const j=JSON.parse(await Bun.stdin.text()); console.log(j.source);'), tool_use_id duplicate)"
+  echo "DEDUP: skipped (source=$(echo "$VALIDATED" | "$SCRIPT_DIR/gstack-js" -e 'const j=JSON.parse(readStdin()); console.log(j.source);'), tool_use_id duplicate)"
   exit 0
 fi
 

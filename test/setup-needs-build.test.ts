@@ -2,53 +2,51 @@ import { expect, test } from 'bun:test';
 import * as fs from 'node:fs';
 import * as os from 'node:os';
 import * as path from 'node:path';
-import { runBashScript } from './helpers/bash-script';
+import { spawnSync } from 'node:child_process';
 
-const setup = fs.readFileSync(new URL('../setup', import.meta.url), 'utf8');
-const start = setup.indexOf('BUILD_STAMP=');
-const end = setup.indexOf('\nif [ "$NEEDS_BUILD" -eq 1 ]; then', start);
-if (start < 0 || end < 0) throw new Error('setup build decision block missing');
-const decision = setup.slice(start, end);
+const ROOT = path.resolve(import.meta.dir, '..');
 
-function write(file: string, time: Date, executable = false) {
-  fs.mkdirSync(path.dirname(file), { recursive: true });
-  fs.writeFileSync(file, file.endsWith('.build-complete') ? 'bun-source-v1\n' : 'fixture');
-  fs.chmodSync(file, executable ? 0o755 : 0o644);
-  fs.utimesSync(file, time, time);
-}
-
-test('setup rebuilds when a local tool is missing or a source is newer', () => {
-  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'gstack-build-decision-'));
+test.skipIf(process.platform === 'win32')('setup installs source CLIs without Bun or build artifacts', () => {
+  const temp = fs.mkdtempSync(path.join(os.tmpdir(), 'gstack-node-setup-'));
+  const source = path.join(temp, 'checkout');
+  const home = path.join(temp, 'home');
+  const bin = path.join(temp, 'bin');
   try {
-    const old = new Date('2024-01-01T00:00:00Z');
-    const stamp = new Date('2024-06-01T00:00:00Z');
-    const newer = new Date('2024-12-01T00:00:00Z');
-    for (const file of ['design/src/index.ts', 'bin/gstack-global-discover.ts', 'make-pdf/src/html.ts', 'lib/design-catalog.ts', 'package.json', 'bun.lock', 'scripts/build.sh']) write(path.join(root, file), old);
-    for (const file of ['design/dist/design', 'bin/gstack-global-discover']) write(path.join(root, file), old, true);
-    write(path.join(root, 'lib/gstack-markdown-html.js'), old);
-    write(path.join(root, 'design/dist/daemon.ts'), old);
-    write(path.join(root, 'design/dist/.build-complete'), stamp);
-    const decide = () => {
-      const result = runBashScript(`SOURCE_GSTACK_DIR="${root}"; IS_WINDOWS=0; ${decision}; echo "$NEEDS_BUILD"`, { timeout: 10_000 });
-      expect(result.status).toBe(0);
-      return result.stdout.trim();
-    };
-    expect(decide()).toBe('0');
-    fs.writeFileSync(path.join(root, 'design/dist/.build-complete'), 'complete\n');
-    expect(decide()).toBe('1');
-    write(path.join(root, 'design/dist/.build-complete'), stamp);
-    fs.unlinkSync(path.join(root, 'design/dist/daemon.ts'));
-    expect(decide()).toBe('1');
-    write(path.join(root, 'design/dist/daemon.ts'), old);
-    fs.unlinkSync(path.join(root, 'design/dist/design'));
-    expect(decide()).toBe('1');
-    write(path.join(root, 'design/dist/design'), old, true);
-    write(path.join(root, 'bin/gstack-global-discover.ts'), newer);
-    expect(decide()).toBe('1');
-    write(path.join(root, 'bin/gstack-global-discover.ts'), old);
-    write(path.join(root, 'lib/design-catalog.ts'), newer);
-    expect(decide()).toBe('1');
-  } finally {
-    fs.rmSync(root, { recursive: true });
-  }
-});
+    fs.cpSync(ROOT, source, { recursive: true, filter: file => {
+      const parts = path.relative(ROOT, file).split(path.sep);
+      return parts.join('/') !== 'bin/gstack-global-discover'
+        && !parts.some(part => part.startsWith('.') || ['node_modules', 'test', 'dist', 'docs'].includes(part));
+    } });
+    fs.mkdirSync(bin); fs.mkdirSync(home);
+    const node = Bun.which(process.env.GSTACK_NODE_BIN ?? 'node');
+    if (!node) throw new Error('Node.js is required for the installation regression');
+    fs.symlinkSync(node, path.join(bin, 'node'));
+    // Keep this free check offline: the registry install is stubbed and its
+    // exact contract asserted; copy the already locked production packages.
+    for (const name of ['marked', 'yaml', 'semver', 'smol-toml']) {
+      fs.cpSync(path.join(ROOT, 'node_modules', name), path.join(source, 'node_modules', name), { recursive: true });
+    }
+    fs.writeFileSync(path.join(bin, 'npm'), '#!/bin/sh\nprintf "%s\\n" "$@" > "$GSTACK_NPM_TRACE"\n', { mode: 0o755 });
+    const trace = path.join(temp, 'npm-args');
+    const env = { ...process.env, PATH: `${bin}:/usr/bin:/bin`, HOME: home, USERPROFILE: home,
+      CODEX_HOME: path.join(home, '.codex'), CLAUDE_CONFIG_DIR: path.join(home, '.claude'),
+      GSTACK_HOME: path.join(home, '.gstack'), GSTACK_STATE_ROOT: path.join(home, '.gstack'),
+      GSTACK_NODE_BIN: 'node', GSTACK_NPM_TRACE: trace };
+    const run = (args: string[]) => spawnSync('bash', ['setup', ...args], {
+      cwd: source, env, encoding: 'utf8', timeout: 30_000,
+    });
+    const noBun = spawnSync('bash', ['-c', 'command -v bun'], { env, encoding: 'utf8', timeout: 5_000 });
+    expect(noBun.status).not.toBe(0);
+    for (const host of ['claude', 'codex']) {
+      const installed = run(['--host', host, '--skill-profile', 'core', '--no-plan-tune-hooks']);
+      expect(installed.status, installed.stderr).toBe(0);
+      expect(fs.readFileSync(trace, 'utf8').trim().split('\n')).toEqual(['ci', '--omit=dev', '--ignore-scripts', '--no-audit', '--no-fund']);
+      const skills = path.join(home, host === 'codex' ? '.codex/skills' : '.claude/skills');
+      expect(fs.readdirSync(skills)).toHaveLength(11);
+      expect(fs.existsSync(path.join(skills, 'gstack/design/design'))).toBe(true);
+      expect(fs.existsSync(path.join(skills, 'gstack/bin/gstack-markdown-html'))).toBe(true);
+    }
+    expect(fs.existsSync(path.join(source, 'design/dist'))).toBe(false);
+    expect(fs.existsSync(path.join(source, 'bin/gstack-global-discover'))).toBe(false);
+  } finally { fs.rmSync(temp, { recursive: true, force: true }); }
+}, 60_000);

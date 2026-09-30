@@ -25,6 +25,7 @@
 //                 parsers that require `---` on line 1 keep working)
 //   legacy files: line 1 `<!-- gstack: design-md-format=legacy-keep -->`
 
+import { parse as parseYamlDocument } from "yaml";
 import { SENTINEL } from './design-detect-contract';
 
 export const CANONICAL_SECTIONS = [
@@ -102,8 +103,7 @@ function canonicalFor(heading: string): CanonicalSection | undefined {
 
 function parseYaml(text: string): { value: Record<string, unknown> | null; error?: string } {
   try {
-    const api = (Bun as unknown as { YAML?: { parse(s: string): unknown } }).YAML;
-    const v = api?.parse ? api.parse(text) : require('yaml').parse(text);
+    const v = parseYamlDocument(text);
     if (v === null || v === undefined) return { value: {} };
     if (typeof v !== 'object' || Array.isArray(v)) return { value: null, error: 'front matter is not a mapping' };
     return { value: v as Record<string, unknown> };

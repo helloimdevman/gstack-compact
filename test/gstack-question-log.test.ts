@@ -289,7 +289,7 @@ describe('gstack-question-log — shared injection patterns (#1934 dedup)', () =
     // '), so the import is dynamic. The invariant is unchanged: the shared
     // audited hasInjection from lib/jsonl-store.ts, never a local duplicate.
     expect(source).toContain(
-      "const { hasInjection } = await import(process.env.GSTACK_LIB_DIR + '/jsonl-store.ts');",
+      "const { hasInjection } = await import(require('node:url').pathToFileURL(process.env.GSTACK_LIB_DIR + '/jsonl-store.ts').href);",
     );
     expect(source).not.toContain('const INJECTION_PATTERNS');
   });

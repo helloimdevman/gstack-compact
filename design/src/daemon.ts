@@ -27,12 +27,13 @@
  * Both are Codex-flagged guards against silent loss of in-memory history.
  */
 
+import { serveHttp } from "../../lib/http-server";
 import fs from "fs";
 import path from "path";
 
 import {
   CMDLINE_MARKER,
-  DaemonState,
+  type DaemonState,
   readVersionString,
   removeStateFile,
   resolveDaemonLogPath,
@@ -84,7 +85,7 @@ const boardMutex = new Map<string, Promise<void>>();
 let lastMeaningfulActivity = Date.now();
 let idleExtensions = 0;
 let shuttingDown = false;
-let serverRef: ReturnType<typeof Bun.serve> | null = null;
+let serverRef: Awaited<ReturnType<typeof serveHttp>> | null = null;
 let idleInterval: ReturnType<typeof setInterval> | null = null;
 const startTime = Date.now();
 const daemonLog = openDaemonLog();
@@ -524,10 +525,10 @@ export async function fetchHandler(req: Request): Promise<Response> {
 
 // ─── Startup ─────────────────────────────────────────────────────
 
-export function start(): { port: number } {
+export async function start(): Promise<{ port: number }> {
   const portArg = process.env.DESIGN_DAEMON_PORT;
   const port = portArg ? parseInt(portArg, 10) : 0;
-  serverRef = Bun.serve({
+  serverRef = await serveHttp({
     port,
     hostname: "127.0.0.1",
     fetch: fetchHandler,
@@ -563,7 +564,7 @@ export function start(): { port: number } {
 }
 
 if (import.meta.main) {
-  start();
+  await start();
 }
 
 // Exported for tests. Keep this small and stable.

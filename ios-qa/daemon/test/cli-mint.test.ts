@@ -104,17 +104,17 @@ describe('bin/gstack-ios-qa-daemon launcher', () => {
     expect(mode).not.toBe(0);
   });
 
-  test('reports missing bun runtime cleanly', () => {
+  test('reports missing Node runtime cleanly', () => {
     // Simulate `bun` missing by giving PATH only /usr/bin + /bin (so bash
     // resolves but `command -v bun` does not). The launcher's preflight
     // check should fire BEFORE attempting to exec bun.
     const r = spawnSync(DAEMON_BIN, [], {
       stdio: 'pipe',
       encoding: 'utf-8',
-      env: { PATH: '/usr/bin:/bin' },
+      env: { PATH: '/usr/bin:/bin', GSTACK_NODE_BIN: 'gstack-test-missing-node-runtime' },
       timeout: 30_000,
     });
     expect(r.status).not.toBe(0);
-    expect(r.stderr).toContain('bun');
+    expect(r.stderr).toContain('Node.js runtime not on PATH');
   });
 });

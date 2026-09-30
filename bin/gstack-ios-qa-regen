@@ -51,8 +51,8 @@ if [[ ! -d "$APP_SOURCE" ]]; then
   exit 1
 fi
 
-if ! command -v bun >/dev/null 2>&1; then
-  echo "gstack-ios-qa-regen: bun runtime not on PATH — install from https://bun.sh" >&2
+if ! command -v "${GSTACK_NODE_BIN:-node}" >/dev/null 2>&1; then
+  echo "gstack-ios-qa-regen: Node.js runtime not on PATH — install from https://nodejs.org/" >&2
   exit 1
 fi
 
@@ -144,7 +144,7 @@ do
   fi
 done
 
-bun run "$GENERATOR" --input "$APP_SOURCE" --output "$GENERATED_DIR"
+"$SCRIPT_DIR/gstack-js" "$GENERATOR" --input "$APP_SOURCE" --output "$GENERATED_DIR"
 
 # Stamp only after successful accessor generation. ios-sync uses this marker
 # to distinguish a complete current install from an interrupted regeneration.

@@ -23,7 +23,7 @@ import { ALL_HOST_NAMES, resolveHostArg, getHostConfig } from '../hosts/index';
 import type { HostConfig, SkillProfile } from './host-config';
 import { loadRouterMap, validateRouterMap } from './resolvers/router-map';
 
-const ROOT = path.resolve(import.meta.dir, '..');
+const ROOT = path.resolve(import.meta.dirname, '..');
 import { ALL_MODEL_NAMES, resolveModel, type Model } from './models';
 
 type HostArg = Host | 'all';

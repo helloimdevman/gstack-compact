@@ -1,4 +1,5 @@
-#!/usr/bin/env bun
+#!/bin/sh
+':' //; exec "$(dirname "$0")/gstack-js" "$0" "$@"
 /**
  * gstack-design-detect — find, and run, an impeccable engine the USER installed.
  *
@@ -82,6 +83,7 @@
  * Non-sink: this spawns a third-party binary the user installed over local
  * paths; gstack does not audit that engine's network behavior (NOTICE.md).
  */
+import compareVersions from "semver/functions/compare.js";
 import * as fs from 'fs';
 import * as os from 'os';
 import * as path from 'path';
@@ -255,7 +257,7 @@ function strictSemver(name: string): string | null {
 }
 
 function versionOrder(a: { name: string; version: string | null }, b: { name: string; version: string | null }): number {
-  const order = a.version && b.version ? Bun.semver.order(b.version, a.version) : Number(!!b.version) - Number(!!a.version);
+  const order = a.version && b.version ? compareVersions(b.version, a.version) : Number(!!b.version) - Number(!!a.version);
   return order || (a.name < b.name ? -1 : a.name > b.name ? 1 : 0);
 }
 
@@ -894,17 +896,17 @@ function engineEnv(p: Probe): Record<string, string> {
 }
 
 function runEngine(p: Probe, engine: string, batch: string[], cwd: string, timeoutMs: number, extra: string[] = []): EngineRun {
-  const r = Bun.spawnSync([engine, 'detect', '--json', ...extra, ...batch], {
-    cwd, stdin: 'ignore', stdout: 'pipe', stderr: 'pipe', env: engineEnv(p),
+  const r = spawnSync(engine, ['detect', '--json', ...extra, ...batch], {
+    cwd, stdio: ['ignore', 'pipe', 'pipe'], env: engineEnv(p),
     timeout: timeoutMs, killSignal: 'SIGKILL', maxBuffer: DETECT_LIMITS.stdoutBytes + 1024,
   });
   const out = r.stdout ?? new Uint8Array();
   const tooLarge = out.byteLength > DETECT_LIMITS.stdoutBytes;
   return {
-    exit: r.exitCode ?? 1,
+    exit: r.status ?? 1,
     stdout: tooLarge ? '' : Buffer.from(out).toString('utf-8'),
     stderr: Buffer.from(r.stderr ?? new Uint8Array()).toString('utf-8'),
-    timedOut: Boolean((r as { exitedDueToTimeout?: boolean }).exitedDueToTimeout),
+    timedOut: r.error?.code === 'ETIMEDOUT',
     tooLarge,
   };
 }

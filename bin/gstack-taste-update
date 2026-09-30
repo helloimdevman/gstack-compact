@@ -1,4 +1,5 @@
-#!/usr/bin/env bun
+#!/bin/sh
+':' //; exec "$(dirname "$0")/gstack-js" "$0" "$@"
 // gstack-taste-update — update the persistent taste profile at
 // ~/.gstack/projects/$SLUG/taste-profile.json
 //

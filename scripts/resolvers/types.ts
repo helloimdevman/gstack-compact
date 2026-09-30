@@ -56,7 +56,7 @@ function buildHostPaths(): Record<string, HostPaths> {
         skillRoot: root,
         localSkillRoot: config.localSkillRoot,
         binDir: `${root}/bin`,
-        designDir: `${root}/design/dist`,
+        designDir: `${root}/design`,
       };
     }
   }

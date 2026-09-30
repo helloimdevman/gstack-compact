@@ -17,7 +17,7 @@ const fn = (name: string) => {
 const blockStart = setup.indexOf('# 6. Install for Kiro CLI');
 const block = setup.slice(blockStart, setup.indexOf('# 6b.', blockStart));
 const helpers = [
-  '_link_or_copy', '_sidecar_root_user_owned', '_claude_entry_is_ours',
+  '_link_or_copy', '_link_node_runtime_assets', '_sidecar_root_user_owned', '_claude_entry_is_ours',
   '_claude_entry_owned_strongly', '_gstack_link_target_abs', '_gstack_target_is_ours',
   '_gstack_generated_header', '_backup_skill_md', '_prune_stale_generated',
   '_skill_source_exists', '_owned_for_windows_refresh', '_cleanup_weak_dir',
@@ -47,7 +47,7 @@ describe.skipIf(process.platform === 'win32')('native Kiro setup installation', 
         const log = path.join(tmp, 'bun.log');
         const result = runBashScript([
           'set -e', helpers, 'log() { :; }', '_browser_hint() { :; }',
-          'bun_cmd() { printf "%s\\n" "$*" >> "$BUN_LOG"; }',
+          'js_cmd() { printf "%s\\n" "$*" >> "$BUN_LOG"; }',
           'INSTALL_KIRO=1', `IS_WINDOWS=${windowsCopy}`, 'BROWSE_BIN=unused',
           '_BACKED_UP_SKILL_MDS=()', '_SKILL_BACKUP_ROOT="$HOME/backups"',
           'KIRO_SKILLS="$HOME/.kiro/skills"', block,

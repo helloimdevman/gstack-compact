@@ -28,6 +28,7 @@
 import { spawn as nodeSpawn } from "child_process";
 import fs from "fs";
 import path from "path";
+import { fileURLToPath } from 'node:url';
 import { setTimeout as delay } from "timers/promises";
 
 import {
@@ -221,7 +222,7 @@ function readPackageVersion(): string {
 
 function defaultDaemonScript(): string {
   // daemon.ts is a sibling in both the source tree and the installed bundle.
-  return path.join(import.meta.dir, "daemon.ts");
+  return path.join(import.meta.dirname, "daemon.ts");
 }
 
 /**
@@ -235,7 +236,7 @@ function resolveSpawnCommand(scriptOverride: string | undefined): {
   const script = scriptOverride ?? defaultDaemonScript();
   return {
     command: process.execPath,
-    args: ["run", script, "--marker", CMDLINE_MARKER],
+    args: [...(process.versions.bun ? ['run'] : ['--disable-warning=ExperimentalWarning', '--import', fileURLToPath(new URL('../../lib/node-runtime.mjs', import.meta.url))]), script, "--marker", CMDLINE_MARKER],
   };
 }
 

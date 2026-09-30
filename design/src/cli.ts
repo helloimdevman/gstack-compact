@@ -1,4 +1,4 @@
-#!/usr/bin/env bun
+#!/usr/bin/env node
 /**
  * gstack design CLI — stateless CLI for AI-powered design generation.
  *
@@ -12,6 +12,10 @@
  *   4. Print result JSON to stdout
  */
 
+import { globSync } from "node:fs";
+import { spawnSync } from "node:child_process";
+import { createInterface } from "node:readline/promises";
+import path from "node:path";
 import { COMMANDS } from "./commands";
 import { generate } from "./generate";
 import { checkCommand } from "./check";
@@ -91,10 +95,10 @@ async function runSetup(): Promise<void> {
 
     // Read from stdin
     process.stdout.write("API key: ");
-    const reader = Bun.stdin.stream().getReader();
-    const { value } = await reader.read();
-    reader.releaseLock();
-    const key = new TextDecoder().decode(value).trim();
+    const reader = createInterface({ input: process.stdin });
+    const line = await reader[Symbol.asyncIterator]().next();
+    reader.close();
+    const key = (line.value ?? "").trim();
 
     if (!key || !key.startsWith("sk-")) {
       console.error("Invalid key. Must start with 'sk-'.");
@@ -183,8 +187,7 @@ async function main(): Promise<void> {
         process.exit(1);
       }
       console.error(`Generating implementation prompt from ${promptImage}...`);
-      const proc2 = Bun.spawn(["git", "rev-parse", "--show-toplevel"]);
-      const root = (await new Response(proc2.stdout).text()).trim();
+      const root = (spawnSync("git", ["rev-parse", "--show-toplevel"], { encoding: "utf8", timeout: 15000 }).stdout ?? "").trim();
       const d2c = await generateDesignToCodePrompt(promptImage, root || undefined);
       console.log(JSON.stringify(d2c, null, 2));
       break;
@@ -224,8 +227,7 @@ async function main(): Promise<void> {
       }
       console.error(`Extracting design language from ${imagePath}...`);
       const extracted = await extractDesignLanguage(imagePath);
-      const proc = Bun.spawn(["git", "rev-parse", "--show-toplevel"]);
-      const repoRoot = (await new Response(proc.stdout).text()).trim();
+      const repoRoot = (spawnSync("git", ["rev-parse", "--show-toplevel"], { encoding: "utf8", timeout: 15000 }).stdout ?? "").trim();
       if (repoRoot) {
         updateDesignMd(repoRoot, extracted, imagePath);
       }
@@ -392,9 +394,9 @@ async function resolveImagePaths(input: string): Promise<string[]> {
 
   // Check if it's a glob pattern
   if (input.includes("*")) {
-    const glob = new Bun.Glob(input);
     const paths: string[] = [];
-    for await (const match of glob.scan({ absolute: true })) {
+    for (const file of globSync(input)) {
+      const match = path.resolve(file);
       if (match.endsWith(".png") || match.endsWith(".jpg") || match.endsWith(".jpeg")) {
         paths.push(match);
       }

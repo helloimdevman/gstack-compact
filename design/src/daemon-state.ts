@@ -8,6 +8,7 @@
  * SIGTERM hitting a reused PID (Codex finding on the daemon plan).
  */
 
+import { which } from "../../lib/which";
 import { execFileSync } from "child_process";
 import fs from "fs";
 import os from "os";
@@ -68,11 +69,11 @@ export function readVersionString(): string {
   if (env) return env;
   const candidates = [
     // Installed bundle: design/dist/design and daemon.ts share this sidecar.
-    path.join(import.meta.dir, ".version"),
+    path.join(import.meta.dirname, ".version"),
     // Dev: design/src/* → repo root is two levels up
-    path.join(import.meta.dir, "..", "..", "VERSION"),
+    path.join(import.meta.dirname, "..", "..", "VERSION"),
     // Defensive: design/dist sibling of source tree
-    path.join(import.meta.dir, "..", "dist", ".version"),
+    path.join(import.meta.dirname, "..", "dist", ".version"),
   ];
   for (const p of candidates) {
     try {
@@ -174,7 +175,7 @@ export function readCmdline(pid: number, timeoutMs?: number): string {
       // Prefer installed PowerShell: Windows PowerShell 5.1 cold startup can
       // exceed the query budget before executing its command. Keep the same
       // bounded CIM query and legacy fallback when the newer host is absent.
-      const powershell = Bun.which("pwsh.exe", { PATH: process.env.PATH ?? "" }) ?? "powershell.exe";
+      const powershell = which("pwsh.exe") ?? "powershell.exe";
       return execFileSync(powershell, ["-NoProfile", "-NonInteractive", "-Command",
         "[Console]::OutputEncoding = [System.Text.UTF8Encoding]::new($false); " +
         `(Get-CimInstance Win32_Process -Filter 'ProcessId = ${pid}' -ErrorAction Stop).CommandLine`,

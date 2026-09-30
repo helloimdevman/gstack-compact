@@ -68,6 +68,7 @@
 BASH_COMPAT=50
 
 set -euo pipefail
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 
 ACTION="${1:-}"
 SETTINGS_FILE="${GSTACK_SETTINGS_FILE:-${CLAUDE_CONFIG_DIR:-$HOME/.claude}/settings.json}"
@@ -89,15 +90,15 @@ EOF
   exit 1
 fi
 
-if ! command -v bun >/dev/null 2>&1; then
-  echo "Error: bun is required but not installed." >&2
+if ! command -v "${GSTACK_NODE_BIN:-node}" >/dev/null 2>&1; then
+  echo "Error: Node.js 24.2+ is required but not installed." >&2
   exit 1
 fi
 
 # ─── Shared JS prelude ────────────────────────────────────────────────
 # Single source of truth for the KNOWN_HOOKS identity table and the
-# ownership/liveness/IO helpers, interpolated into EVERY bun -e script as
-#   bun -e "$_HOOK_JS_PRELUDE"' <single-quoted body>'
+# ownership/liveness/IO helpers, interpolated into EVERY "$SCRIPT_DIR/gstack-js" -e script as
+#   "$SCRIPT_DIR/gstack-js" -e "$_HOOK_JS_PRELUDE"' <single-quoted body>'
 # so the dedupe key and the prune predicate cannot drift. The prelude MUST NOT
 # contain single quotes (this assignment is single-quoted).
 _HOOK_JS_PRELUDE='
@@ -306,7 +307,7 @@ function gsWriteIfChanged(path, beforeText, settings, existed) {
 
 GSTACK_SETTINGS_INPUT="$SETTINGS_FILE"
 export GSTACK_SETTINGS_INPUT
-SETTINGS_FILE=$(bun -e "$_HOOK_JS_PRELUDE"'gsMain(function () {
+SETTINGS_FILE=$("$SCRIPT_DIR/gstack-js" -e "$_HOOK_JS_PRELUDE"'gsMain(function () {
   process.stdout.write(gsResolveSettingsPath(process.env.GSTACK_SETTINGS_INPUT));
 });') || exit $?
 
@@ -402,7 +403,7 @@ case "$ACTION" in
     fi
     _acquire_lock || exit 5
     _mutation_env
-    GSTACK_SETTINGS_PATH="$SETTINGS_FILE" GSTACK_HOOK_CMD="$HOOK_CMD" bun -e "$_HOOK_JS_PRELUDE"'gsMain(function () {
+    GSTACK_SETTINGS_PATH="$SETTINGS_FILE" GSTACK_HOOK_CMD="$HOOK_CMD" "$SCRIPT_DIR/gstack-js" -e "$_HOOK_JS_PRELUDE"'gsMain(function () {
       const settingsPath = process.env.GSTACK_SETTINGS_PATH;
       const hookCmd = process.env.GSTACK_HOOK_CMD;
       const loaded = gsLoadSettings(settingsPath);
@@ -432,7 +433,7 @@ case "$ACTION" in
     [ -f "$SETTINGS_FILE" ] || exit 1
     _acquire_lock || exit 5
     _mutation_env
-    GSTACK_SETTINGS_PATH="$SETTINGS_FILE" bun -e "$_HOOK_JS_PRELUDE"'gsMain(function () {
+    GSTACK_SETTINGS_PATH="$SETTINGS_FILE" "$SCRIPT_DIR/gstack-js" -e "$_HOOK_JS_PRELUDE"'gsMain(function () {
       const settingsPath = process.env.GSTACK_SETTINGS_PATH;
       const loaded = gsLoadSettings(settingsPath);
       const settings = loaded.settings;
@@ -502,7 +503,7 @@ case "$ACTION" in
     GSTACK_TIMEOUT="$TIMEOUT" \
     GSTACK_DIFF_ONLY="$DIFF_ONLY" \
     GSTACK_ENSURE="$ENSURE" \
-    bun -e "$_HOOK_JS_PRELUDE"'gsMain(function () {
+    "$SCRIPT_DIR/gstack-js" -e "$_HOOK_JS_PRELUDE"'gsMain(function () {
       const settingsPath = process.env.GSTACK_SETTINGS_PATH;
       const event = process.env.GSTACK_EVENT;
       const cmd = process.env.GSTACK_COMMAND;
@@ -655,7 +656,7 @@ case "$ACTION" in
     [ -f "$SETTINGS_FILE" ] || exit 0
     _acquire_lock || exit 5
     _mutation_env
-    GSTACK_SETTINGS_PATH="$SETTINGS_FILE" GSTACK_SOURCE="$SOURCE" bun -e "$_HOOK_JS_PRELUDE"'gsMain(function () {
+    GSTACK_SETTINGS_PATH="$SETTINGS_FILE" GSTACK_SOURCE="$SOURCE" "$SCRIPT_DIR/gstack-js" -e "$_HOOK_JS_PRELUDE"'gsMain(function () {
       const settingsPath = process.env.GSTACK_SETTINGS_PATH;
       const source = process.env.GSTACK_SOURCE;
       const loaded = gsLoadSettings(settingsPath);
@@ -756,7 +757,7 @@ case "$ACTION" in
     GSTACK_PRUNE_ALL="$PRUNE_ALL" \
     GSTACK_PT_OPTOUT="$GSTACK_PT_OPTOUT" \
     GSTACK_SWEEP_EXCLUDE_SOURCES="${GSTACK_SWEEP_EXCLUDE_SOURCES:-}" \
-    bun -e "$_HOOK_JS_PRELUDE"'gsMain(function () {
+    "$SCRIPT_DIR/gstack-js" -e "$_HOOK_JS_PRELUDE"'gsMain(function () {
       const settingsPath = process.env.GSTACK_SETTINGS_PATH;
       const root = (process.env.GSTACK_REPOINT_ROOT || "").replace(/\/+$/, "");
       const all = process.env.GSTACK_PRUNE_ALL === "1";
@@ -895,7 +896,7 @@ case "$ACTION" in
     fi
     _mutation_env
     GSTACK_SETTINGS_PATH="$SETTINGS_FILE" GSTACK_RESTORE_PATH="$LATEST" \
-    bun -e "$_HOOK_JS_PRELUDE"'gsMain(function () {
+    "$SCRIPT_DIR/gstack-js" -e "$_HOOK_JS_PRELUDE"'gsMain(function () {
       var fs = require("fs");
       var target = process.env.GSTACK_SETTINGS_PATH;
       var backup = process.env.GSTACK_RESTORE_PATH;
@@ -937,7 +938,7 @@ case "$ACTION" in
       exit 1
     fi
     [ -f "$SETTINGS_FILE" ] || exit 0
-    GSTACK_SETTINGS_PATH="$SETTINGS_FILE" GSTACK_LI_EVENT="$LI_EVENT" GSTACK_LI_OWNED_BY="$LI_OWNED_BY" GSTACK_LI_CMD_RE="$LI_CMD_RE" bun -e "$_HOOK_JS_PRELUDE"'gsMain(function () {
+    GSTACK_SETTINGS_PATH="$SETTINGS_FILE" GSTACK_LI_EVENT="$LI_EVENT" GSTACK_LI_OWNED_BY="$LI_OWNED_BY" GSTACK_LI_CMD_RE="$LI_CMD_RE" "$SCRIPT_DIR/gstack-js" -e "$_HOOK_JS_PRELUDE"'gsMain(function () {
       const event = process.env.GSTACK_LI_EVENT;
       const ownedBy = process.env.GSTACK_LI_OWNED_BY || "";
       const reSrc = process.env.GSTACK_LI_CMD_RE || "";
@@ -975,7 +976,7 @@ case "$ACTION" in
 
   list-sources)
     [ -f "$SETTINGS_FILE" ] || { echo "(no settings file)"; exit 0; }
-    GSTACK_SETTINGS_PATH="$SETTINGS_FILE" bun -e "$_HOOK_JS_PRELUDE"'gsMain(function () {
+    GSTACK_SETTINGS_PATH="$SETTINGS_FILE" "$SCRIPT_DIR/gstack-js" -e "$_HOOK_JS_PRELUDE"'gsMain(function () {
       const fs = require("fs");
       let settings = {};
       try { settings = JSON.parse(fs.readFileSync(process.env.GSTACK_SETTINGS_PATH, "utf8")); }

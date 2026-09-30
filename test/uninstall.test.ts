@@ -3,6 +3,7 @@ import { spawnSync } from 'child_process';
 import * as fs from 'fs';
 import * as path from 'path';
 import * as os from 'os';
+import { copyNodeRuntimeFixture } from './helpers/node-runtime-fixture';
 
 const ROOT = path.resolve(import.meta.dir, '..');
 const UNINSTALL = path.join(ROOT, 'bin', 'gstack-uninstall');
@@ -258,6 +259,7 @@ describe('hook cleanup runs before the install root is deleted', () => {
       fs.mkdirSync(installBin, { recursive: true });
       // The installed copies — the uninstaller under test IS the one inside
       // the root it deletes.
+      copyNodeRuntimeFixture(installRoot);
       for (const b of ['gstack-uninstall', 'gstack-settings-hook', 'gstack-session-update', 'gstack-config']) {
         const src = path.join(ROOT, 'bin', b);
         const dst = path.join(installBin, b);
@@ -317,6 +319,7 @@ describe('the Memorable bridge hook is removed by name and the kept config is le
       const installRoot = path.join(mockHome, '.claude', 'skills', 'gstack');
       const installBin = path.join(installRoot, 'bin');
       fs.mkdirSync(installBin, { recursive: true });
+      copyNodeRuntimeFixture(installRoot);
       for (const b of ['gstack-uninstall', 'gstack-settings-hook', 'gstack-session-update', 'gstack-config']) {
         const dst = path.join(installBin, b);
         fs.copyFileSync(path.join(ROOT, 'bin', b), dst);
@@ -360,6 +363,7 @@ describe('the Memorable arm stays quiet when nothing of its is registered', () =
       const installRoot = path.join(mockHome, '.claude', 'skills', 'gstack');
       const installBin = path.join(installRoot, 'bin');
       fs.mkdirSync(installBin, { recursive: true });
+      copyNodeRuntimeFixture(installRoot);
       for (const b of ['gstack-uninstall', 'gstack-settings-hook', 'gstack-session-update', 'gstack-config']) {
         const dst = path.join(installBin, b);
         fs.copyFileSync(path.join(ROOT, 'bin', b), dst);
@@ -392,6 +396,7 @@ describe('hook cleanup under lock contention is loud, never silent (review-army)
       const installRoot = path.join(mockHome, '.claude', 'skills', 'gstack');
       const installBin = path.join(installRoot, 'bin');
       fs.mkdirSync(installBin, { recursive: true });
+      copyNodeRuntimeFixture(installRoot);
       for (const b of ['gstack-uninstall', 'gstack-settings-hook', 'gstack-session-update', 'gstack-config']) {
         const dst = path.join(installBin, b);
         fs.copyFileSync(path.join(ROOT, 'bin', b), dst);
@@ -449,6 +454,7 @@ describe('the consent key never outlives the hook, even when the config lives ou
       const installBin = path.join(installRoot, 'bin');
       fs.mkdirSync(installBin, { recursive: true });
       fs.mkdirSync(otherRoot, { recursive: true });
+      copyNodeRuntimeFixture(installRoot);
       for (const b of ['gstack-uninstall', 'gstack-settings-hook', 'gstack-session-update', 'gstack-config']) {
         const dst = path.join(installBin, b);
         fs.copyFileSync(path.join(ROOT, 'bin', b), dst);
@@ -480,6 +486,7 @@ describe('the consent flip does not depend on the hook manager being present', (
       const installRoot = path.join(mockHome, '.claude', 'skills', 'gstack');
       const installBin = path.join(installRoot, 'bin');
       fs.mkdirSync(installBin, { recursive: true });
+      copyNodeRuntimeFixture(installRoot);
       for (const b of ['gstack-uninstall', 'gstack-config']) { // no settings hook, no session-update
         const dst = path.join(installBin, b);
         fs.copyFileSync(path.join(ROOT, 'bin', b), dst);

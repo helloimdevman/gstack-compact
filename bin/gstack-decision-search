@@ -1,4 +1,5 @@
-#!/usr/bin/env bun
+#!/bin/sh
+':' //; exec "$(dirname "$0")/gstack-js" "$0" "$@"
 /**
  * gstack-decision-search — read active decisions (the curated "what did we decide" view).
  *
@@ -25,7 +26,7 @@ import {
 } from "../lib/gstack-decision";
 import { resolveSlug, gitBranch, flagValue } from "../lib/bin-context";
 
-const HERE = import.meta.dir;
+const HERE = import.meta.dirname;
 const args = process.argv.slice(2);
 
 const slug = resolveSlug(`${HERE}/gstack-slug`);

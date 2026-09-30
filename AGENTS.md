@@ -266,4 +266,4 @@ bun run skill:check      # health dashboard for all skills
 - Browser steps follow `scripts/resolvers/browser.ts` and the host's own browser tool instructions.
 - Safety skills (careful, freeze, guard) use inline advisory prose — always confirm before destructive operations.
 - State paths resolve via `bin/gstack-paths` (sourced via `eval "$(...)"`). Honors `GSTACK_HOME`, `CLAUDE_PLUGIN_DATA`, `CLAUDE_PLANS_DIR`.
-- The `claude` CLI binary resolves via `lib/claude-bin.ts` (`Bun.which()` + `GSTACK_CLAUDE_BIN` override). Set `GSTACK_CLAUDE_BIN=wsl` plus `GSTACK_CLAUDE_BIN_ARGS='["claude"]'` to run Claude through WSL on Windows.
+- The `claude` CLI binary resolves via `lib/claude-bin.ts` (`lib/which.ts` + `GSTACK_CLAUDE_BIN` override). Set `GSTACK_CLAUDE_BIN=wsl` plus `GSTACK_CLAUDE_BIN_ARGS='["claude"]'` to run Claude through WSL on Windows.

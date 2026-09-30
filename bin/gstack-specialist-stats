@@ -29,8 +29,8 @@ if [ -z "$COMBINED" ]; then
   exit 0
 fi
 
-printf '%s' "$COMBINED" | bun -e "
-const lines = (await Bun.stdin.text()).trim().split('\n').filter(Boolean);
+printf '%s' "$COMBINED" | "$SCRIPT_DIR/gstack-js" -e "
+const lines = (readStdin()).trim().split('\n').filter(Boolean);
 const NEVER_GATE = new Set(['security', 'data-migration']);
 const stats = {};
 let reviewed = 0;

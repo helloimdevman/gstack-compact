@@ -15,22 +15,22 @@ test('runtime-only builds portable source bundles with working daemon spawn, att
     DESIGN_DAEMON_STATE_FILE: state, DESIGN_DAEMON_VERSION: '',
     DESIGN_DAEMON_IDLE_MS: '3000', DESIGN_DAEMON_CHECK_MS: '100',
   };
-  const run = (args: string[]) => spawnSync(process.execPath, ['run', ...args], {
+  const run = (args: string[]) => spawnSync(process.env.GSTACK_NODE_BIN ?? 'node', args, {
     cwd: root, env, encoding: 'utf8', timeout: 20_000,
   });
   const cli = (...args: string[]) => run(['design/dist/design', ...args]);
   try {
     for (const file of [
-      'scripts/build.sh', 'scripts/write-version-files.sh', 'package.json', 'VERSION',
+      'scripts/build.sh', 'scripts/write-version-files.sh', 'package.json', 'VERSION', 'bin/gstack-js', 'lib/node-runtime.mjs', 'lib/node-eval.mjs',
       'design/src', 'make-pdf/src', 'bin/gstack-global-discover.ts',
-      ...['design-catalog', 'design-md', 'design-detect-contract', 'fs-atomic', 'egress-receipt'].map(name => `lib/${name}.ts`),
+      ...['design-catalog', 'design-md', 'design-detect-contract', 'fs-atomic', 'egress-receipt', 'which', 'http-server'].map(name => `lib/${name}.ts`),
     ]) {
       const dest = path.join(root, file);
       fs.mkdirSync(path.dirname(dest), { recursive: true });
       fs.cpSync(path.join(ROOT, file), dest, { recursive: true });
     }
-    // Copy the sole renderer dependency; never write through a live registration.
-    fs.cpSync(path.dirname(require.resolve('marked/package.json')), path.join(root, 'node_modules/marked'), { recursive: true });
+    // Copy the runtime dependencies the bundles consume.
+    for (const name of ['marked', 'yaml']) fs.cpSync(path.join(ROOT, 'node_modules', name), path.join(root, 'node_modules', name), { recursive: true });
     fs.mkdirSync(path.join(root, 'shims'));
     for (const opener of ['open', 'xdg-open']) {
       fs.writeFileSync(path.join(root, 'shims', opener), '#!/bin/sh\nexit 0\n', { mode: 0o755 });
@@ -44,9 +44,9 @@ test('runtime-only builds portable source bundles with working daemon spawn, att
     });
     expect(built.status, built.stderr).toBe(0);
     expect(fs.existsSync(path.join(root, '.agents'))).toBe(false);
-    expect(fs.readFileSync(path.join(root, 'design/dist/.build-complete'), 'utf8')).toBe('bun-source-v1\n');
+    expect(fs.readFileSync(path.join(root, 'design/dist/.build-complete'), 'utf8')).toBe('node-source-v1\n');
     for (const file of ['design/dist/design', 'bin/gstack-global-discover']) {
-      expect(fs.readFileSync(path.join(root, file), 'utf8')).toStartWith('#!/usr/bin/env bun\n');
+      expect(fs.readFileSync(path.join(root, file), 'utf8')).toStartWith(file.startsWith('design/') ? '#!/usr/bin/env node\n' : '#!/bin/sh\n');
       expect(fs.statSync(path.join(root, file)).size).toBeLessThan(1_000_000);
       expect(fs.existsSync(path.join(root, `${file}.exe`))).toBe(false);
     }

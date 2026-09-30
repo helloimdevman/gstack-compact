@@ -1,4 +1,5 @@
-#!/usr/bin/env bun
+#!/bin/sh
+':' //; exec "$(dirname "$0")/gstack-js" "$0" "$@"
 /**
  * gstack-global-discover — Discover AI coding sessions across Claude Code, Codex CLI, and Gemini CLI.
  * Resolves each session's working directory to a git repo, deduplicates by normalized remote URL,

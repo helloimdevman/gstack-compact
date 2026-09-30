@@ -20,7 +20,7 @@ import * as fs from 'fs';
 import * as path from 'path';
 import { discoverTemplates } from './discover-skills';
 
-const ROOT = path.resolve(import.meta.dir, '..');
+const ROOT = path.resolve(import.meta.dirname, '..');
 const OUTPUT = path.join(ROOT, 'gstack', 'llms.txt');
 
 interface SkillEntry {
