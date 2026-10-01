@@ -48,7 +48,7 @@
     "eval:bg:release": "bin/gstack-detach --label evals-release --lock gstack-evals --timeout 100000 -- bun run test:release"
   },
   "dependencies": {
-    "marked": "^18.0.11",
+    "marked": "^18.0.14",
     "yaml": "^2.9.1",
     "smol-toml": "1.9.0",
     "semver": "7.8.5"
