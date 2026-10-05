@@ -62,10 +62,10 @@
     "ai-agent"
   ],
   "devDependencies": {
-    "@anthropic-ai/claude-agent-sdk": "0.2.117",
-    "@anthropic-ai/sdk": "^0.78.0",
+    "@anthropic-ai/claude-agent-sdk": "0.3.288",
+    "@anthropic-ai/sdk": "^0.131.0",
     "adm-zip": "0.6.1",
-    "sharp": "0.35.4",
+    "sharp": "0.35.5",
     "xterm": "5.3.0"
   },
   "overrides": {
