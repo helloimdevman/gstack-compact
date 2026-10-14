@@ -34,10 +34,17 @@ test.skipIf(process.platform === 'win32')('real SDK close cannot turn an aborted
   __resetSemaphoreForTests(1);
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'sdk-cancel-native-'));
   const script = path.join(dir, 'owned-child.ts');
-  fs.writeFileSync(script, `process.on('SIGTERM', () => {});\nprocess.stdin.resume();\nconsole.log(${JSON.stringify(JSON.stringify(assistant))});\nconsole.log(${JSON.stringify(JSON.stringify(terminal))});\nsetInterval(() => {}, 1000);\n`);
+  // SDK 0.3 closes stdin before forwarding abort; the actor exits on that EOF.
+  fs.writeFileSync(script, `process.on('SIGTERM', () => {});\nprocess.stdin.on('end', () => process.exit(0));\nprocess.stdin.resume();\nconsole.log(${JSON.stringify(JSON.stringify(assistant))});\nconsole.log(${JSON.stringify(JSON.stringify(terminal))});\nsetInterval(() => {}, 1000);\n`);
   const controller = new AbortController();
   let child: ChildProcess | undefined; let exited: Promise<void> | undefined;
-  const provider = ((args: Parameters<QueryProvider>[0]) => query({ ...args, options: { ...args.options,
+  const provider = ((args: Parameters<QueryProvider>[0]) => query({ ...args,
+    // An open input stream prevents the SDK's single-turn automatic EOF.
+    prompt: (async function* () {
+      yield { type: 'user' as const, message: { role: 'user' as const, content: args.prompt as string }, parent_tool_use_id: null, session_id: '' };
+      if (!controller.signal.aborted) await new Promise<void>(resolve => controller.signal.addEventListener('abort', () => resolve(), { once: true }));
+    })(),
+    options: { ...args.options,
     pathToClaudeCodeExecutable: script,
     spawnClaudeCodeProcess: spawnOptions => {
       child = spawn(process.execPath, [script], { cwd: dir, env: { PATH: dir, HOME: dir, USERPROFILE: dir, TMPDIR: dir, TMP: dir, TEMP: dir, EVALS: '' }, stdio: ['pipe', 'pipe', 'ignore'], signal: spawnOptions.signal });
@@ -54,6 +61,8 @@ test.skipIf(process.platform === 'win32')('real SDK close cannot turn an aborted
     while (Date.now() < end && (!fs.existsSync(stream) || !fs.readFileSync(stream, 'utf8').includes('result'))) await Bun.sleep(5);
     expect(fs.readFileSync(stream, 'utf8')).toContain('result');
     await Bun.sleep(20);
+    expect(child?.exitCode).toBeNull();
+    expect(result).toBeUndefined();
     controller.abort(new Error('cancel native EOF'));
     await Promise.race([running, new Promise((_, reject) => { timer = setTimeout(() => reject(new Error('runner did not settle')), 1000); })]);
     expect(error).toBe(controller.signal.reason);

@@ -6,17 +6,18 @@ import AdmZip from "adm-zip";
 import sharp from "sharp";
 
 describe("security dependency overrides", () => {
-  for (const [name, minimum] of [["sharp", "0.35.4"], ["adm-zip", "0.6.1"]]) {
+  for (const [name, minimum] of [["sharp", "0.35.5"], ["adm-zip", "0.6.1"], ["proxy-addr", "2.0.8"]]) {
     test(`${name} resolves only versions at or above ${minimum}`, async () => {
       const lock = await Bun.file(join(import.meta.dir, "../bun.lock")).text();
       const manifest = JSON.parse(readFileSync(join(import.meta.dir, "../package.json"), "utf8"));
       const override = manifest.overrides[name];
       expect(lock).toContain(`"${name}": "${override}"`);
       const versions = [...lock.matchAll(new RegExp(`"${name}@([^"]+)"`, "g"))];
+      expect(versions.length).toBeGreaterThan(0);
       for (const match of versions) {
         expect(Bun.semver.satisfies(match[1], `>=${minimum}`)).toBe(true);
       }
-      const installed = name === "sharp" ? sharp.versions.sharp : require("adm-zip/package.json").version;
+      const installed = name === "sharp" ? sharp.versions.sharp : require(`${name}/package.json`).version;
       expect(Bun.semver.satisfies(installed, `>=${minimum}`)).toBe(true);
     });
   }

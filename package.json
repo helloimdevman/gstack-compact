@@ -48,9 +48,9 @@
     "eval:bg:release": "bin/gstack-detach --label evals-release --lock gstack-evals --timeout 100000 -- bun run test:release"
   },
   "dependencies": {
-    "marked": "^18.0.11",
+    "marked": "^18.1.0",
     "yaml": "^2.9.1",
-    "smol-toml": "1.9.0",
+    "smol-toml": "1.9.1",
     "semver": "7.8.5"
   },
   "engines": {
@@ -62,15 +62,16 @@
     "ai-agent"
   ],
   "devDependencies": {
-    "@anthropic-ai/claude-agent-sdk": "0.2.117",
-    "@anthropic-ai/sdk": "^0.78.0",
+    "@anthropic-ai/claude-agent-sdk": "0.3.288",
+    "@anthropic-ai/sdk": "^0.131.0",
     "adm-zip": "0.6.1",
-    "sharp": "0.35.4",
+    "sharp": "0.35.5",
     "xterm": "5.3.0"
   },
   "overrides": {
     "adm-zip": "0.6.1",
     "ip-address": "10.3.1",
-    "sharp": "0.35.4"
+    "proxy-addr": "2.0.8",
+    "sharp": "0.35.5"
   }
 }

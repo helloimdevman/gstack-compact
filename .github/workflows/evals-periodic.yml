@@ -64,10 +64,10 @@ jobs:
       # Registry cache export needs a docker-container builder — the default
       # `docker` driver hard-errors on cache-to.
       - if: steps.check.outputs.exists == 'false'
-        uses: docker/setup-buildx-action@37fe631027851001ddb9b187196cc803df7f5f0e # v4
+        uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4
 
       - if: steps.check.outputs.exists == 'false'
-        uses: docker/build-push-action@53b7df96c91f9c12dcc8a07bcb9ccacbed38856a # v7
+        uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7
         with:
           context: .github/docker
           file: .github/docker/Dockerfile.ci
@@ -98,7 +98,7 @@ jobs:
           EVALS_ALL: "1"
         run: EVALS_TIER=periodic bun --no-install run scripts/test-paid-shards.ts --tier periodic --emit-plan /tmp/paid-plan/manifest.json --slices 8 --autoplan-slice
 
-      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         with:
           name: paid-plan
           path: /tmp/paid-plan/manifest.json
@@ -109,7 +109,7 @@ jobs:
           EVALS_ALL: "1"
         run: EVALS_TIER=gate bun run scripts/test-paid-shards.ts --tier gate --emit-plan /tmp/gate-census-plan/manifest.json --slices 6
 
-      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         with:
           name: gate-census-plan
           path: /tmp/gate-census-plan/manifest.json
@@ -166,7 +166,7 @@ jobs:
       - name: Register gstack skills for PTY tests
         uses: ./.github/actions/register-gstack-skills
 
-      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8
         with:
           name: paid-plan
           path: /tmp/paid-plan
@@ -183,7 +183,7 @@ jobs:
 
       - name: Upload slice results
         if: always()
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         with:
           name: paid-slice-${{ matrix.slice }}
           path: /tmp/paid-slice-results
@@ -191,7 +191,7 @@ jobs:
 
       - name: Upload shard logs on failure
         if: failure()
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         with:
           name: paid-slice-${{ matrix.slice }}-logs
           include-hidden-files: true
@@ -247,7 +247,7 @@ jobs:
 
       - run: bun run build
 
-      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8
         with:
           name: gate-census-plan
           path: /tmp/gate-census-plan
@@ -264,7 +264,7 @@ jobs:
 
       - name: Upload census results
         if: always()
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         with:
           name: gate-census-${{ matrix.slice }}
           path: /tmp/gate-census-results
@@ -291,23 +291,23 @@ jobs:
         with:
           bun-version: 1.4.0
 
-      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8
         with:
           name: paid-plan
           path: /tmp/paid-report
 
-      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8
         with:
           pattern: paid-slice-[0-9]*
           path: /tmp/paid-report
           merge-multiple: true
 
-      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8
         with:
           name: gate-census-plan
           path: /tmp/gate-census-report
 
-      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8
         with:
           pattern: gate-census-[0-9]*
           path: /tmp/gate-census-report

@@ -222,6 +222,10 @@ export const KNOWN_WINDOWS_INCOMPATIBLE: Array<{ file: string; reason: string }>
 // coverage, so auto-excluding them defeats the regression tests they carry.
 const KNOWN_WINDOWS_SAFE: Array<{ file: string; reason: string }> = [
   {
+    file: 'test/node-runtime-paths.test.ts',
+    reason: 'bin/ names the copied launcher passed to explicit Bash; native preload and import paths require Windows coverage',
+  },
+  {
     file: 'test/setup-windows-rerun-refresh.test.ts',
     // Trips the "spawns bin/ shebang script" pattern via path.join(..., 'bin',
     // 'tool.sh') fixture paths, but every spawn goes through test/helpers/bash-script.ts

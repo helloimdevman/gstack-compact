@@ -735,13 +735,14 @@ function processExternalHost(
   let symlinkLoop = false;
   const claudePath = ctx.tmplPath.replace(/\.tmpl$/, '');
   try {
-    const resolvedClaude = fs.realpathSync(claudePath);
-    const resolvedExternal = path.join(fs.realpathSync(path.dirname(outputPath)), path.basename(outputPath));
-    if (resolvedClaude === resolvedExternal) {
+    const sourceStat = fs.statSync(claudePath);
+    const outputStat = fs.statSync(outputPath);
+    // File identity also catches Windows short-path aliases and hard links.
+    if (sourceStat.dev === outputStat.dev && sourceStat.ino === outputStat.ino) {
       symlinkLoop = true;
     }
   } catch {
-    // realpathSync fails if file doesn't exist yet — no symlink loop
+    // A missing source or output cannot alias an existing source artifact.
   }
 
   // Extract hook safety prose BEFORE transforming frontmatter (which strips hooks)

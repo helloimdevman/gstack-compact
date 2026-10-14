@@ -78,13 +78,15 @@ export async function runWithSecretSink(opts: SecretSinkOptions): Promise<SinkRe
 
   const env = {
     // Minimal PATH that still finds jq/git/curl/sed so our bins work.
-    PATH: '/usr/bin:/bin:/usr/sbin:/sbin:/opt/homebrew/bin:/usr/local/bin',
+    PATH: process.platform === 'win32' ? process.env.PATH : '/usr/bin:/bin:/usr/sbin:/sbin:/opt/homebrew/bin:/usr/local/bin',
+    ...(process.platform === 'win32' ? { SystemRoot: process.env.SystemRoot, USERPROFILE: tmpHome } : {}),
     HOME: tmpHome,
     GSTACK_HOME: path.join(tmpHome, '.gstack'),
     ...(opts.env || {}),
   };
 
-  const proc = Bun.spawn([opts.bin, ...opts.args], {
+  const shellScript = process.platform === 'win32' && /^#![^\n]*\bbash\b/.test(fs.readFileSync(opts.bin, 'utf8'));
+  const proc = Bun.spawn(shellScript ? [Bun.which('bash') ?? 'bash', opts.bin, ...opts.args] : [opts.bin, ...opts.args], {
     env,
     stdout: 'pipe',
     stderr: 'pipe',
@@ -160,7 +162,7 @@ function walk(root: string, dir: string, out: Record<string, string>) {
     }
     if (!stat.isFile()) continue;
     if (stat.size > 1024 * 1024) continue; // skip huge files, unlikely to be secrets
-    const rel = path.relative(root, full);
+    const rel = path.relative(root, full).split(path.sep).join('/');
     try {
       out[rel] = fs.readFileSync(full, 'utf-8');
     } catch {

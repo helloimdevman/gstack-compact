@@ -1,5 +1,18 @@
 # Changelog
 
+## [1.91.1.1] - 2026-10-15
+
+### Fixed
+
+- Run TypeScript CLI imports from native Windows paths, including paths with spaces and URL punctuation.
+- Preserve source skills and metadata when generated host outputs alias them through symlinks, Windows short paths, or hard links.
+- Keep Windows fixture ownership and secret-sink checks accurate, and exercise SDK cancellation against its current stdin/EOF lifecycle.
+- Pin the patched `proxy-addr` dependency and ensure the `sharp` update is not overridden by its previous version.
+
+### Changed
+
+- Update the pending production and development dependencies and GitHub Actions, and rebuild the Markdown renderer for the updated parser.
+
 ## [1.91.1.0] - 2026-09-25
 
 ### Fixed
