@@ -4,6 +4,7 @@ import { spawnSync } from 'node:child_process';
 import * as fs from 'fs';
 import * as path from 'path';
 import * as os from 'os';
+import { fileURLToPath } from 'node:url';
 
 const ROOT = path.resolve(import.meta.dir, '..');
 const SETUP_SRC = fs.readFileSync(path.join(ROOT, 'setup'), 'utf-8');
@@ -55,14 +56,16 @@ describe('setup: js_cmd routing in link_*_skill_dirs (Windows non-ASCII path fix
     try {
       const marker = path.join(tmp, 'args');
       const sentinel = path.join(tmp, 'node with spaces');
-      fs.writeFileSync(sentinel, '#!/bin/sh\nprintf "%s\\n" "$@" > "$TRACE"\n', { mode: 0o755 });
+      const node = Bun.which(process.env.GSTACK_NODE_BIN ?? 'node');
+      if (!node) throw new Error('Node.js is required for launcher regressions');
+      fs.writeFileSync(sentinel, '#!/bin/sh\nif [ "$1" = -p ]; then exec "$ACTUAL_NODE" "$@"; fi\nprintf "%s\\n" "$@" > "$TRACE"\n', { mode: 0o755 });
       const literal = 'literal $(not-a-command)';
       const result = spawnSync('bash', [path.join(ROOT, 'bin/gstack-js'), '-e', 'await Promise.resolve()', literal], {
-        env: { ...process.env, GSTACK_NODE_BIN: sentinel, TRACE: marker }, encoding: 'utf8', timeout: 10_000,
+        env: { ...process.env, GSTACK_NODE_BIN: sentinel, ACTUAL_NODE: node, TRACE: marker }, encoding: 'utf8', timeout: 10_000,
       });
       expect(result.status, result.stderr).toBe(0);
       const args = fs.readFileSync(marker, 'utf8').trim().split('\n');
-      expect(path.resolve(args[args.indexOf('--import') + 1])).toBe(path.join(ROOT, 'lib/node-runtime.mjs'));
+      expect(fileURLToPath(args[args.indexOf('--import') + 1])).toBe(path.join(ROOT, 'lib/node-runtime.mjs'));
       expect(args.slice(-2)).toEqual(['await Promise.resolve()', literal]);
     } finally { fs.rmSync(tmp, { recursive: true, force: true }); }
   });
