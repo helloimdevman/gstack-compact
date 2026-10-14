@@ -108,9 +108,12 @@ test('a pre-manifest core install can refresh, but a mixed legacy directory cann
       const manifest = path.join(skillsDir, name, '.gstack-manifest.json');
       if (fs.existsSync(manifest)) fs.unlinkSync(manifest);
     }
-    expect(await installCoreProfile(opts)).toHaveLength(11);
+    // Copies without a manifest cannot establish ownership; links can.
+    if (process.platform === 'win32') await expect(installCoreProfile(opts)).rejects.toThrow('foreign skill collision');
+    else expect(await installCoreProfile(opts)).toHaveLength(11);
     const note = path.join(skillsDir, 'gstack', 'my-notes.md');
-    fs.unlinkSync(path.join(skillsDir, 'gstack', '.gstack-manifest.json'));
+    const manifest = path.join(skillsDir, 'gstack', '.gstack-manifest.json');
+    if (fs.existsSync(manifest)) fs.unlinkSync(manifest);
     fs.writeFileSync(note, 'user content\n');
     await expect(installCoreProfile(opts)).rejects.toThrow('foreign skill collision');
     expect(fs.readFileSync(note, 'utf8')).toBe('user content\n');

@@ -30,7 +30,8 @@ mock.module(runner, () => ({
     expect(path.dirname(opts.cwd)).toBe(${JSON.stringify(directory)});
     expect(fs.realpathSync(opts.cwd)).not.toBe(fs.realpathSync(root));
     const git = args => execFileSync('git', args, { cwd: opts.cwd, encoding: 'utf8', timeout: 5000 });
-    expect(fs.realpathSync(git(['rev-parse', '--show-toplevel']).trim())).toBe(fs.realpathSync(opts.cwd));
+    const target = fs.statSync(git(['rev-parse', '--show-toplevel']).trim()), fixture = fs.statSync(opts.cwd);
+    expect([target.dev, target.ino]).toEqual([fixture.dev, fixture.ino]);
     expect(git(['rev-parse', 'origin/main']).trim()).toBe(git(['rev-parse', 'HEAD']).trim());
     expect(git(['status', '--porcelain'])).toBe('');
     expect(git(['ls-files']).trim().split('\\n')).toEqual(['CLAUDE.md', 'PLAN.md', 'README.md', 'src/tasks.ts']);
